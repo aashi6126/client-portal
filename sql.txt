@@ -1,0 +1,26 @@
+CREATE TABLE students (
+    student_id INTEGER PRIMARY KEY,
+    first_name TEXT NOT NULL,
+    last_name TEXT NOT NULL,
+    age INTEGER,
+    grade TEXT,
+    school_name TEXT,
+    school_address TEXT,
+    school_phone TEXT
+);
+
+INSERT INTO students (first_name, last_name, age, grade, school_name, school_address, school_phone)
+VALUES ('John', 'Doe', 15, '10th', 'ABC High School', '123 Main Street', '555-123-4567');
+
+INSERT INTO students (first_name, last_name, age, grade, school_name, school_address, school_phone)
+VALUES ('Jane', 'Smith', 16, '11th', 'XYZ High School', '456 Elm Street', '555-987-6543');
+
+INSERT INTO students (first_name, last_name, age, grade, school_name, school_address, school_phone)
+VALUES ('Diya', 'Bhatt', 16, '11th', 'XYZ High School', '456 Elm Street', '555-987-6543');
+
+
+UPDATE students
+SET school_name = 'Monroe'
+WHERE student_id = 1;
+
+delete from students where student_id in (3,4,5);

@@ -1,0 +1,211 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="4e1ee6b6-20a0-4f2b-a4c4-65a99aa2f9eb" name="Changes" comment="">
+      <change afterPath="$PROJECT_DIR$/../client_portal/.idea/ aashipy.iml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/.idea/inspectionProfiles/profiles_settings.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/.idea/misc.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/.idea/modules.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/.idea/vcs.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/.idea/workspace.xml" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/Customer_Data.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/archive/data.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/archive/test.csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/archive/test.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/customer.db" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/customer_data.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/main.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/sql.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/sql_customer.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/.gitignore" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/README.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/package-lock.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/package.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/public/favicon.ico" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/public/index.html" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/public/logo192.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/public/logo512.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/public/manifest.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/public/robots.txt" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/App.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/App.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/App.test.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/index.css" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/index.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/logo.svg" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/reportWebVitals.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student-manager/src/setupTests.js" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/student_data .csv" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../client_portal/students.db" afterDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../client_portal" />
+  </component>
+  <component name="MarkdownSettingsMigration">
+    <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 1
+}</component>
+  <component name="ProjectId" id="2dzi1hIN3Rk5Uzj8RwIJvglls5h" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Python.customer_data.executor": "Run",
+    "Python.main.executor": "Run",
+    "Python.test.executor": "Debug",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "main",
+    "last_opened_file_path": "/Users/Aman/PycharmProjects/ aashipy"
+  },
+  "keyToStringList": {
+    "com.intellij.ide.scratch.ScratchImplUtil$2/New Scratch File": [
+      "Python"
+    ]
+  }
+}]]></component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/archive" />
+    </key>
+  </component>
+  <component name="RunManager" selected="Python.customer_data">
+    <configuration name="customer_data" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name=" aashipy" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/customer_data.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="main" type="PythonConfigurationType" factoryName="Python" nameIsGenerated="true">
+      <module name=" aashipy" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/main.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <configuration name="test" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">
+      <module name=" aashipy" />
+      <option name="ENV_FILES" value="" />
+      <option name="INTERPRETER_OPTIONS" value="" />
+      <option name="PARENT_ENVS" value="true" />
+      <envs>
+        <env name="PYTHONUNBUFFERED" value="1" />
+      </envs>
+      <option name="SDK_HOME" value="" />
+      <option name="WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+      <option name="IS_MODULE_SDK" value="true" />
+      <option name="ADD_CONTENT_ROOTS" value="true" />
+      <option name="ADD_SOURCE_ROOTS" value="true" />
+      <option name="SCRIPT_NAME" value="$PROJECT_DIR$/archive/test.py" />
+      <option name="PARAMETERS" value="" />
+      <option name="SHOW_COMMAND_LINE" value="false" />
+      <option name="EMULATE_TERMINAL" value="false" />
+      <option name="MODULE_MODE" value="false" />
+      <option name="REDIRECT_INPUT" value="false" />
+      <option name="INPUT_FILE" value="" />
+      <method v="2" />
+    </configuration>
+    <recent_temporary>
+      <list>
+        <item itemvalue="Python.customer_data" />
+        <item itemvalue="Python.test" />
+      </list>
+    </recent_temporary>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-python-sdk-5a2391486177-d3b881c8e49f-com.jetbrains.pycharm.community.sharedIndexes.bundled-PC-233.13763.11" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="SpellCheckerSettings" RuntimeDictionaries="0" Folders="0" CustomDictionaries="0" DefaultDictionary="application-level" UseSingleDictionary="true" transferred="true" />
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="4e1ee6b6-20a0-4f2b-a4c4-65a99aa2f9eb" name="Changes" comment="" />
+      <created>1711017093857</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1711017093857</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="XDebuggerManager">
+    <breakpoint-manager>
+      <breakpoints>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../client_portal/main.py</url>
+          <line>10</line>
+          <option name="timeStamp" value="1" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../client_portal/customer_data.py</url>
+          <line>31</line>
+          <option name="timeStamp" value="2" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../client_portal/archive/test.py</url>
+          <line>24</line>
+          <option name="timeStamp" value="3" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../client_portal/archive/test.py</url>
+          <line>21</line>
+          <option name="timeStamp" value="6" />
+        </line-breakpoint>
+        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
+          <url>file://$PROJECT_DIR$/../client_portal/customer_data.py</url>
+          <line>16</line>
+          <option name="timeStamp" value="7" />
+        </line-breakpoint>
+      </breakpoints>
+    </breakpoint-manager>
+  </component>
+</project>
