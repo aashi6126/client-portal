@@ -20,8 +20,7 @@ def insert_customer(row_to_insert):
     cursor.execute(sql_query, row_to_insert)
     conn.commit()
     conn.close()
-
-
+`   `
 
 def import_data_from_csv():
     with open('Customer_Data.csv', 'r') as csvfile:
