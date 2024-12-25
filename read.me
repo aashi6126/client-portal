@@ -1,0 +1,20 @@
+Some notes about the app
+
+Database
+1. Uses an in-memory file based DB called customer.db stored under services directory
+2. Some commands to help see whats in the tables
+    a. sqlite3 customer.db
+    b. .tables
+    c. select * from Customer;
+    d. .exit
+
+Services
+1. Start the service customer_api.py by rt click run file in terminal or by running the following in terminal   
+    /usr/local/bin/python3 /Users/aashisharma/projects/client_portal/client-portal/services/api/customer_api.py
+2. It should start in http://127.0.0.1:5000
+3. Verify by going to the browser that the data is being retruned by the api http://127.0.0.1:5000/api/customers
+
+Webapp
+1. cd /Users/aashisharma/projects/client_portal/client-portal/webapp/customer-app
+2. npm start
+3. http://localhost:3000/ should show the app

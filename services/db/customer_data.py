@@ -13,17 +13,16 @@ def print_hi(name):
 
 
 def insert_customer(row_to_insert):
-    conn = sqlite3.connect('customer.db')
+    conn = sqlite3.connect('/Users/aashisharma/projects/client_portal/client-portal/services/customer.db')
     cursor = conn.cursor()
     table_name = 'customer'
-    sql_query = f"INSERT INTO {table_name} (Renewal_Date, Other_Broker, Group_Name, Contact_Person, Email, Phone_Number, Funding, Current_Carrier, Num_Employees_At_Renewal, Waiting_Period, Deductible_Accumulation, Previous_Carrier, Cobra_Carrier, Dental_Effective_Date, Dental_Carrier, Vision_Effective_Date, Vision_Carrier, Life_And_ADND_Effective_Date, Life_And_ADND_Carrier, LTD_Effective_Date, LTD_Carrier, STD_Effective_Date, STD_Carrier, Effective_Date_401K, Carrier_401K, Employer, Employee, PNC, Employee_Navigator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
+    sql_query = f"INSERT INTO {table_name} (Renewal_Date, Other_Broker, Group_Name, Contact_Person, Email, Phone_Number, Funding, Current_Carrier, Num_Employees_At_Renewal, Waiting_Period, Deductible_Accumulation, Previous_Carrier, Cobra_Carrier, Dental_Effective_Date, Dental_Carrier, Vision_Effective_Date, Vision_Carrier, Life_And_ADND_Effective_Date, Life_And_ADND_Carrier, LTD_Effective_Date, LTD_Carrier, STD_Effective_Date, STD_Carrier, Effective_Date_401K, Carrier_401K, Employer, Employee, PNC, Employee_Navigator, Product) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)"
     cursor.execute(sql_query, row_to_insert)
     conn.commit()
     conn.close()
-`   `
 
 def import_data_from_csv():
-    with open('Customer_Data.csv', 'r') as csvfile:
+    with open('/Users/aashisharma/projects/client_portal/client-portal/services/Customer_Data.csv', 'r') as csvfile:
         reader = csv.reader(csvfile)
         next(reader)
         next(reader)

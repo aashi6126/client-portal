@@ -28,5 +28,6 @@ CREATE TABLE Customer(
   Employer TEXT,
   Employee TEXT,
   PNC TEXT,
-  Employee_Navigator TEXT
+  Employee_Navigator TEXT,
+  Product TEXT
 );
