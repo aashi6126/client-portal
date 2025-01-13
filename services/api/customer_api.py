@@ -8,7 +8,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 app = Flask(__name__)
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/aashisharma/projects/client_portal/client-portal/services/customer.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////services/customer.db'
 db = SQLAlchemy(app)
 CORS(app, origins=['http://localhost:3000'])
 # CORS(app)  # This will enable CORS for all routes
@@ -51,7 +51,7 @@ approute = '/api/customers'
 @app.route(approute, methods=['GET'])
 def get_customers(page=1, page_size=10):
     
-    conn = sqlite3.connect('/Users/aashisharma/projects/client_portal/client-portal/services/customer.db')
+    conn = sqlite3.connect('services/customer.db')
     cursor = conn.cursor()
 
     cursor.execute("SELECT Renewal_Date, Other_Broker, Group_Name, Contact_Person, Email, Phone_Number, Funding, Current_Carrier, Num_Employees_At_Renewal, Waiting_Period, Deductible_Accumulation, Previous_Carrier, Cobra_Carrier, Dental_Effective_Date, Dental_Carrier, Vision_Effective_Date, Vision_Carrier, Life_And_ADND_Effective_Date, Life_And_ADND_Carrier, LTD_Effective_Date, LTD_Carrier, STD_Effective_Date, STD_Carrier, Effective_Date_401K, Carrier_401K, Employer, Employee, PNC, Employee_Navigator, Product, Customer_id FROM customer")
@@ -80,7 +80,7 @@ approute = '/api/customers'
 @app.route(approute + '/<int:Customer_id>', methods=['PUT'])
 def update_customers(Customer_id):
     try: 
-        conn = sqlite3.connect('/Users/aashisharma/projects/client_portal/client-portal/services/customer.db')
+        conn = sqlite3.connect('services/customer.db')
         
         cursor = conn.cursor()
         customer = request.get_json()
@@ -108,7 +108,7 @@ approute = '/api/customers'
 @app.route(approute + '/<int:Customer_id>', methods=['DELETE'])
 def delete_customer(Customer_id):
     try:
-        conn = sqlite3.connect('/Users/aashisharma/projects/client_portal/client-portal/services/customer.db')
+        conn = sqlite3.connect('services/customer.db')
         cursor = conn.cursor()
         delete_query = """ DELETE FROM customer WHERE Customer_id = ? """
         cursor.execute(delete_query, (Customer_id,))
@@ -131,7 +131,7 @@ def clone_customer(customer_id):
     conn = None
     cursor = None
     try:
-        conn = sqlite3.connect('/Users/aashisharma/projects/client_portal/client-portal/services/customer.db')
+        conn = sqlite3.connect('services/customer.db')
         cursor = conn.cursor()
 
         # Get the customer data
