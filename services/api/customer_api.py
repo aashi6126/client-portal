@@ -49,7 +49,7 @@ class Customer(db.Model):
 
 approute = '/api/customers'
 @app.route(approute, methods=['GET'])
-def get_customers(page=1, page_size=10):
+def get_customers(page=1, page_size=5000):
     
     conn = sqlite3.connect('services/customer.db')
     cursor = conn.cursor()
