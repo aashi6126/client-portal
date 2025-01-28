@@ -29,5 +29,6 @@ CREATE TABLE Customer(
   Employee TEXT,
   PNC TEXT,
   Employee_Navigator TEXT,
-  Product TEXT
+  Product TEXT,
+  Client_Manager TEXT
 );
