@@ -11,6 +11,7 @@ from sqlalchemy import create_engine
 from dateutil.parser import parse
 
 app = Flask(__name__)
+CORS(app, origins=['http://localhost:3000'])
 
 app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/amandetail/workspaces/client-portal/services/customer.db'
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -65,42 +66,48 @@ def add_customer():
         except ValueError:
             return None
 
-    new_customer = Customer(
-        Other_Broker=data.get('Other_Broker'),
-        Group_Name=data.get('Group_Name'),
-        Contact_Person=data.get('Contact_Person'),
-        Email=data.get('Email'),
-        Phone_Number=data.get('Phone_Number'),
-        Funding=data.get('Funding'),
-        Current_Carrier=data.get('Current_Carrier'),
-        Num_Employees_At_Renewal=data.get('Num_Employees_At_Renewal'),
-        Waiting_Period=data.get('Waiting_Period'),
-        Deductible_Accumulation=data.get('Deductible_Accumulation'),
-        Previous_Carrier=data.get('Previous_Carrier'),
-        Cobra_Carrier=data.get('Cobra_Carrier'),
-        Dental_Effective_Date=parse_date(data.get('Dental_Effective_Date')),
-        Dental_Carrier=data.get('Dental_Carrier'),
-        Vision_Effective_Date=parse_date(data.get('Vision_Effective_Date')),
-        Vision_Carrier=data.get('Vision_Carrier'),
-        Life_And_ADND_Effective_Date=parse_date(data.get('Life_And_ADND_Effective_Date')),
-        Life_And_ADND_Carrier=data.get('Life_And_ADND_Carrier'),
-        LTD_Effective_Date=parse_date(data.get('LTD_Effective_Date')),
-        LTD_Carrier=data.get('LTD_Carrier'),
-        STD_Effective_Date=parse_date(data.get('STD_Effective_Date')),
-        STD_Carrier=data.get('STD_Carrier'),
-        Effective_Date_401K=parse_date(data.get('Effective_Date_401K')),
-        Carrier_401K=data.get('Carrier_401K'),
-        Employer=data.get('Employer'),
-        Employee=data.get('Employee'),
-        PNC=data.get('PNC'),
-        Employee_Navigator=data.get('Employee_Navigator'),
-        Product=data.get('Product'),
-        client_manager=data.get('Client_Manager')
-    )
-    session.add(new_customer)
-    session.commit()
-    session.close()
-    return jsonify({'message': 'New customer added successfully', 'customer_id': new_customer.Customer_id}), 201
+    try:
+        for customer_data in data:
+            new_customer = Customer(
+                Other_Broker=customer_data.get('Other_Broker'),
+                Group_Name=customer_data.get('Group_Name'),
+                Contact_Person=customer_data.get('Contact_Person'),
+                Email=customer_data.get('Email'),
+                Phone_Number=customer_data.get('Phone_Number'),
+                Funding=customer_data.get('Funding'),
+                Current_Carrier=customer_data.get('Current_Carrier'),
+                Num_Employees_At_Renewal=customer_data.get('Num_Employees_At_Renewal'),
+                Waiting_Period=customer_data.get('Waiting_Period'),
+                Deductible_Accumulation=customer_data.get('Deductible_Accumulation'),
+                Previous_Carrier=customer_data.get('Previous_Carrier'),
+                Cobra_Carrier=customer_data.get('Cobra_Carrier'),
+                Dental_Effective_Date=parse_date(customer_data.get('Dental_Effective_Date')),
+                Dental_Carrier=customer_data.get('Dental_Carrier'),
+                Vision_Effective_Date=parse_date(customer_data.get('Vision_Effective_Date')),
+                Vision_Carrier=customer_data.get('Vision_Carrier'),
+                Life_And_ADND_Effective_Date=parse_date(customer_data.get('Life_And_ADND_Effective_Date')),
+                Life_And_ADND_Carrier=customer_data.get('Life_And_ADND_Carrier'),
+                LTD_Effective_Date=parse_date(customer_data.get('LTD_Effective_Date')),
+                LTD_Carrier=customer_data.get('LTD_Carrier'),
+                STD_Effective_Date=parse_date(customer_data.get('STD_Effective_Date')),
+                STD_Carrier=customer_data.get('STD_Carrier'),
+                Effective_Date_401K=parse_date(customer_data.get('Effective_Date_401K')),
+                Carrier_401K=customer_data.get('Carrier_401K'),
+                Employer=customer_data.get('Employer'),
+                Employee=customer_data.get('Employee'),
+                PNC=customer_data.get('PNC'),
+                Employee_Navigator=customer_data.get('Employee_Navigator'),
+                Product=customer_data.get('Product'),
+                Client_Manager=customer_data.get('Client_Manager')
+            )
+            session.add(new_customer)
+        session.commit()
+        return jsonify({'message': 'New customer added successfully', 'customer_id': new_customer.Customer_id}), 201
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
 
 @app.route('/api/customers/<int:Customer_id>', methods=['PUT'])
 def update_customers(Customer_id):
@@ -150,7 +157,6 @@ def update_customers(Customer_id):
         })
 
         session.commit()
-        session.close()
         return jsonify({'message': 'Customer updated successfully'}), 200
 
     except Exception as e:
@@ -161,17 +167,17 @@ def update_customers(Customer_id):
     finally:
         session.close()
 
+
 @app.route('/api/customers/<int:Customer_id>', methods=['DELETE'])
 def delete_customer(Customer_id):
     session = Session()
     try:
-        customer = session.query(Customer).get(Customer_id)
+        customer = session.get(Customer, Customer_id)
         if not customer:
             return jsonify({'message': 'Customer not found'}), 404
 
         session.delete(customer)
         session.commit()
-        session.close()
         return jsonify({'message': 'Customer deleted successfully'}), 200
 
     except Exception as e:
@@ -220,8 +226,8 @@ def get_customers(page=1, page_size=5000):
             'PNC': row[27],
             'Employee_Navigator': row[28],
             'Product': row[29],
-            'Client_Manager': row[30],
-            'Customer_id': row[31]
+            'Client_Manager': row[30] if row[31] else None,
+            'Customer_id': row[31] 
         } for row in rows]
 
         start = (page - 1) * page_size
@@ -289,6 +295,24 @@ def clone_customer(customer_id):
         session.add(cloned_customer)
         session.commit()
         return jsonify({'message': 'Customer cloned successfully', 'customer_id': cloned_customer.Customer_id}), 201
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+    finally:
+        session.close()
+
+@app.route('/api/customers/purge', methods=['DELETE'])
+def purge_customers():
+    session = Session()
+    try:
+        # Delete all customers
+        logging.info("Deleting all customers")
+        session.query(Customer).delete()
+        session.commit()
+        return jsonify({'message': 'All customers deleted successfully'}), 200
 
     except Exception as e:
         print(f"An error occurred: {e}")
