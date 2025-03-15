@@ -13,7 +13,7 @@ from dateutil.parser import parse
 app = Flask(__name__)
 CORS(app, origins=['http://localhost:3000'])
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////Users/amandetail/workspaces/client-portal/services/customer.db'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://///Users/aman/workspaces/client-portal/services/customer.db'
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 db = SQLAlchemy(app)
 CORS(app, origins=['http://localhost:3000'])
