@@ -1,5 +1,8 @@
 CREATE TABLE Customer(
   Customer_id INTEGER PRIMARY KEY AUTOINCREMENT,
+  Tax_ID TEXT,
+  Enrollment_POC TEXT,
+  Form_Fire_Code TEXT,
   Renewal_Date DATE,
   Other_Broker TEXT,
   Group_Name TEXT,

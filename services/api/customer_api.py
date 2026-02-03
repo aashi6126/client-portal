@@ -1,6 +1,6 @@
 import sqlite3
+import os
 from flask import Flask, jsonify
-from flask_cors import CORS, cross_origin
 import logging
 logging.basicConfig(level=logging.DEBUG)
 from flask import request
@@ -10,16 +10,45 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine
 from dateutil.parser import parse
 
-app = Flask(__name__)
-CORS(app, origins=['http://localhost:3000'])
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite://///Users/aman/workspaces/client-portal/services/customer.db'
+
+app = Flask(__name__)
+
+# Custom CORS origin validator for devtunnels support
+def is_allowed_origin(origin):
+    """Check if origin is allowed."""
+    allowed_origins = [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ]
+    if origin in allowed_origins:
+        return True
+    # Allow any devtunnels.ms subdomain
+    if origin and origin.endswith('.use.devtunnels.ms'):
+        return True
+    return False
+
+# CORS configuration with custom origin validation
+@app.after_request
+def after_request(response):
+    origin = request.headers.get('Origin')
+    if origin and is_allowed_origin(origin):
+        response.headers['Access-Control-Allow-Origin'] = origin
+        response.headers['Access-Control-Allow-Headers'] = 'Content-Type,Authorization'
+        response.headers['Access-Control-Allow-Methods'] = 'GET,PUT,POST,DELETE,OPTIONS'
+        response.headers['Access-Control-Allow-Credentials'] = 'true'
+    return response
+
+# Allow database URI to be configured via environment variable for testing
+db_uri = os.environ.get('DATABASE_URI', 'sqlite://///Users/aman/workspaces/client-portal/services/customer.db')
+app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 db = SQLAlchemy(app)
-CORS(app, origins=['http://localhost:3000'])
 
 # Create a session factory
 Session = sessionmaker(bind=engine)
+# //Tax ID	Form Fire Code	Enrollment POC	Renewal Date	Other Broker	Group Name
+# //Contact Person	Email	Phone Number	Funding	Current Carrier	# of Emp at renewal	Waiting Period	Deductible Accumulation	Previous Carrier	Cobra Carrier	Dental Effective Date	Dental Carrier	Vision Effective Date	Vision Carrier	Life & AD&D Effective Date	Life & AD&D Carrier	LTD Effective Date	LTD Carrier	STD Effective Date	STD Carrier	401K Effective Date	401K Carrier	Employer	Employee
 
 class Customer(db.Model):
     Customer_id = db.Column(db.Integer, primary_key=True)
@@ -54,21 +83,35 @@ class Customer(db.Model):
     Product = db.Column(db.String(500))
     Client_Manager = db.Column(db.String(500))
     Renewal_Date = db.Column(db.Date)
+    Tax_ID = db.Column(db.String(500))
+    Enrollment_POC = db.Column(db.String(500))
+    Form_Fire_Code = db.Column(db.String(500))
 
 @app.route('/api/customers', methods=['POST'])
 def add_customer():
     session = Session()
     data = request.get_json()
-    
+    logging.debug(f"Received data: {data}")
+
+    if not data:
+        return jsonify({'error': 'No data provided. No rows created.'}), 400
+
+
     def parse_date(date_str):
         try:
             return parse(date_str).date() if date_str else None
         except ValueError:
             return None
 
+
     try:
+        new_customer = None
         for customer_data in data:
             new_customer = Customer(
+                Tax_ID=customer_data.get('Tax_ID'),
+                Enrollment_POC=customer_data.get('Enrollment_POC'),
+                Form_Fire_Code=customer_data.get('Form_Fire_Code'),
+                Renewal_Date=parse_date(customer_data.get('Renewal_Date')),
                 Other_Broker=customer_data.get('Other_Broker'),
                 Group_Name=customer_data.get('Group_Name'),
                 Contact_Person=customer_data.get('Contact_Person'),
@@ -121,9 +164,11 @@ def update_customers(Customer_id):
                 return parse(date_str).date() if date_str else None
             except ValueError:
                 return None
-
+# {'Carrier_401K': None, 'Client_Manager': None, 'Cobra_Carrier': None, 'Contact_Person': None, 'Current_Carrier': None, 'Customer_id': 193, 'Deductible_Accumulation': None, 'Dental_Carrier': None, 'Dental_Effective_Date': None, 'Effective_Date_401K': None, 'Email': 'Ssmith@gmail.com', 'Employee': '99%', 'Employee_Navigator': None, 'Employer': 'Target updated', 'Enrollment_POC': None, 'Form_Fire_Code': None, 'Funding': 'Not Insured', 'Group_Name': None, 'LTD_Carrier': None, 'LTD_Effective_Date': None, 'Life_And_ADND_Carrier': None, 'Life_And_ADND_Effective_Date': None, 'Num_Employees_At_Renewal': None, 'Other_Broker': None, 'PNC': None, 'Phone_Number': None, 'Previous_Carrier': None, 'Product': None, 'Renewal_Date': None, 'STD_Carrier': None, 'STD_Effective_Date': None, 'Tax_ID': '37-146904184-354872888-3101248', 'Vision_Carrier': None, 'Vision_Effective_Date': None, 'Waiting_Period': None}
         session.query(Customer).filter(Customer.Customer_id == Customer_id).update({
-            Customer.Renewal_Date: parse_date(customer.get('Renewal_Date')),
+            Customer.Tax_ID: customer.get('Tax_ID'),
+            Customer.Enrollment_POC: customer.get('Enrollment_POC'),
+            Customer.Form_Fire_Code: customer.get('Form_Fire_Code'),
             Customer.Other_Broker: customer.get('Other_Broker'),
             Customer.Group_Name: customer.get('Group_Name'),
             Customer.Contact_Person: customer.get('Contact_Person'),
@@ -153,7 +198,8 @@ def update_customers(Customer_id):
             Customer.PNC: customer.get('PNC'),
             Customer.Employee_Navigator: customer.get('Employee_Navigator'),
             Customer.Product: customer.get('Product'),
-            Customer.Client_Manager: customer.get('Client_Manager')
+            Customer.Client_Manager: customer.get('Client_Manager'),
+            Customer.Renewal_Date: parse_date(customer.get('Renewal_Date')),
         })
 
         session.commit()
@@ -193,42 +239,45 @@ def get_customers(page=1, page_size=5000):
     session = Session()
     try:
         customers = session.query(Customer).all()
-        rows = [(c.Renewal_Date, c.Other_Broker, c.Group_Name, c.Contact_Person, c.Email, c.Phone_Number, c.Funding, c.Current_Carrier, c.Num_Employees_At_Renewal, c.Waiting_Period, c.Deductible_Accumulation, c.Previous_Carrier, c.Cobra_Carrier, c.Dental_Effective_Date, c.Dental_Carrier, c.Vision_Effective_Date, c.Vision_Carrier, c.Life_And_ADND_Effective_Date, c.Life_And_ADND_Carrier, c.LTD_Effective_Date, c.LTD_Carrier, c.STD_Effective_Date, c.STD_Carrier, c.Effective_Date_401K, c.Carrier_401K, c.Employer, c.Employee, c.PNC, c.Employee_Navigator, c.Product, c.Client_Manager, c.Customer_id) for c in customers]
-
-        all_customers = [{
-            'Renewal_Date': row[0].strftime('%Y-%m-%d') if row[0] else None,
-            'Other_Broker': row[1],
-            'Group_Name': row[2],
-            'Contact_Person': row[3],
-            'Email': row[4],
-            'Phone_Number': row[5],
-            'Funding': row[6],
-            'Current_Carrier': row[7],
-            'Num_Employees_At_Renewal': row[8],
-            'Waiting_Period': row[9],
-            'Deductible_Accumulation': row[10],
-            'Previous_Carrier': row[11],
-            'Cobra_Carrier': row[12],
-            'Dental_Effective_Date': row[13].strftime('%Y-%m-%d') if row[13] else None,
-            'Dental_Carrier': row[14],
-            'Vision_Effective_Date': row[15].strftime('%Y-%m-%d') if row[15] else None,
-            'Vision_Carrier': row[16],
-            'Life_And_ADND_Effective_Date': row[17].strftime('%Y-%m-%d') if row[17] else None,
-            'Life_And_ADND_Carrier': row[18],
-            'LTD_Effective_Date': row[19].strftime('%Y-%m-%d') if row[19] else None,
-            'LTD_Carrier': row[20],
-            'STD_Effective_Date': row[21].strftime('%Y-%m-%d') if row[21] else None,
-            'STD_Carrier': row[22],
-            'Effective_Date_401K': row[23].strftime('%Y-%m-%d') if row[23] else None,
-            'Carrier_401K': row[24],
-            'Employer': row[25],
-            'Employee': row[26],
-            'PNC': row[27],
-            'Employee_Navigator': row[28],
-            'Product': row[29],
-            'Client_Manager': row[30] if row[31] else None,
-            'Customer_id': row[31] 
-        } for row in rows]
+        all_customers = []
+        for c in customers:
+            all_customers.append({
+                'Customer_id': c.Customer_id,
+                'Tax_ID': c.Tax_ID,
+                'Enrollment_POC': c.Enrollment_POC,
+                'Form_Fire_Code': c.Form_Fire_Code,
+                'Renewal_Date': c.Renewal_Date.strftime('%Y-%m-%d') if c.Renewal_Date else None,
+                'Other_Broker': c.Other_Broker,
+                'Group_Name': c.Group_Name,
+                'Contact_Person': c.Contact_Person,
+                'Email': c.Email,
+                'Phone_Number': c.Phone_Number,
+                'Funding': c.Funding,
+                'Current_Carrier': c.Current_Carrier,
+                'Num_Employees_At_Renewal': c.Num_Employees_At_Renewal,
+                'Waiting_Period': c.Waiting_Period,
+                'Deductible_Accumulation': c.Deductible_Accumulation,
+                'Previous_Carrier': c.Previous_Carrier,
+                'Cobra_Carrier': c.Cobra_Carrier,
+                'Dental_Effective_Date': c.Dental_Effective_Date.strftime('%Y-%m-%d') if c.Dental_Effective_Date else None,
+                'Dental_Carrier': c.Dental_Carrier,
+                'Vision_Effective_Date': c.Vision_Effective_Date.strftime('%Y-%m-%d') if c.Vision_Effective_Date else None,
+                'Vision_Carrier': c.Vision_Carrier,
+                'Life_And_ADND_Effective_Date': c.Life_And_ADND_Effective_Date.strftime('%Y-%m-%d') if c.Life_And_ADND_Effective_Date else None,
+                'Life_And_ADND_Carrier': c.Life_And_ADND_Carrier,
+                'LTD_Effective_Date': c.LTD_Effective_Date.strftime('%Y-%m-%d') if c.LTD_Effective_Date else None,
+                'LTD_Carrier': c.LTD_Carrier,
+                'STD_Effective_Date': c.STD_Effective_Date.strftime('%Y-%m-%d') if c.STD_Effective_Date else None,
+                'STD_Carrier': c.STD_Carrier,
+                'Effective_Date_401K': c.Effective_Date_401K.strftime('%Y-%m-%d') if c.Effective_Date_401K else None,
+                'Carrier_401K': c.Carrier_401K,
+                'Employer': c.Employer,
+                'Employee': c.Employee,
+                'PNC': getattr(c, 'PNC', None),
+                'Employee_Navigator': getattr(c, 'Employee_Navigator', None),
+                'Product': getattr(c, 'Product', None),
+                'Client_Manager': getattr(c, 'Client_Manager', None)
+            })
 
         start = (page - 1) * page_size
         end = start + page_size 
@@ -249,6 +298,7 @@ def get_customers(page=1, page_size=5000):
         return jsonify({'error': str(e)}), 500
 
     finally:
+        
         session.close()
 
 @app.route('/api/customers/<int:customer_id>/clone', methods=['POST'])
@@ -260,6 +310,9 @@ def clone_customer(customer_id):
             return jsonify({'message': 'Customer not found'}), 404
 
         cloned_customer = Customer(
+            Tax_ID=customer.Tax_ID,
+            Enrollment_POC=customer.Enrollment_POC,
+            Form_Fire_Code=customer.Form_Fire_Code,
             Other_Broker=customer.Other_Broker,
             Group_Name=customer.Group_Name,
             Contact_Person=customer.Contact_Person,
