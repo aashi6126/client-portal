@@ -42,8 +42,8 @@ export const columns = [
   { id: 'STD_Carrier', label: 'STD Carrier' },
   { id: 'Effective_Date_401K', label: '401K Effective Date' },
   { id: 'Carrier_401K', label: '401K Carrier' },
-  { id: 'Employer', label: 'Employer' },
-  { id: 'Employee', label: 'Employee' },
+  { id: 'Employer', label: 'Employer Contribution %' },
+  { id: 'Employee', label: 'Employee Contribution %' },
 ];
 
 const stickyStyles = [

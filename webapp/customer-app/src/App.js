@@ -16,7 +16,7 @@ import {
 import CustomerTable, { columns } from './components/CustomerTable';
 import CustomerModal from './components/CustomerModal.js';
 
-const API_URL = 'https://jtxm3xb0-5000.use.devtunnels.ms/api/customers';
+const API_URL = 'http://127.0.0.1:5000/api/customers';
 
 function App() {
   const [customers, setCustomers] = useState([]);
