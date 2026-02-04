@@ -1,0 +1,260 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
+import {
+  AppBar,
+  Box,
+  Button,
+  Container,
+  TextField,
+  Toolbar,
+  Typography,
+  Stack,
+  Paper,
+} from '@mui/material';
+import CustomerTable, { columns } from './components/CustomerTable';
+import CustomerModal from './components/CustomerModal.js';
+
+const API_URL = 'https://jtxm3xb0-5000.use.devtunnels.ms/api/customers';
+
+function App() {
+  const [customers, setCustomers] = useState([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentCustomer, setCurrentCustomer] = useState(null);
+  const [searchInput, setSearchInput] = useState('');
+
+  useEffect(() => {
+    fetchCustomers();
+  }, []);
+
+  function openModal(customer) {
+    setCurrentCustomer(customer);
+    setIsModalOpen(true);
+  }
+
+  function fetchCustomers() {
+    fetch(API_URL)
+      .then(response => response.json())
+      .then(data => {
+        if (Array.isArray(data.customers)) {
+          setCustomers(data.customers);
+        } else {
+          console.error('Fetched data is not an array:', data.customers);
+        }
+      })
+      .catch(error => console.error('Error fetching customers:', error));
+  }
+
+  function handleSearchInput(event) {
+    setSearchInput(event.target.value);
+  }
+
+  function filteredCustomers(customers) {
+    return customers.filter(customer => {
+      return Object.keys(customer).some(key =>
+        customer[key] && customer[key].toString().toLowerCase().includes(searchInput.toLowerCase())
+      );
+    });
+  }
+
+  function saveCustomer(currentCustomer) {
+    if (currentCustomer === null) {
+      console.error('currentCustomer is null');
+      return;
+    }
+    if (currentCustomer.Customer_id) {
+      axios.put(`${API_URL}/${currentCustomer.Customer_id}`, currentCustomer)
+        .then(() => {
+          setIsModalOpen(false);
+          fetchCustomers(); // <-- fetch latest data after update
+        })
+        .catch(error => console.error('Error saving customer:', error));
+    } else {
+      axios.post(API_URL, currentCustomer)
+        .then(() => {
+          setIsModalOpen(false);
+          fetchCustomers(); // <-- fetch latest data after create
+        })
+        .catch(error => console.error('Error creating customer:', error));
+    }
+  }
+
+  function deleteCustomer(customer) {
+    axios.delete(`${API_URL}/${customer.Customer_id}`)
+      .then(() => {
+        fetchCustomers();
+      })
+      .catch(error => console.error('Error:', error));
+  }
+
+  function cloneCustomer(customer) {
+    axios.post(`${API_URL}/${customer.Customer_id}/clone`)
+      .then(() => {
+        fetchCustomers();
+      })
+      .catch(error => console.error(`Error cloning customer: ${error}`));
+  }
+
+  function exportToExcel() {
+    // Use columns array to preserve order and labels
+    const cols = columns; // columns imported from CustomerTable.js
+    const dataToExport = filteredCustomers(customers).map(row =>
+      Object.fromEntries(cols.map(col => [col.label, row[col.id] ?? '']))
+    );
+    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
+    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
+    saveAs(data, 'customers.xlsx');
+  }
+
+  function handleFileUpload(event) {
+    if (window.confirm("This action will remove all current rows and replace them with records from the spreadsheet. Do you want to proceed?")) {
+      const file = event.target.files[0];
+      if (!file) {
+        alert("No file selected.");
+        return;
+      }
+
+      console.log('Starting import process...');
+
+      axios.delete(API_URL + '/purge')
+        .then(() => {
+          console.log('Purge successful, reading file...');
+          const reader = new FileReader();
+
+          reader.onload = (e) => {
+            try {
+              const data = new Uint8Array(e.target.result);
+              const workbook = XLSX.read(data, { type: 'array' });
+              const firstSheetName = workbook.SheetNames[0];
+              const worksheet = workbook.Sheets[firstSheetName];
+              let json = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); // defval ensures empty cells are included
+
+              console.log('Raw data from Excel:', json);
+
+              if (!Array.isArray(json) || json.length === 0) {
+                alert("No data found in the Excel file.");
+                return;
+              }
+
+              // Replace spaces with underscores in all keys and trim whitespace
+              json = json.map(row => {
+                const newRow = {};
+                Object.keys(row).forEach(key => {
+                  // Trim whitespace and replace spaces with underscores
+                  const cleanKey = key.trim().replace(/ /g, '_');
+                  newRow[cleanKey] = row[key];
+                });
+                return newRow;
+              });
+
+              console.log('Transformed data:', json);
+
+              const customersWithClientManager = json.map(customer => ({
+                ...customer,
+                client_manager: customer.client_manager || 'Unknown'
+              }));
+
+              console.log(`Uploading ${customersWithClientManager.length} customers...`);
+
+              setCustomers(customersWithClientManager);
+              axios.post(API_URL, customersWithClientManager)
+                .then((response) => {
+                  console.log('Upload successful:', response);
+                  fetchCustomers();
+                  alert(`Successfully imported ${customersWithClientManager.length} customers.`);
+                })
+                .catch(error => {
+                  console.error('Error uploading customers:', error);
+                  alert(`Failed to upload customers: ${error.message}`);
+                });
+            } catch (err) {
+              console.error('Error parsing Excel file:', err);
+              alert("Failed to parse Excel file. Please check the file format.");
+            }
+          };
+
+          reader.onerror = (err) => {
+            console.error('Error reading file:', err);
+            alert("Failed to read file.");
+          };
+
+          reader.readAsArrayBuffer(file);
+        })
+        .catch(error => {
+          console.error('Error purging customers:', error);
+          alert(`Failed to purge existing data: ${error.message}`);
+        });
+    }
+  }
+
+  return (
+    <Box>
+      <AppBar position="static" sx={{ background: 'linear-gradient(to left, #000000, #434343)' }}>
+        <Container maxWidth="xl">
+          <Toolbar sx={{ minHeight: '36px', py: 0, px: 0 }}>
+            <Typography variant="subtitle1" sx={{ flexGrow: 1, fontWeight: 600 }}>
+              Client List
+            </Typography>
+          </Toolbar>
+        </Container>
+      </AppBar>
+      <Box mt={1}>
+        <Container maxWidth="xl">
+          <Paper sx={{ p: 1, mb: 1 }}>
+            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" justifyContent="space-between">
+              <TextField
+                label="Search..."
+                value={searchInput}
+                onChange={handleSearchInput}
+                variant="outlined"
+                size="small"
+                sx={{ width: 300 }}
+              />
+              <Stack direction="row" spacing={1}>
+                <Button variant="contained" color="primary" onClick={exportToExcel} size="small">
+                  Export Excel
+                </Button>
+                <label htmlFor="fileUpload">
+                  <input
+                    type="file"
+                    accept=".xlsx, .xls"
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                    id="fileUpload"
+                  />
+                  <Button variant="contained" component="span" color="secondary" size="small">
+                    Import Excel
+                  </Button>
+                </label>
+              </Stack>
+            </Stack>
+          </Paper>
+          <Box mb={0.5}>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>
+              Total Customers: <b>{filteredCustomers(customers).length}</b>
+            </Typography>
+          </Box>
+          <CustomerTable
+            customers={filteredCustomers(customers)}
+            openModal={openModal}
+            deleteCustomer={deleteCustomer}
+            cloneCustomer={cloneCustomer}
+          />
+        </Container>
+      </Box>
+      <CustomerModal
+        isOpen={isModalOpen}
+        onRequestClose={() => setIsModalOpen(false)}
+        currentCustomer={currentCustomer}
+        setCurrentCustomer={setCurrentCustomer}
+        saveCustomer={saveCustomer}
+      />
+    </Box>
+  );
+}
+
+export default App;

@@ -1,0 +1,36 @@
+.customer-modal-header {
+  position: sticky;
+  top: 0;
+  background: #fff;
+  z-index: 2;
+  border-bottom: 1px solid #eee;
+  padding: 16px 24px;
+}
+
+.customer-modal-header h2 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.customer-modal-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px 24px;
+  background: #fff;
+}
+
+.customer-modal-form {
+  font-size: 9px;
+}
+
+.customer-modal-footer {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid #eee;
+  padding: 12px 24px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+  z-index: 2;
+}

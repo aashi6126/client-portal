@@ -1,0 +1,53 @@
+.customer-table-container {
+  width: 100%;
+  overflow-x: auto;
+  background: #e6f2ff;
+  padding-bottom: 8px;
+}
+
+.customer-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  background-color: #e6f2ff;
+  font-size: 10px;
+}
+
+.customer-table th,
+.customer-table td {
+  border: 1px solid #222;
+  padding: 8px 10px;
+  background: #fff;
+  white-space: nowrap;
+}
+
+.customer-table thead th {
+  background: #b3d8ff;
+  position: sticky;
+  top: 0;
+  z-index: 3;
+}
+
+.sticky-col {
+  position: sticky;
+  left: 0;
+  background: #f8fafc;
+  z-index: 2;
+}
+
+.sticky-col-0 { left: 0; z-index: 4; }
+.sticky-col-1 { left: 90px; }
+.sticky-col-2 { left: 180px; }
+.sticky-col-3 { left: 270px; }
+.sticky-col-4 { left: 360px; }
+
+.action-icons {
+  display: flex;
+  flex-direction: row;
+  gap: 8px;
+}
+
+.no-customers-cell {
+  text-align: center;
+  background: #f8fafc;
+}
