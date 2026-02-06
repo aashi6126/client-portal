@@ -1,0 +1,163 @@
+// FILE: ./components/Dashboard.js
+import React, { useState, useMemo } from 'react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import Paper from '@mui/material/Paper';
+import CustomerTable from './CustomerTable';
+
+const Dashboard = ({ customers, openModal, deleteCustomer, cloneCustomer }) => {
+  const [selectedMonth, setSelectedMonth] = useState(null);
+
+  // Get upcoming renewals (next 12 months from today)
+  const upcomingRenewals = useMemo(() => {
+    const today = new Date();
+    const twelveMonthsFromNow = new Date();
+    twelveMonthsFromNow.setMonth(today.getMonth() + 12);
+
+    return customers.filter(customer => {
+      if (!customer.Renewal_Date) return false;
+      const renewalDate = new Date(customer.Renewal_Date);
+      return renewalDate >= today && renewalDate <= twelveMonthsFromNow;
+    });
+  }, [customers]);
+
+  // Group renewals by month
+  const monthlyData = useMemo(() => {
+    const grouped = {};
+
+    upcomingRenewals.forEach(customer => {
+      const monthKey = customer.Renewal_Date.substring(0, 7); // YYYY-MM
+      if (!grouped[monthKey]) {
+        grouped[monthKey] = {
+          month: monthKey,
+          count: 0,
+          customers: []
+        };
+      }
+      grouped[monthKey].count++;
+      grouped[monthKey].customers.push(customer);
+    });
+
+    // Convert to array and sort by month
+    return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month));
+  }, [upcomingRenewals]);
+
+  // Format month for display (e.g., "Jan 2026")
+  const formatMonth = (monthKey) => {
+    const [year, month] = monthKey.split('-');
+    const date = new Date(year, parseInt(month) - 1);
+    return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+  };
+
+  // Handle bar click
+  const handleBarClick = (data) => {
+    if (selectedMonth === data.month) {
+      setSelectedMonth(null); // Deselect if clicking same month
+    } else {
+      setSelectedMonth(data.month);
+    }
+  };
+
+  // Get filtered customers for selected month
+  const filteredCustomers = useMemo(() => {
+    if (!selectedMonth) return [];
+    const monthData = monthlyData.find(m => m.month === selectedMonth);
+    return monthData ? monthData.customers : [];
+  }, [selectedMonth, monthlyData]);
+
+  return (
+    <Box sx={{ p: 3 }}>
+      <Typography variant="h5" gutterBottom>
+        Renewals Dashboard
+      </Typography>
+
+      <Typography variant="body2" color="text.secondary" gutterBottom>
+        Showing renewals for the next 12 months
+      </Typography>
+
+      {monthlyData.length === 0 ? (
+        <Paper sx={{ p: 3, mt: 2, textAlign: 'center' }}>
+          <Typography variant="body1" color="text.secondary">
+            No renewals found in the next 12 months
+          </Typography>
+        </Paper>
+      ) : (
+        <>
+          {/* Summary Statistics */}
+          <Paper sx={{ p: 2, mt: 2, mb: 3 }}>
+            <Typography variant="body1">
+              <strong>Total Upcoming Renewals:</strong> {upcomingRenewals.length}
+            </Typography>
+          </Paper>
+
+          {/* Bar Chart */}
+          <Paper sx={{ p: 3, mt: 2 }}>
+            <Typography variant="h6" gutterBottom>
+              Renewals by Month
+            </Typography>
+            <ResponsiveContainer width="100%" height={150}>
+              <BarChart data={monthlyData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" />
+                <XAxis
+                  dataKey="month"
+                  tickFormatter={formatMonth}
+                  angle={0}
+                  textAnchor="middle"
+                  height={30}
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis label={{ value: 'Renewals', angle: -90, position: 'insideLeft', style: { fontSize: 11 } }} />
+                <Tooltip
+                  formatter={(value) => [`${value} renewals`, 'Count']}
+                  labelFormatter={formatMonth}
+                />
+                <Bar
+                  dataKey="count"
+                  onClick={handleBarClick}
+                  cursor="pointer"
+                  radius={[8, 8, 0, 0]}
+                >
+                  {monthlyData.map((entry, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={selectedMonth === entry.month ? '#1565c0' : '#1976d2'}
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+            <Typography variant="caption" display="block" sx={{ mt: 1, textAlign: 'center' }}>
+              Click on a bar to view customer details
+            </Typography>
+          </Paper>
+
+          {/* Drill-down Table */}
+          {selectedMonth && (
+            <Box sx={{ mt: 2 }}>
+              <Typography variant="h6" gutterBottom>
+                Renewals for {formatMonth(selectedMonth)}
+              </Typography>
+              <CustomerTable
+                customers={filteredCustomers}
+                openModal={openModal}
+                deleteCustomer={deleteCustomer}
+                cloneCustomer={cloneCustomer}
+              />
+            </Box>
+          )}
+
+          {!selectedMonth && (
+            <Paper sx={{ p: 2, mt: 2, textAlign: 'center' }}>
+              <Typography variant="body2" color="text.secondary">
+                Click on a bar in the chart above to view customer details for that month
+              </Typography>
+            </Paper>
+          )}
+        </>
+      )}
+    </Box>
+  );
+};
+
+export default Dashboard;
