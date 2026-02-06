@@ -1,260 +1,601 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import * as XLSX from 'xlsx';
-import { saveAs } from 'file-saver';
 import {
   AppBar,
   Box,
   Button,
   Container,
-  TextField,
   Toolbar,
   Typography,
-  Stack,
+  Tabs,
+  Tab,
   Paper,
+  Stack,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
+  TextField
 } from '@mui/material';
-import CustomerTable, { columns } from './components/CustomerTable';
-import CustomerModal from './components/CustomerModal.js';
+import AddIcon from '@mui/icons-material/Add';
+import FileDownloadIcon from '@mui/icons-material/FileDownload';
+import FileUploadIcon from '@mui/icons-material/FileUpload';
 
-const API_URL = 'http://127.0.0.1:5000/api/customers';
+// Import new components
+import Dashboard from './components/Dashboard';
+import ClientTable from './components/ClientTable';
+import ClientModal from './components/ClientModal';
+import BenefitsTable from './components/BenefitsTable';
+import BenefitsModal from './components/BenefitsModal';
+import CommercialTable from './components/CommercialTable';
+import CommercialModal from './components/CommercialModal';
 
-function App() {
-  const [customers, setCustomers] = useState([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [currentCustomer, setCurrentCustomer] = useState(null);
-  const [searchInput, setSearchInput] = useState('');
+// API URLs
+const API_CLIENTS = '/api/clients';
+const API_BENEFITS = '/api/benefits';
+const API_COMMERCIAL = '/api/commercial';
 
+function NewApp() {
+  // Tab state
+  const [activeTab, setActiveTab] = useState(0);
+
+  // Data states
+  const [clients, setClients] = useState([]);
+  const [benefits, setBenefits] = useState([]);
+  const [commercial, setCommercial] = useState([]);
+
+  // Modal states for Clients
+  const [clientModalOpen, setClientModalOpen] = useState(false);
+  const [currentClient, setCurrentClient] = useState(null);
+
+  // Modal states for Benefits
+  const [benefitsModalOpen, setBenefitsModalOpen] = useState(false);
+  const [currentBenefit, setCurrentBenefit] = useState(null);
+
+  // Modal states for Commercial
+  const [commercialModalOpen, setCommercialModalOpen] = useState(false);
+  const [currentCommercial, setCurrentCommercial] = useState(null);
+
+  // Delete confirmation dialog
+  const [deleteDialog, setDeleteDialog] = useState({
+    open: false,
+    type: null,
+    item: null
+  });
+
+  // Search states
+  const [clientSearch, setClientSearch] = useState('');
+  const [benefitsSearch, setBenefitsSearch] = useState('');
+  const [commercialSearch, setCommercialSearch] = useState('');
+
+  // Import/Export states
+  const [importing, setImporting] = useState(false);
+  const fileInputRef = useRef(null);
+
+  // Fetch data on mount
   useEffect(() => {
-    fetchCustomers();
+    fetchAllData();
   }, []);
 
-  function openModal(customer) {
-    setCurrentCustomer(customer);
-    setIsModalOpen(true);
-  }
+  // Fetch all data
+  const fetchAllData = () => {
+    fetchClients();
+    fetchBenefits();
+    fetchCommercial();
+  };
 
-  function fetchCustomers() {
-    fetch(API_URL)
-      .then(response => response.json())
-      .then(data => {
-        if (Array.isArray(data.customers)) {
-          setCustomers(data.customers);
-        } else {
-          console.error('Fetched data is not an array:', data.customers);
-        }
+  // ========== CLIENT OPERATIONS ==========
+
+  const fetchClients = () => {
+    axios.get(API_CLIENTS)
+      .then(response => {
+        setClients(response.data.clients || []);
       })
-      .catch(error => console.error('Error fetching customers:', error));
-  }
+      .catch(error => console.error('Error fetching clients:', error));
+  };
 
-  function handleSearchInput(event) {
-    setSearchInput(event.target.value);
-  }
+  const openClientModal = (client = null) => {
+    setCurrentClient(client);
+    setClientModalOpen(true);
+  };
 
-  function filteredCustomers(customers) {
-    return customers.filter(customer => {
-      return Object.keys(customer).some(key =>
-        customer[key] && customer[key].toString().toLowerCase().includes(searchInput.toLowerCase())
-      );
-    });
-  }
-
-  function saveCustomer(currentCustomer) {
-    if (currentCustomer === null) {
-      console.error('currentCustomer is null');
-      return;
-    }
-    if (currentCustomer.Customer_id) {
-      axios.put(`${API_URL}/${currentCustomer.Customer_id}`, currentCustomer)
+  const saveClient = (clientData) => {
+    if (clientData.id) {
+      // Update existing client
+      axios.put(`${API_CLIENTS}/${clientData.id}`, clientData)
         .then(() => {
-          setIsModalOpen(false);
-          fetchCustomers(); // <-- fetch latest data after update
+          setClientModalOpen(false);
+          fetchClients();
         })
-        .catch(error => console.error('Error saving customer:', error));
+        .catch(error => console.error('Error updating client:', error));
     } else {
-      axios.post(API_URL, currentCustomer)
+      // Create new client
+      axios.post(API_CLIENTS, clientData)
         .then(() => {
-          setIsModalOpen(false);
-          fetchCustomers(); // <-- fetch latest data after create
+          setClientModalOpen(false);
+          fetchClients();
         })
-        .catch(error => console.error('Error creating customer:', error));
+        .catch(error => console.error('Error creating client:', error));
     }
-  }
+  };
 
-  function deleteCustomer(customer) {
-    axios.delete(`${API_URL}/${customer.Customer_id}`)
+  const deleteClient = (client) => {
+    setDeleteDialog({ open: true, type: 'client', item: client });
+  };
+
+  const cloneClient = (client) => {
+    axios.post(`${API_CLIENTS}/${client.id}/clone`)
       .then(() => {
-        fetchCustomers();
+        fetchClients();
       })
-      .catch(error => console.error('Error:', error));
-  }
+      .catch(error => console.error('Error cloning client:', error));
+  };
 
-  function cloneCustomer(customer) {
-    axios.post(`${API_URL}/${customer.Customer_id}/clone`)
-      .then(() => {
-        fetchCustomers();
+  // ========== BENEFITS OPERATIONS ==========
+
+  const fetchBenefits = () => {
+    axios.get(API_BENEFITS)
+      .then(response => {
+        setBenefits(response.data.benefits || []);
       })
-      .catch(error => console.error(`Error cloning customer: ${error}`));
-  }
+      .catch(error => console.error('Error fetching benefits:', error));
+  };
 
-  function exportToExcel() {
-    // Use columns array to preserve order and labels
-    const cols = columns; // columns imported from CustomerTable.js
-    const dataToExport = filteredCustomers(customers).map(row =>
-      Object.fromEntries(cols.map(col => [col.label, row[col.id] ?? '']))
-    );
-    const worksheet = XLSX.utils.json_to_sheet(dataToExport);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Customers');
-    const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-    const data = new Blob([excelBuffer], { type: 'application/octet-stream' });
-    saveAs(data, 'customers.xlsx');
-  }
+  const openBenefitsModal = (benefit = null) => {
+    setCurrentBenefit(benefit);
+    setBenefitsModalOpen(true);
+  };
 
-  function handleFileUpload(event) {
-    if (window.confirm("This action will remove all current rows and replace them with records from the spreadsheet. Do you want to proceed?")) {
-      const file = event.target.files[0];
-      if (!file) {
-        alert("No file selected.");
-        return;
-      }
-
-      console.log('Starting import process...');
-
-      axios.delete(API_URL + '/purge')
+  const saveBenefit = (benefitData) => {
+    if (benefitData.id) {
+      // Update existing benefit
+      axios.put(`${API_BENEFITS}/${benefitData.id}`, benefitData)
         .then(() => {
-          console.log('Purge successful, reading file...');
-          const reader = new FileReader();
-
-          reader.onload = (e) => {
-            try {
-              const data = new Uint8Array(e.target.result);
-              const workbook = XLSX.read(data, { type: 'array' });
-              const firstSheetName = workbook.SheetNames[0];
-              const worksheet = workbook.Sheets[firstSheetName];
-              let json = XLSX.utils.sheet_to_json(worksheet, { defval: "" }); // defval ensures empty cells are included
-
-              console.log('Raw data from Excel:', json);
-
-              if (!Array.isArray(json) || json.length === 0) {
-                alert("No data found in the Excel file.");
-                return;
-              }
-
-              // Replace spaces with underscores in all keys and trim whitespace
-              json = json.map(row => {
-                const newRow = {};
-                Object.keys(row).forEach(key => {
-                  // Trim whitespace and replace spaces with underscores
-                  const cleanKey = key.trim().replace(/ /g, '_');
-                  newRow[cleanKey] = row[key];
-                });
-                return newRow;
-              });
-
-              console.log('Transformed data:', json);
-
-              const customersWithClientManager = json.map(customer => ({
-                ...customer,
-                client_manager: customer.client_manager || 'Unknown'
-              }));
-
-              console.log(`Uploading ${customersWithClientManager.length} customers...`);
-
-              setCustomers(customersWithClientManager);
-              axios.post(API_URL, customersWithClientManager)
-                .then((response) => {
-                  console.log('Upload successful:', response);
-                  fetchCustomers();
-                  alert(`Successfully imported ${customersWithClientManager.length} customers.`);
-                })
-                .catch(error => {
-                  console.error('Error uploading customers:', error);
-                  alert(`Failed to upload customers: ${error.message}`);
-                });
-            } catch (err) {
-              console.error('Error parsing Excel file:', err);
-              alert("Failed to parse Excel file. Please check the file format.");
-            }
-          };
-
-          reader.onerror = (err) => {
-            console.error('Error reading file:', err);
-            alert("Failed to read file.");
-          };
-
-          reader.readAsArrayBuffer(file);
+          setBenefitsModalOpen(false);
+          fetchBenefits();
         })
         .catch(error => {
-          console.error('Error purging customers:', error);
-          alert(`Failed to purge existing data: ${error.message}`);
+          console.error('Error updating benefit:', error);
+          alert('Error updating benefit: ' + (error.response?.data?.error || error.message));
+        });
+    } else {
+      // Create new benefit
+      axios.post(API_BENEFITS, benefitData)
+        .then(() => {
+          setBenefitsModalOpen(false);
+          fetchBenefits();
+        })
+        .catch(error => {
+          console.error('Error creating benefit:', error);
+          alert('Error creating benefit: ' + (error.response?.data?.error || error.message));
         });
     }
-  }
+  };
+
+  const deleteBenefit = (benefit) => {
+    setDeleteDialog({ open: true, type: 'benefit', item: benefit });
+  };
+
+  const cloneBenefit = (benefit) => {
+    axios.post(`${API_BENEFITS}/${benefit.id}/clone`)
+      .then(() => {
+        fetchBenefits();
+      })
+      .catch(error => console.error('Error cloning benefit:', error));
+  };
+
+  // ========== COMMERCIAL OPERATIONS ==========
+
+  const fetchCommercial = () => {
+    axios.get(API_COMMERCIAL)
+      .then(response => {
+        setCommercial(response.data.commercial || []);
+      })
+      .catch(error => console.error('Error fetching commercial:', error));
+  };
+
+  const openCommercialModal = (commercialRecord = null) => {
+    setCurrentCommercial(commercialRecord);
+    setCommercialModalOpen(true);
+  };
+
+  const saveCommercial = (commercialData) => {
+    if (commercialData.id) {
+      // Update existing commercial
+      axios.put(`${API_COMMERCIAL}/${commercialData.id}`, commercialData)
+        .then(() => {
+          setCommercialModalOpen(false);
+          fetchCommercial();
+        })
+        .catch(error => console.error('Error updating commercial:', error));
+    } else {
+      // Create new commercial
+      axios.post(API_COMMERCIAL, commercialData)
+        .then(() => {
+          setCommercialModalOpen(false);
+          fetchCommercial();
+        })
+        .catch(error => console.error('Error creating commercial:', error));
+    }
+  };
+
+  const deleteCommercial = (commercialRecord) => {
+    setDeleteDialog({ open: true, type: 'commercial', item: commercialRecord });
+  };
+
+  const cloneCommercial = (commercialRecord) => {
+    axios.post(`${API_COMMERCIAL}/${commercialRecord.id}/clone`)
+      .then(() => {
+        fetchCommercial();
+      })
+      .catch(error => console.error('Error cloning commercial:', error));
+  };
+
+  // ========== DELETE CONFIRMATION ==========
+
+  const confirmDelete = () => {
+    const { type, item } = deleteDialog;
+
+    if (type === 'client') {
+      axios.delete(`${API_CLIENTS}/${item.id}`)
+        .then(() => {
+          fetchClients();
+          // Also refresh benefits and commercial as they may cascade delete
+          fetchBenefits();
+          fetchCommercial();
+        })
+        .catch(error => console.error('Error deleting client:', error));
+    } else if (type === 'benefit') {
+      axios.delete(`${API_BENEFITS}/${item.id}`)
+        .then(() => {
+          fetchBenefits();
+        })
+        .catch(error => console.error('Error deleting benefit:', error));
+    } else if (type === 'commercial') {
+      axios.delete(`${API_COMMERCIAL}/${item.id}`)
+        .then(() => {
+          fetchCommercial();
+        })
+        .catch(error => console.error('Error deleting commercial:', error));
+    }
+
+    setDeleteDialog({ open: false, type: null, item: null });
+  };
+
+  const cancelDelete = () => {
+    setDeleteDialog({ open: false, type: null, item: null });
+  };
+
+  // ========== TAB CHANGE ==========
+
+  const handleTabChange = (event, newValue) => {
+    setActiveTab(newValue);
+  };
+
+  // ========== SEARCH FILTERS ==========
+
+  const filterClients = () => {
+    if (!clientSearch) return clients;
+    return clients.filter(client =>
+      Object.values(client).some(val =>
+        val && val.toString().toLowerCase().includes(clientSearch.toLowerCase())
+      )
+    );
+  };
+
+  const filterBenefits = () => {
+    if (!benefitsSearch) return benefits;
+    return benefits.filter(benefit =>
+      Object.values(benefit).some(val =>
+        val && val.toString().toLowerCase().includes(benefitsSearch.toLowerCase())
+      )
+    );
+  };
+
+  const filterCommercial = () => {
+    if (!commercialSearch) return commercial;
+    return commercial.filter(comm =>
+      Object.values(comm).some(val =>
+        val && val.toString().toLowerCase().includes(commercialSearch.toLowerCase())
+      )
+    );
+  };
+
+  // ========== IMPORT/EXPORT OPERATIONS ==========
+
+  const handleExport = async () => {
+    try {
+      const response = await axios.get('/api/export', {
+        responseType: 'blob'
+      });
+
+      // Create download link
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+
+      // Get filename from response headers or use default
+      const contentDisposition = response.headers['content-disposition'];
+      const filename = contentDisposition
+        ? contentDisposition.split('filename=')[1]?.replace(/"/g, '')
+        : `Client_Data_Export_${new Date().toISOString().slice(0,10)}.xlsx`;
+
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error('Export failed:', error);
+      alert('Export failed. Please try again.');
+    }
+  };
+
+  const handleImportClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    setImporting(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const response = await axios.post('/api/import', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+
+      const { stats } = response.data;
+      let message = 'Import completed!\n\n';
+      message += `Clients: ${stats.clients_created} created, ${stats.clients_updated} updated\n`;
+      message += `Benefits: ${stats.benefits_created} created, ${stats.benefits_updated} updated\n`;
+      message += `Commercial: ${stats.commercial_created} created, ${stats.commercial_updated} updated`;
+
+      if (stats.errors && stats.errors.length > 0) {
+        message += `\n\nWarnings (${stats.errors.length}):\n${stats.errors.slice(0, 5).join('\n')}`;
+        if (stats.errors.length > 5) {
+          message += `\n... and ${stats.errors.length - 5} more`;
+        }
+      }
+
+      alert(message);
+      fetchAllData();
+    } catch (error) {
+      console.error('Import error:', error);
+      alert('Import failed: ' + (error.response?.data?.error || error.message));
+    } finally {
+      setImporting(false);
+      event.target.value = '';  // Reset file input
+    }
+  };
 
   return (
     <Box>
+      {/* Hidden file input for import */}
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileChange}
+        accept=".xlsx,.xls"
+        style={{ display: 'none' }}
+      />
+
+      {/* Header */}
       <AppBar position="static" sx={{ background: 'linear-gradient(to left, #000000, #434343)' }}>
         <Container maxWidth="xl">
-          <Toolbar sx={{ minHeight: '36px', py: 0, px: 0 }}>
-            <Typography variant="subtitle1" sx={{ flexGrow: 1, fontWeight: 600 }}>
-              Client List
+          <Toolbar sx={{ minHeight: '48px', py: 1, px: 0 }}>
+            <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600 }}>
+              Client Portal
             </Typography>
+            <Stack direction="row" spacing={1}>
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<FileUploadIcon />}
+                onClick={handleImportClick}
+                disabled={importing}
+                size="small"
+              >
+                {importing ? 'Importing...' : 'Import'}
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<FileDownloadIcon />}
+                onClick={handleExport}
+                size="small"
+              >
+                Export
+              </Button>
+            </Stack>
           </Toolbar>
         </Container>
       </AppBar>
-      <Box mt={1}>
-        <Container maxWidth="xl">
-          <Paper sx={{ p: 1, mb: 1 }}>
-            <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} alignItems="center" justifyContent="space-between">
+
+      <Container maxWidth="xl">
+        {/* Tabs */}
+        <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
+          <Tabs value={activeTab} onChange={handleTabChange}>
+            <Tab label="Dashboard" />
+            <Tab label="Clients" />
+            <Tab label="Employee Benefits" />
+            <Tab label="Commercial Insurance" />
+          </Tabs>
+        </Box>
+
+        {/* Tab 0: Dashboard */}
+        {activeTab === 0 && (
+          <Dashboard
+            onOpenBenefitsModal={openBenefitsModal}
+            onOpenCommercialModal={openCommercialModal}
+          />
+        )}
+
+        {/* Tab 1: Clients */}
+        {activeTab === 1 && (
+          <Box mt={2}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  Clients ({filterClients().length} of {clients.length})
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => openClientModal()}
+                >
+                  Add Client
+                </Button>
+              </Stack>
               <TextField
-                label="Search..."
-                value={searchInput}
-                onChange={handleSearchInput}
+                label="Search clients..."
+                value={clientSearch}
+                onChange={(e) => setClientSearch(e.target.value)}
                 variant="outlined"
                 size="small"
-                sx={{ width: 300 }}
+                fullWidth
               />
-              <Stack direction="row" spacing={1}>
-                <Button variant="contained" color="primary" onClick={exportToExcel} size="small">
-                  Export Excel
-                </Button>
-                <label htmlFor="fileUpload">
-                  <input
-                    type="file"
-                    accept=".xlsx, .xls"
-                    onChange={handleFileUpload}
-                    style={{ display: 'none' }}
-                    id="fileUpload"
-                  />
-                  <Button variant="contained" component="span" color="secondary" size="small">
-                    Import Excel
-                  </Button>
-                </label>
-              </Stack>
-            </Stack>
-          </Paper>
-          <Box mb={0.5}>
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>
-              Total Customers: <b>{filteredCustomers(customers).length}</b>
-            </Typography>
+            </Paper>
+            <ClientTable
+              clients={filterClients()}
+              onEdit={openClientModal}
+              onDelete={deleteClient}
+              onClone={cloneClient}
+            />
           </Box>
-          <CustomerTable
-            customers={filteredCustomers(customers)}
-            openModal={openModal}
-            deleteCustomer={deleteCustomer}
-            cloneCustomer={cloneCustomer}
-          />
-        </Container>
-      </Box>
-      <CustomerModal
-        isOpen={isModalOpen}
-        onRequestClose={() => setIsModalOpen(false)}
-        currentCustomer={currentCustomer}
-        setCurrentCustomer={setCurrentCustomer}
-        saveCustomer={saveCustomer}
+        )}
+
+        {/* Tab 2: Employee Benefits */}
+        {activeTab === 2 && (
+          <Box mt={2}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  Employee Benefits ({filterBenefits().length} of {benefits.length})
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => openBenefitsModal()}
+                >
+                  Add New Benefits
+                </Button>
+              </Stack>
+              <TextField
+                label="Search benefits..."
+                value={benefitsSearch}
+                onChange={(e) => setBenefitsSearch(e.target.value)}
+                variant="outlined"
+                size="small"
+                fullWidth
+              />
+            </Paper>
+            <BenefitsTable
+              benefits={filterBenefits()}
+              onEdit={openBenefitsModal}
+              onDelete={deleteBenefit}
+              onClone={cloneBenefit}
+            />
+          </Box>
+        )}
+
+        {/* Tab 3: Commercial Insurance */}
+        {activeTab === 3 && (
+          <Box mt={2}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  Commercial Insurance ({filterCommercial().length} of {commercial.length})
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => openCommercialModal()}
+                >
+                  Add New Commercial
+                </Button>
+              </Stack>
+              <TextField
+                label="Search commercial..."
+                value={commercialSearch}
+                onChange={(e) => setCommercialSearch(e.target.value)}
+                variant="outlined"
+                size="small"
+                fullWidth
+              />
+            </Paper>
+            <CommercialTable
+              commercial={filterCommercial()}
+              onEdit={openCommercialModal}
+              onDelete={deleteCommercial}
+              onClone={cloneCommercial}
+            />
+          </Box>
+        )}
+      </Container>
+
+      {/* Modals */}
+      <ClientModal
+        open={clientModalOpen}
+        onClose={() => setClientModalOpen(false)}
+        client={currentClient}
+        onSave={saveClient}
       />
+
+      <BenefitsModal
+        open={benefitsModalOpen}
+        onClose={() => setBenefitsModalOpen(false)}
+        benefit={currentBenefit}
+        onSave={saveBenefit}
+        clients={clients}
+      />
+
+      <CommercialModal
+        open={commercialModalOpen}
+        onClose={() => setCommercialModalOpen(false)}
+        commercial={currentCommercial}
+        onSave={saveCommercial}
+        clients={clients}
+      />
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog
+        open={deleteDialog.open}
+        onClose={cancelDelete}
+      >
+        <DialogTitle>Confirm Delete</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete this {deleteDialog.type}?
+            {deleteDialog.type === 'client' && (
+              <Box sx={{ mt: 2, p: 1, backgroundColor: '#fff3cd', borderRadius: 1 }}>
+                <Typography variant="body2" color="warning.dark">
+                  <strong>Warning:</strong> Deleting this client will also delete all associated Employee Benefits and Commercial Insurance records.
+                </Typography>
+              </Box>
+            )}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={cancelDelete} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={confirmDelete} color="error" variant="contained" autoFocus>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }
 
-export default App;
+export default NewApp;
