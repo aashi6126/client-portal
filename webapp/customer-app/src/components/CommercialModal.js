@@ -31,6 +31,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
     tax_id: '',
     remarks: '',
     status: 'Active',
+    outstanding_item: '',
     // 17 Insurance Products
     general_liability_carrier: '',
     general_liability_limit: '',
@@ -277,6 +278,23 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
               >
                 <MenuItem value="Active">Active</MenuItem>
                 <MenuItem value="Inactive">Inactive</MenuItem>
+              </TextField>
+            </Grid>
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Outstanding Item"
+                value={formData.outstanding_item || ''}
+                onChange={handleChange('outstanding_item')}
+                fullWidth
+                size="small"
+                select
+                InputLabelProps={{ shrink: true }}
+              >
+                <MenuItem value="">None</MenuItem>
+                <MenuItem value="Pending Premium">Pending Premium</MenuItem>
+                <MenuItem value="In Audit">In Audit</MenuItem>
+                <MenuItem value="Pending Cancellation">Pending Cancellation</MenuItem>
+                <MenuItem value="Complete">Complete</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12}>

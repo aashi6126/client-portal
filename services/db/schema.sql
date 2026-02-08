@@ -40,7 +40,6 @@ CREATE TABLE IF NOT EXISTS employee_benefits (
     deductible_accumulation VARCHAR(100),
     previous_carrier VARCHAR(200),
     cobra_carrier VARCHAR(200),
-    employer_contribution VARCHAR(50),
     employee_contribution VARCHAR(50),
 
     -- Dental
@@ -93,6 +92,24 @@ CREATE INDEX idx_employee_benefits_tax_id ON employee_benefits(tax_id);
 CREATE INDEX idx_employee_benefits_renewal_date ON employee_benefits(renewal_date);
 
 -- ============================================================================
+-- BENEFIT PLANS TABLE (Child of Employee Benefits - supports multiple plans)
+-- Covers: Medical, Dental, Vision, Life & AD&D
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS benefit_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    employee_benefit_id INTEGER NOT NULL,
+    plan_type VARCHAR(50) NOT NULL,   -- medical, dental, vision, life_adnd
+    plan_number INTEGER NOT NULL DEFAULT 1,
+    carrier VARCHAR(200),
+    renewal_date DATE,
+
+    FOREIGN KEY (employee_benefit_id) REFERENCES employee_benefits(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_benefit_plans_employee_benefit_id ON benefit_plans(employee_benefit_id);
+CREATE INDEX idx_benefit_plans_plan_type ON benefit_plans(plan_type);
+
+-- ============================================================================
 -- COMMERCIAL INSURANCE TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS commercial_insurance (
@@ -102,6 +119,7 @@ CREATE TABLE IF NOT EXISTS commercial_insurance (
     -- Core fields
     remarks TEXT,
     status VARCHAR(50),
+    outstanding_item VARCHAR(50),
 
     -- 1. Commercial General Liability
     general_liability_carrier VARCHAR(200),

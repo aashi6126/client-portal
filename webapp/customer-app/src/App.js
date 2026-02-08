@@ -21,6 +21,8 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
+import BugReportIcon from '@mui/icons-material/BugReport';
+import MenuItem from '@mui/material/MenuItem';
 
 // Import new components
 import Dashboard from './components/Dashboard';
@@ -72,6 +74,10 @@ function NewApp() {
   // Import/Export states
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Feedback dialog state
+  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  const [feedbackData, setFeedbackData] = useState({ type: 'Bug', subject: '', description: '' });
 
   // Fetch data on mount
   useEffect(() => {
@@ -375,6 +381,18 @@ function NewApp() {
     }
   };
 
+  // ========== FEEDBACK ==========
+
+  const handleFeedbackSubmit = () => {
+    const subject = encodeURIComponent(`[${feedbackData.type}] ${feedbackData.subject}`);
+    const body = encodeURIComponent(
+      `Type: ${feedbackData.type}\nSubject: ${feedbackData.subject}\n\nDescription:\n${feedbackData.description}`
+    );
+    window.location.href = `mailto:aman22@gmail.com,aminkhatri@gmail.com?subject=${subject}&body=${body}`;
+    setFeedbackOpen(false);
+    setFeedbackData({ type: 'Bug', subject: '', description: '' });
+  };
+
   return (
     <Box>
       {/* Hidden file input for import */}
@@ -391,7 +409,7 @@ function NewApp() {
         <Container maxWidth="xl">
           <Toolbar sx={{ minHeight: '48px', py: 1, px: 0 }}>
             <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600 }}>
-              Client Portal
+              Client Hub
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button
@@ -412,6 +430,15 @@ function NewApp() {
                 size="small"
               >
                 Export
+              </Button>
+              <Button
+                variant="outlined"
+                color="inherit"
+                startIcon={<BugReportIcon />}
+                onClick={() => setFeedbackOpen(true)}
+                size="small"
+              >
+                Feedback
               </Button>
             </Stack>
           </Toolbar>
@@ -434,6 +461,7 @@ function NewApp() {
           <Dashboard
             onOpenBenefitsModal={openBenefitsModal}
             onOpenCommercialModal={openCommercialModal}
+            onNavigateToTab={setActiveTab}
           />
         )}
 
@@ -467,7 +495,6 @@ function NewApp() {
               clients={filterClients()}
               onEdit={openClientModal}
               onDelete={deleteClient}
-              onClone={cloneClient}
             />
           </Box>
         )}
@@ -502,7 +529,6 @@ function NewApp() {
               benefits={filterBenefits()}
               onEdit={openBenefitsModal}
               onDelete={deleteBenefit}
-              onClone={cloneBenefit}
             />
           </Box>
         )}
@@ -537,7 +563,6 @@ function NewApp() {
               commercial={filterCommercial()}
               onEdit={openCommercialModal}
               onDelete={deleteCommercial}
-              onClone={cloneCommercial}
             />
           </Box>
         )}
@@ -556,7 +581,7 @@ function NewApp() {
         onClose={() => setBenefitsModalOpen(false)}
         benefit={currentBenefit}
         onSave={saveBenefit}
-        clients={clients}
+        clients={currentBenefit ? clients : clients.filter(c => !benefits.some(b => b.tax_id === c.tax_id))}
       />
 
       <CommercialModal
@@ -564,7 +589,7 @@ function NewApp() {
         onClose={() => setCommercialModalOpen(false)}
         commercial={currentCommercial}
         onSave={saveCommercial}
-        clients={clients}
+        clients={currentCommercial ? clients : clients.filter(c => !commercial.some(cm => cm.tax_id === c.tax_id))}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -591,6 +616,64 @@ function NewApp() {
           </Button>
           <Button onClick={confirmDelete} color="error" variant="contained" autoFocus>
             Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Feedback Dialog */}
+      <Dialog
+        open={feedbackOpen}
+        onClose={() => setFeedbackOpen(false)}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>Submit Feedback</DialogTitle>
+        <DialogContent>
+          <DialogContentText sx={{ mb: 2 }}>
+            Report a bug or request a feature. This will open your email client to send to aman22@gmail.com and aminkhatri@gmail.com.
+          </DialogContentText>
+          <TextField
+            label="Type"
+            select
+            value={feedbackData.type}
+            onChange={(e) => setFeedbackData({ ...feedbackData, type: e.target.value })}
+            fullWidth
+            size="small"
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="Bug">Bug Report</MenuItem>
+            <MenuItem value="Feature Request">Feature Request</MenuItem>
+          </TextField>
+          <TextField
+            label="Subject"
+            value={feedbackData.subject}
+            onChange={(e) => setFeedbackData({ ...feedbackData, subject: e.target.value })}
+            fullWidth
+            size="small"
+            sx={{ mb: 2 }}
+          />
+          <TextField
+            label="Description"
+            value={feedbackData.description}
+            onChange={(e) => setFeedbackData({ ...feedbackData, description: e.target.value })}
+            fullWidth
+            size="small"
+            multiline
+            rows={4}
+            placeholder="Please describe the bug or feature in detail..."
+          />
+        </DialogContent>
+        <DialogActions sx={{ p: 2 }}>
+          <Button onClick={() => setFeedbackOpen(false)} color="inherit">
+            Cancel
+          </Button>
+          <Button
+            onClick={handleFeedbackSubmit}
+            variant="contained"
+            color="primary"
+            disabled={!feedbackData.subject.trim() || !feedbackData.description.trim()}
+          >
+            Send Email
           </Button>
         </DialogActions>
       </Dialog>

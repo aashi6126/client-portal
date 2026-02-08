@@ -14,7 +14,7 @@ fi
 
 # Start API service in background
 echo "📡 Starting API service on http://127.0.0.1:5000..."
-python3 services/api/customer_api.py &
+/opt/anaconda3/bin/python services/api/customer_api.py &
 API_PID=$!
 
 # Wait a moment for API to start

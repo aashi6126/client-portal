@@ -15,7 +15,6 @@ import {
 } from '@mui/material';
 import EditIcon from '@mui/icons-material/Edit';
 import DeleteIcon from '@mui/icons-material/Delete';
-import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 
 /**
  * Reusable DataTable component for displaying tabular data with actions
@@ -25,7 +24,6 @@ import ContentCopyIcon from '@mui/icons-material/ContentCopy';
  * @param {Array} data - Array of data rows
  * @param {Function} onEdit - Callback when edit button is clicked (row) => void
  * @param {Function} onDelete - Callback when delete button is clicked (row) => void
- * @param {Function} onClone - Callback when clone button is clicked (row) => void
  * @param {String} idField - Field name to use as unique identifier (default: 'id')
  */
 const DataTable = ({
@@ -33,11 +31,12 @@ const DataTable = ({
   data = [],
   onEdit,
   onDelete,
-  onClone,
-  idField = 'id'
+  idField = 'id',
+  defaultOrderBy = '',
+  defaultOrder = 'asc'
 }) => {
-  const [orderBy, setOrderBy] = useState('');
-  const [order, setOrder] = useState('asc');
+  const [orderBy, setOrderBy] = useState(defaultOrderBy);
+  const [order, setOrder] = useState(defaultOrder);
 
   // Handle sorting
   const handleRequestSort = (property) => {
@@ -50,9 +49,11 @@ const DataTable = ({
   const sortedData = React.useMemo(() => {
     if (!orderBy) return data;
 
+    const sortColumn = columns.find(c => c.id === orderBy);
+
     return [...data].sort((a, b) => {
-      const aVal = a[orderBy];
-      const bVal = b[orderBy];
+      const aVal = sortColumn?.sortValue ? sortColumn.sortValue(a) : a[orderBy];
+      const bVal = sortColumn?.sortValue ? sortColumn.sortValue(b) : b[orderBy];
 
       if (aVal == null) return 1;
       if (bVal == null) return -1;
@@ -70,7 +71,7 @@ const DataTable = ({
         return bVal < aVal ? -1 : bVal > aVal ? 1 : 0;
       }
     });
-  }, [data, orderBy, order]);
+  }, [data, orderBy, order, columns]);
 
   // Render cell content
   const renderCell = (column, row) => {
@@ -89,7 +90,8 @@ const DataTable = ({
     // Handle dates
     if (column.id.includes('date') || column.id.includes('Date')) {
       try {
-        const date = new Date(value);
+        const str = String(value);
+        const date = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
         if (!isNaN(date.getTime())) {
           return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
         }
@@ -116,6 +118,22 @@ const DataTable = ({
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
+            {/* Actions column (left) */}
+            <TableCell
+              sx={{
+                fontWeight: 'bold',
+                backgroundColor: '#f5f5f5',
+                position: 'sticky',
+                left: 0,
+                zIndex: 3,
+                boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
+                minWidth: 80,
+                whiteSpace: 'nowrap'
+              }}
+            >
+              Actions
+            </TableCell>
+
             {/* Data columns */}
             {columns.map((column) => (
               <TableCell
@@ -124,13 +142,6 @@ const DataTable = ({
                   fontWeight: 'bold',
                   backgroundColor: '#f5f5f5',
                   whiteSpace: 'nowrap',
-                  ...(column.sticky && {
-                    position: 'sticky',
-                    left: 0,
-                    zIndex: 3,
-                    backgroundColor: '#f5f5f5',
-                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
-                  }),
                   minWidth: column.minWidth || 150,
                   maxWidth: column.maxWidth || 300
                 }}
@@ -148,22 +159,6 @@ const DataTable = ({
                 )}
               </TableCell>
             ))}
-
-            {/* Actions column */}
-            <TableCell
-              sx={{
-                fontWeight: 'bold',
-                backgroundColor: '#f5f5f5',
-                position: 'sticky',
-                right: 0,
-                zIndex: 3,
-                boxShadow: '-2px 0 5px rgba(0,0,0,0.1)',
-                minWidth: 100,
-                whiteSpace: 'nowrap'
-              }}
-            >
-              Actions
-            </TableCell>
           </TableRow>
         </TableHead>
 
@@ -185,32 +180,14 @@ const DataTable = ({
                   }
                 }}
               >
-                {/* Data cells */}
-                {columns.map((column) => (
-                  <TableCell
-                    key={column.id}
-                    sx={{
-                      ...(column.sticky && {
-                        position: 'sticky',
-                        left: 0,
-                        zIndex: 1,
-                        backgroundColor: 'white',
-                        boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
-                      })
-                    }}
-                  >
-                    {renderCell(column, row)}
-                  </TableCell>
-                ))}
-
-                {/* Actions cell */}
+                {/* Actions cell (left) */}
                 <TableCell
                   sx={{
                     position: 'sticky',
-                    right: 0,
+                    left: 0,
                     zIndex: 1,
                     backgroundColor: 'white',
-                    boxShadow: '-2px 0 5px rgba(0,0,0,0.1)'
+                    boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
                   }}
                 >
                   <Box sx={{ display: 'flex', gap: 0.5 }}>
@@ -222,17 +199,6 @@ const DataTable = ({
                           color="primary"
                         >
                           <EditIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    )}
-                    {onClone && (
-                      <Tooltip title="Clone">
-                        <IconButton
-                          size="small"
-                          onClick={() => onClone(row)}
-                          color="secondary"
-                        >
-                          <ContentCopyIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
                     )}
@@ -249,6 +215,13 @@ const DataTable = ({
                     )}
                   </Box>
                 </TableCell>
+
+                {/* Data cells */}
+                {columns.map((column) => (
+                  <TableCell key={column.id}>
+                    {renderCell(column, row)}
+                  </TableCell>
+                ))}
               </TableRow>
             ))
           )}

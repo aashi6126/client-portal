@@ -43,7 +43,7 @@ def after_request(response):
 # ===========================================================================
 # DATABASE CONFIGURATION
 # ===========================================================================
-db_uri = os.environ.get('DATABASE_URI', 'sqlite://///Users/aman/workspaces/client-portal/services/customer.db')
+db_uri = os.environ.get('DATABASE_URI', 'sqlite://///Users/amandetail/workspaces/client-portal/client-portal/services/customer.db')
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
@@ -98,6 +98,9 @@ class EmployeeBenefit(db.Model):
     tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
 
     # Core fields
+    status = db.Column(db.String(50))
+    outstanding_item = db.Column(db.String(50))
+    remarks = db.Column(db.Text)
     form_fire_code = db.Column(db.String(100))
     enrollment_poc = db.Column(db.String(200))
     renewal_date = db.Column(db.Date)
@@ -154,14 +157,18 @@ class EmployeeBenefit(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship
+    # Relationships
     client = db.relationship('Client', back_populates='employee_benefits')
+    plans = db.relationship('BenefitPlan', back_populates='employee_benefit', cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
             'id': self.id,
             'tax_id': self.tax_id,
             'client_name': self.client.client_name if self.client else None,
+            'status': self.status,
+            'outstanding_item': self.outstanding_item,
+            'remarks': self.remarks,
             'form_fire_code': self.form_fire_code,
             'enrollment_poc': self.enrollment_poc,
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
@@ -172,7 +179,6 @@ class EmployeeBenefit(db.Model):
             'deductible_accumulation': self.deductible_accumulation,
             'previous_carrier': self.previous_carrier,
             'cobra_carrier': self.cobra_carrier,
-            'employer_contribution': self.employer_contribution,
             'employee_contribution': self.employee_contribution,
             'dental_renewal_date': self.dental_renewal_date.isoformat() if self.dental_renewal_date else None,
             'dental_carrier': self.dental_carrier,
@@ -193,7 +199,44 @@ class EmployeeBenefit(db.Model):
             'hospital_renewal_date': self.hospital_renewal_date.isoformat() if self.hospital_renewal_date else None,
             'hospital_carrier': self.hospital_carrier,
             'voluntary_life_renewal_date': self.voluntary_life_renewal_date.isoformat() if self.voluntary_life_renewal_date else None,
-            'voluntary_life_carrier': self.voluntary_life_carrier
+            'voluntary_life_carrier': self.voluntary_life_carrier,
+            'plans': self._get_plans_dict()
+        }
+
+    def _get_plans_dict(self):
+        """Group child BenefitPlan records by type."""
+        plans_dict = {'medical': [], 'dental': [], 'vision': [], 'life_adnd': []}
+        for plan in (self.plans or []):
+            if plan.plan_type in plans_dict:
+                plans_dict[plan.plan_type].append(plan.to_dict())
+        for pt in plans_dict:
+            plans_dict[pt].sort(key=lambda p: p['plan_number'])
+        return plans_dict
+
+
+MULTI_PLAN_TYPES = ['medical', 'dental', 'vision', 'life_adnd']
+
+
+class BenefitPlan(db.Model):
+    __tablename__ = 'benefit_plans'
+
+    id = db.Column(db.Integer, primary_key=True)
+    employee_benefit_id = db.Column(db.Integer, db.ForeignKey('employee_benefits.id'), nullable=False)
+    plan_type = db.Column(db.String(50), nullable=False)
+    plan_number = db.Column(db.Integer, nullable=False, default=1)
+    carrier = db.Column(db.String(200))
+    renewal_date = db.Column(db.Date)
+
+    # Relationship
+    employee_benefit = db.relationship('EmployeeBenefit', back_populates='plans')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'plan_type': self.plan_type,
+            'plan_number': self.plan_number,
+            'carrier': self.carrier,
+            'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None
         }
 
 
@@ -206,6 +249,7 @@ class CommercialInsurance(db.Model):
     # Core fields
     remarks = db.Column(db.Text)
     status = db.Column(db.String(50))
+    outstanding_item = db.Column(db.String(50))
 
     # 1. Commercial General Liability
     general_liability_carrier = db.Column(db.String(200))
@@ -325,6 +369,7 @@ class CommercialInsurance(db.Model):
             'client_name': self.client.client_name if self.client else None,
             'remarks': self.remarks,
             'status': self.status,
+            'outstanding_item': self.outstanding_item,
             'general_liability_carrier': self.general_liability_carrier,
             'general_liability_limit': self.general_liability_limit,
             'general_liability_premium': format_premium(self.general_liability_premium),
@@ -406,6 +451,48 @@ def parse_date(date_str):
     try:
         return parse(date_str).date()
     except:
+        return None
+
+
+def save_benefit_plans(session, benefit, plans_data):
+    """Save multi-plan child records for a benefit. Deletes existing plans first."""
+    # Delete existing plans for this benefit
+    session.query(BenefitPlan).filter_by(employee_benefit_id=benefit.id).delete()
+    session.flush()
+
+    for plan_type in MULTI_PLAN_TYPES:
+        for idx, plan_info in enumerate(plans_data.get(plan_type, []), 1):
+            carrier = plan_info.get('carrier')
+            renewal = plan_info.get('renewal_date')
+            if carrier or renewal:
+                plan = BenefitPlan(
+                    employee_benefit_id=benefit.id,
+                    plan_type=plan_type,
+                    plan_number=idx,
+                    carrier=carrier,
+                    renewal_date=parse_date(renewal)
+                )
+                session.add(plan)
+
+    # Also update flat fields from first plan for backward compat
+    for plan_type in MULTI_PLAN_TYPES:
+        plans_for_type = plans_data.get(plan_type, [])
+        first = plans_for_type[0] if plans_for_type else {}
+        if plan_type == 'medical':
+            benefit.current_carrier = first.get('carrier') or None
+            benefit.renewal_date = parse_date(first.get('renewal_date'))
+        else:
+            setattr(benefit, f'{plan_type}_carrier', first.get('carrier') or None)
+            setattr(benefit, f'{plan_type}_renewal_date', parse_date(first.get('renewal_date')))
+
+
+def parse_premium(val):
+    """Parse premium value to float, returning None for empty/invalid values."""
+    if val is None or val == '':
+        return None
+    try:
+        return float(val)
+    except (ValueError, TypeError):
         return None
 
 
@@ -610,6 +697,9 @@ def create_benefit():
 
         benefit = EmployeeBenefit(
             tax_id=data.get('tax_id'),
+            status=data.get('status'),
+            outstanding_item=data.get('outstanding_item'),
+            remarks=data.get('remarks'),
             form_fire_code=data.get('form_fire_code'),
             enrollment_poc=data.get('enrollment_poc'),
             renewal_date=parse_date(data.get('renewal_date')),
@@ -620,7 +710,6 @@ def create_benefit():
             deductible_accumulation=data.get('deductible_accumulation'),
             previous_carrier=data.get('previous_carrier'),
             cobra_carrier=data.get('cobra_carrier'),
-            employer_contribution=data.get('employer_contribution'),
             employee_contribution=data.get('employee_contribution'),
             dental_renewal_date=parse_date(data.get('dental_renewal_date')),
             dental_carrier=data.get('dental_carrier'),
@@ -645,7 +734,16 @@ def create_benefit():
         )
 
         session.add(benefit)
+        session.flush()
+
+        # Save multi-plan child records if provided
+        if 'plans' in data:
+            save_benefit_plans(session, benefit, data['plans'])
+
         session.commit()
+
+        # Refresh to load plans relationship
+        session.refresh(benefit)
 
         return jsonify({
             'message': 'Benefit created successfully',
@@ -672,6 +770,9 @@ def update_benefit(benefit_id):
 
         # Update all fields
         benefit.tax_id = data.get('tax_id', benefit.tax_id)
+        benefit.status = data.get('status', benefit.status)
+        benefit.outstanding_item = data.get('outstanding_item', benefit.outstanding_item)
+        benefit.remarks = data.get('remarks', benefit.remarks)
         benefit.form_fire_code = data.get('form_fire_code', benefit.form_fire_code)
         benefit.enrollment_poc = data.get('enrollment_poc', benefit.enrollment_poc)
         benefit.renewal_date = parse_date(data.get('renewal_date')) if 'renewal_date' in data else benefit.renewal_date
@@ -682,7 +783,6 @@ def update_benefit(benefit_id):
         benefit.deductible_accumulation = data.get('deductible_accumulation', benefit.deductible_accumulation)
         benefit.previous_carrier = data.get('previous_carrier', benefit.previous_carrier)
         benefit.cobra_carrier = data.get('cobra_carrier', benefit.cobra_carrier)
-        benefit.employer_contribution = data.get('employer_contribution', benefit.employer_contribution)
         benefit.employee_contribution = data.get('employee_contribution', benefit.employee_contribution)
 
         # Update benefit plans
@@ -727,7 +827,14 @@ def update_benefit(benefit_id):
         if 'voluntary_life_carrier' in data:
             benefit.voluntary_life_carrier = data.get('voluntary_life_carrier')
 
+        # Save multi-plan child records if provided
+        if 'plans' in data:
+            save_benefit_plans(session, benefit, data['plans'])
+
         session.commit()
+
+        # Refresh to load updated plans relationship
+        session.refresh(benefit)
 
         return jsonify({
             'message': 'Benefit updated successfully',
@@ -773,6 +880,9 @@ def clone_benefit(benefit_id):
 
         new_benefit = EmployeeBenefit(
             tax_id=original.tax_id,
+            status=original.status,
+            outstanding_item=original.outstanding_item,
+            remarks=original.remarks,
             form_fire_code=original.form_fire_code,
             enrollment_poc=original.enrollment_poc,
             renewal_date=original.renewal_date,
@@ -783,7 +893,6 @@ def clone_benefit(benefit_id):
             deductible_accumulation=original.deductible_accumulation,
             previous_carrier=original.previous_carrier,
             cobra_carrier=original.cobra_carrier,
-            employer_contribution=original.employer_contribution,
             employee_contribution=original.employee_contribution,
             dental_renewal_date=original.dental_renewal_date,
             dental_carrier=original.dental_carrier,
@@ -808,7 +917,22 @@ def clone_benefit(benefit_id):
         )
 
         session.add(new_benefit)
+        session.flush()
+
+        # Clone child BenefitPlan records
+        for plan in original.plans:
+            new_plan = BenefitPlan(
+                employee_benefit_id=new_benefit.id,
+                plan_type=plan.plan_type,
+                plan_number=plan.plan_number,
+                carrier=plan.carrier,
+                renewal_date=plan.renewal_date
+            )
+            session.add(new_plan)
+
         session.commit()
+
+        session.refresh(new_benefit)
 
         return jsonify({
             'message': 'Benefit cloned successfully',
@@ -872,90 +996,91 @@ def create_commercial():
             tax_id=data.get('tax_id'),
             remarks=data.get('remarks'),
             status=data.get('status'),
+            outstanding_item=data.get('outstanding_item'),
             # General Liability
-            general_liability_carrier=data.get('general_liability_carrier'),
-            general_liability_limit=data.get('general_liability_limit'),
-            general_liability_premium=data.get('general_liability_premium'),
+            general_liability_carrier=data.get('general_liability_carrier') or None,
+            general_liability_limit=data.get('general_liability_limit') or None,
+            general_liability_premium=parse_premium(data.get('general_liability_premium')),
             general_liability_renewal_date=parse_date(data.get('general_liability_renewal_date')),
             # Property
-            property_carrier=data.get('property_carrier'),
-            property_limit=data.get('property_limit'),
-            property_premium=data.get('property_premium'),
+            property_carrier=data.get('property_carrier') or None,
+            property_limit=data.get('property_limit') or None,
+            property_premium=parse_premium(data.get('property_premium')),
             property_renewal_date=parse_date(data.get('property_renewal_date')),
             # BOP
-            bop_carrier=data.get('bop_carrier'),
-            bop_limit=data.get('bop_limit'),
-            bop_premium=data.get('bop_premium'),
+            bop_carrier=data.get('bop_carrier') or None,
+            bop_limit=data.get('bop_limit') or None,
+            bop_premium=parse_premium(data.get('bop_premium')),
             bop_renewal_date=parse_date(data.get('bop_renewal_date')),
             # Umbrella
-            umbrella_carrier=data.get('umbrella_carrier'),
-            umbrella_limit=data.get('umbrella_limit'),
-            umbrella_premium=data.get('umbrella_premium'),
+            umbrella_carrier=data.get('umbrella_carrier') or None,
+            umbrella_limit=data.get('umbrella_limit') or None,
+            umbrella_premium=parse_premium(data.get('umbrella_premium')),
             umbrella_renewal_date=parse_date(data.get('umbrella_renewal_date')),
             # Workers Comp
-            workers_comp_carrier=data.get('workers_comp_carrier'),
-            workers_comp_limit=data.get('workers_comp_limit'),
-            workers_comp_premium=data.get('workers_comp_premium'),
+            workers_comp_carrier=data.get('workers_comp_carrier') or None,
+            workers_comp_limit=data.get('workers_comp_limit') or None,
+            workers_comp_premium=parse_premium(data.get('workers_comp_premium')),
             workers_comp_renewal_date=parse_date(data.get('workers_comp_renewal_date')),
             # Professional E&O
-            professional_eo_carrier=data.get('professional_eo_carrier'),
-            professional_eo_limit=data.get('professional_eo_limit'),
-            professional_eo_premium=data.get('professional_eo_premium'),
+            professional_eo_carrier=data.get('professional_eo_carrier') or None,
+            professional_eo_limit=data.get('professional_eo_limit') or None,
+            professional_eo_premium=parse_premium(data.get('professional_eo_premium')),
             professional_eo_renewal_date=parse_date(data.get('professional_eo_renewal_date')),
             # Cyber
-            cyber_carrier=data.get('cyber_carrier'),
-            cyber_limit=data.get('cyber_limit'),
-            cyber_premium=data.get('cyber_premium'),
+            cyber_carrier=data.get('cyber_carrier') or None,
+            cyber_limit=data.get('cyber_limit') or None,
+            cyber_premium=parse_premium(data.get('cyber_premium')),
             cyber_renewal_date=parse_date(data.get('cyber_renewal_date')),
             # Auto
-            auto_carrier=data.get('auto_carrier'),
-            auto_limit=data.get('auto_limit'),
-            auto_premium=data.get('auto_premium'),
+            auto_carrier=data.get('auto_carrier') or None,
+            auto_limit=data.get('auto_limit') or None,
+            auto_premium=parse_premium(data.get('auto_premium')),
             auto_renewal_date=parse_date(data.get('auto_renewal_date')),
             # EPLI
-            epli_carrier=data.get('epli_carrier'),
-            epli_limit=data.get('epli_limit'),
-            epli_premium=data.get('epli_premium'),
+            epli_carrier=data.get('epli_carrier') or None,
+            epli_limit=data.get('epli_limit') or None,
+            epli_premium=parse_premium(data.get('epli_premium')),
             epli_renewal_date=parse_date(data.get('epli_renewal_date')),
             # NYDBL
-            nydbl_carrier=data.get('nydbl_carrier'),
-            nydbl_limit=data.get('nydbl_limit'),
-            nydbl_premium=data.get('nydbl_premium'),
+            nydbl_carrier=data.get('nydbl_carrier') or None,
+            nydbl_limit=data.get('nydbl_limit') or None,
+            nydbl_premium=parse_premium(data.get('nydbl_premium')),
             nydbl_renewal_date=parse_date(data.get('nydbl_renewal_date')),
             # Surety
-            surety_carrier=data.get('surety_carrier'),
-            surety_limit=data.get('surety_limit'),
-            surety_premium=data.get('surety_premium'),
+            surety_carrier=data.get('surety_carrier') or None,
+            surety_limit=data.get('surety_limit') or None,
+            surety_premium=parse_premium(data.get('surety_premium')),
             surety_renewal_date=parse_date(data.get('surety_renewal_date')),
             # Product Liability
-            product_liability_carrier=data.get('product_liability_carrier'),
-            product_liability_limit=data.get('product_liability_limit'),
-            product_liability_premium=data.get('product_liability_premium'),
+            product_liability_carrier=data.get('product_liability_carrier') or None,
+            product_liability_limit=data.get('product_liability_limit') or None,
+            product_liability_premium=parse_premium(data.get('product_liability_premium')),
             product_liability_renewal_date=parse_date(data.get('product_liability_renewal_date')),
             # Flood
-            flood_carrier=data.get('flood_carrier'),
-            flood_limit=data.get('flood_limit'),
-            flood_premium=data.get('flood_premium'),
+            flood_carrier=data.get('flood_carrier') or None,
+            flood_limit=data.get('flood_limit') or None,
+            flood_premium=parse_premium(data.get('flood_premium')),
             flood_renewal_date=parse_date(data.get('flood_renewal_date')),
             # Crime
-            crime_carrier=data.get('crime_carrier'),
-            crime_limit=data.get('crime_limit'),
-            crime_premium=data.get('crime_premium'),
+            crime_carrier=data.get('crime_carrier') or None,
+            crime_limit=data.get('crime_limit') or None,
+            crime_premium=parse_premium(data.get('crime_premium')),
             crime_renewal_date=parse_date(data.get('crime_renewal_date')),
             # Directors & Officers
-            directors_officers_carrier=data.get('directors_officers_carrier'),
-            directors_officers_limit=data.get('directors_officers_limit'),
-            directors_officers_premium=data.get('directors_officers_premium'),
+            directors_officers_carrier=data.get('directors_officers_carrier') or None,
+            directors_officers_limit=data.get('directors_officers_limit') or None,
+            directors_officers_premium=parse_premium(data.get('directors_officers_premium')),
             directors_officers_renewal_date=parse_date(data.get('directors_officers_renewal_date')),
             # Fiduciary
-            fiduciary_carrier=data.get('fiduciary_carrier'),
-            fiduciary_limit=data.get('fiduciary_limit'),
-            fiduciary_premium=data.get('fiduciary_premium'),
+            fiduciary_carrier=data.get('fiduciary_carrier') or None,
+            fiduciary_limit=data.get('fiduciary_limit') or None,
+            fiduciary_premium=parse_premium(data.get('fiduciary_premium')),
             fiduciary_renewal_date=parse_date(data.get('fiduciary_renewal_date')),
             # Inland Marine
-            inland_marine_carrier=data.get('inland_marine_carrier'),
-            inland_marine_limit=data.get('inland_marine_limit'),
-            inland_marine_premium=data.get('inland_marine_premium'),
+            inland_marine_carrier=data.get('inland_marine_carrier') or None,
+            inland_marine_limit=data.get('inland_marine_limit') or None,
+            inland_marine_premium=parse_premium(data.get('inland_marine_premium')),
             inland_marine_renewal_date=parse_date(data.get('inland_marine_renewal_date'))
         )
 
@@ -989,6 +1114,7 @@ def update_commercial(commercial_id):
         commercial.tax_id = data.get('tax_id', commercial.tax_id)
         commercial.remarks = data.get('remarks', commercial.remarks)
         commercial.status = data.get('status', commercial.status)
+        commercial.outstanding_item = data.get('outstanding_item', commercial.outstanding_item)
 
         # Update all insurance products
         for product in ['general_liability', 'property', 'bop', 'umbrella', 'workers_comp',
@@ -996,11 +1122,11 @@ def update_commercial(commercial_id):
                        'product_liability', 'flood', 'crime', 'directors_officers',
                        'fiduciary', 'inland_marine']:
             if f'{product}_carrier' in data:
-                setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier'))
+                setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             if f'{product}_limit' in data:
-                setattr(commercial, f'{product}_limit', data.get(f'{product}_limit'))
+                setattr(commercial, f'{product}_limit', data.get(f'{product}_limit') or None)
             if f'{product}_premium' in data:
-                setattr(commercial, f'{product}_premium', data.get(f'{product}_premium'))
+                setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
             if f'{product}_renewal_date' in data:
                 setattr(commercial, f'{product}_renewal_date', parse_date(data.get(f'{product}_renewal_date')))
 
@@ -1052,6 +1178,7 @@ def clone_commercial(commercial_id):
             tax_id=original.tax_id,
             remarks=original.remarks,
             status=original.status,
+            outstanding_item=original.outstanding_item,
             # Copy all product fields
             general_liability_carrier=original.general_liability_carrier,
             general_liability_limit=original.general_liability_limit,
@@ -1153,14 +1280,25 @@ def get_dashboard_renewals():
         renewals = []
 
         # Get employee benefits renewals
+        multi_plan_type_names = {'medical': 'Medical', 'dental': 'Dental', 'vision': 'Vision', 'life_adnd': 'Life & AD&D'}
         benefits = session.query(EmployeeBenefit).all()
         for benefit in benefits:
-            # Check all renewal date fields
-            renewal_fields = [
-                ('renewal_date', 'Medical'),
-                ('dental_renewal_date', 'Dental'),
-                ('vision_renewal_date', 'Vision'),
-                ('life_adnd_renewal_date', 'Life & AD&D'),
+            # Multi-plan types: read from benefit_plans child table
+            for plan in benefit.plans:
+                if plan.renewal_date and today <= plan.renewal_date <= twelve_months:
+                    type_name = multi_plan_type_names.get(plan.plan_type, plan.plan_type)
+                    label = f"{type_name} Plan {plan.plan_number}" if plan.plan_number > 1 else type_name
+                    renewals.append({
+                        'type': 'benefits',
+                        'policy_type': label,
+                        'renewal_date': plan.renewal_date.isoformat(),
+                        'client_name': benefit.client.client_name if benefit.client else None,
+                        'tax_id': benefit.tax_id,
+                        'carrier': plan.carrier
+                    })
+
+            # Single-plan types: read from flat fields
+            single_plan_fields = [
                 ('ltd_renewal_date', 'LTD'),
                 ('std_renewal_date', 'STD'),
                 ('k401_renewal_date', '401K'),
@@ -1170,15 +1308,10 @@ def get_dashboard_renewals():
                 ('voluntary_life_renewal_date', 'Voluntary Life')
             ]
 
-            for field_name, policy_type in renewal_fields:
+            for field_name, policy_type in single_plan_fields:
                 renewal_date = getattr(benefit, field_name)
                 if renewal_date and today <= renewal_date <= twelve_months:
-                    # Get carrier field name - special case for Medical which uses 'current_carrier'
-                    if field_name == 'renewal_date':
-                        carrier = benefit.current_carrier
-                    else:
-                        carrier = getattr(benefit, field_name.replace('_renewal_date', '_carrier'), None)
-
+                    carrier = getattr(benefit, field_name.replace('_renewal_date', '_carrier'), None)
                     renewals.append({
                         'type': 'benefits',
                         'policy_type': policy_type,
@@ -1334,22 +1467,75 @@ def export_to_excel():
         # ========== EMPLOYEE BENEFITS SHEET ==========
         ws_benefits = wb.create_sheet("Employee Benefits")
 
-        # Row 1: Section headers
-        benefit_sections = [
-            (1, 2, ''),
-            (3, 13, 'MEDICAL PLANS'),
-            (14, 15, 'DENTAL PLANS'),
-            (16, 17, 'VISION PLANS'),
-            (18, 19, 'Life & AD&D PLANS'),
-            (20, 21, 'LTD PLANS'),
-            (22, 23, 'STD PLANS'),
-            (24, 25, '401K PLANS'),
-            (26, 27, 'CRITICAL ILLNESS PLANS'),
-            (28, 29, 'ACCIDENT PLANS'),
-            (30, 31, 'HOSPITAL PLANS'),
-            (32, 33, 'VOLUNTARY LIFE PLANS'),
-            (34, 35, '')
+        # Load benefits and determine max plan counts for dynamic columns
+        benefits = session.query(EmployeeBenefit).all()
+
+        multi_plan_defs = [
+            ('medical', 'MEDICAL'),
+            ('dental', 'DENTAL'),
+            ('vision', 'VISION'),
+            ('life_adnd', 'Life & AD&D')
         ]
+
+        # Determine max number of plans per type across all benefits
+        max_plans = {}
+        for plan_type, _ in multi_plan_defs:
+            max_count = 1  # At least 1 column per type
+            for benefit in benefits:
+                count = len([p for p in benefit.plans if p.plan_type == plan_type])
+                if count > max_count:
+                    max_count = count
+            max_plans[plan_type] = max_count
+
+        # Build dynamic headers and section spans
+        # Fixed columns: Tax ID, Client Name, Status, Outstanding Item, Remarks (cols 1-5)
+        # Medical global fields: Form Fire Code, Enrollment POC, Other Broker, Funding,
+        #   # of Emp at renewal, Waiting Period, Deductible Accumulation, Previous Carrier, Cobra Administrator (9 cols)
+        # Then dynamic multi-plan columns (carrier + renewal per plan)
+        # Then single-plan types (7 types x 2 cols = 14 cols)
+        # Then 1095 (2 cols)
+
+        benefit_headers = ['Tax ID', 'Client Name ', 'Status', 'Outstanding Item', 'Remarks',
+                           'Form Fire Code', 'Enrollment POC', 'Other Broker', 'Funding',
+                           '# of Emp at renewal', 'Waiting Period', 'Deductible Accumulation',
+                           'Previous Carrier', 'Cobra Administrator']
+        # Track col position (1-based) — after fixed cols
+        col_pos = len(benefit_headers) + 1  # Next col to use
+
+        benefit_sections = [(1, 5, ''), (6, 14, 'MEDICAL GLOBAL')]
+
+        # Multi-plan type dynamic columns
+        multi_plan_col_map = {}  # plan_type -> start_col (for data writing)
+        for plan_type, label in multi_plan_defs:
+            n = max_plans[plan_type]
+            start = col_pos
+            for i in range(1, n + 1):
+                suffix = f' {i}' if n > 1 else ''
+                benefit_headers.append(f'{label} Carrier{suffix}')
+                benefit_headers.append(f'{label} Renewal Date{suffix}')
+            multi_plan_col_map[plan_type] = start
+            end = col_pos + n * 2 - 1
+            benefit_sections.append((start, end, f'{label} PLANS'))
+            col_pos += n * 2
+
+        # Single-plan types
+        single_plan_types = [
+            ('ltd', 'LTD'), ('std', 'STD'), ('k401', '401K'),
+            ('critical_illness', 'Critical Illness'), ('accident', 'Accident'),
+            ('hospital', 'Hospital'), ('voluntary_life', 'Voluntary Life')
+        ]
+        single_plan_col_start = col_pos
+        for prefix, label in single_plan_types:
+            benefit_headers.append(f'{label} Renewal Date')
+            benefit_headers.append(f'{label} Carrier')
+            benefit_sections.append((col_pos, col_pos + 1, f'{label.upper()} PLANS'))
+            col_pos += 2
+
+        # 1095
+        benefit_headers.extend(['Employer Contribution %', 'Employee Contribution %'])
+        benefit_sections.append((col_pos, col_pos + 1, '1095'))
+
+        # Write section headers (Row 1)
         for start_col, end_col, title in benefit_sections:
             if title:
                 if start_col != end_col:
@@ -1358,90 +1544,76 @@ def export_to_excel():
                 cell.font = section_font
                 cell.fill = section_fill
 
-        # Row 2: Column headers
-        benefit_headers = [
-            'Tax ID', 'Client Name ', 'Form Fire Code', 'Enrollment POC', 'Renewal Date',
-            'Other Broker', 'Funding', 'Current Carrier', '# of Emp at renewal', 'Waiting Period',
-            'Deductible Accumulation', 'Previous Carrier', 'Cobra Administrator',
-            'Dental Renewal Date', 'Dental Carrier',
-            'Vision Renewal Date', 'Vision Carrier',
-            'Life & AD&D Renewal Date', 'Life & AD&D Carrier',
-            'LTD Renewal Date', 'LTD Carrier',
-            'STD Renewal Date', 'STD Carrier',
-            '401K Renewal Date', '401K Carrier',
-            'Critical Illness Renewal Date', 'Critical Illness Carrier',
-            'Accident Renewal Date', 'Accident Carrier',
-            'Hospital Renewal Date', 'Hospital Carrier',
-            'Voluntary Life Renewal Date', 'Voluntary Life Carrier',
-            'Employer Contribution %', 'Employee Contribution %'
-        ]
+        # Write column headers (Row 2)
         for col, header in enumerate(benefit_headers, 1):
             cell = ws_benefits.cell(row=2, column=col, value=header)
             cell.font = header_font
 
-        # Benefits data
-        benefits = session.query(EmployeeBenefit).all()
+        # Write benefits data
         for row_idx, benefit in enumerate(benefits, 3):
             client_name = benefit.client.client_name if benefit.client else None
-            ws_benefits.cell(row=row_idx, column=1, value=benefit.tax_id)
-            ws_benefits.cell(row=row_idx, column=2, value=client_name)
-            ws_benefits.cell(row=row_idx, column=3, value=benefit.form_fire_code)
-            ws_benefits.cell(row=row_idx, column=4, value=benefit.enrollment_poc)
-            ws_benefits.cell(row=row_idx, column=5, value=benefit.renewal_date)
-            ws_benefits.cell(row=row_idx, column=6, value='None')  # Other Broker - not in model
-            ws_benefits.cell(row=row_idx, column=7, value=benefit.funding)
-            ws_benefits.cell(row=row_idx, column=8, value=benefit.current_carrier)
-            ws_benefits.cell(row=row_idx, column=9, value=benefit.num_employees_at_renewal)
-            ws_benefits.cell(row=row_idx, column=10, value=benefit.waiting_period)
-            ws_benefits.cell(row=row_idx, column=11, value=benefit.deductible_accumulation)
-            ws_benefits.cell(row=row_idx, column=12, value=benefit.previous_carrier)
-            ws_benefits.cell(row=row_idx, column=13, value=benefit.cobra_carrier)
-            ws_benefits.cell(row=row_idx, column=14, value=benefit.dental_renewal_date)
-            ws_benefits.cell(row=row_idx, column=15, value=benefit.dental_carrier)
-            ws_benefits.cell(row=row_idx, column=16, value=benefit.vision_renewal_date)
-            ws_benefits.cell(row=row_idx, column=17, value=benefit.vision_carrier)
-            ws_benefits.cell(row=row_idx, column=18, value=benefit.life_adnd_renewal_date)
-            ws_benefits.cell(row=row_idx, column=19, value=benefit.life_adnd_carrier)
-            ws_benefits.cell(row=row_idx, column=20, value=benefit.ltd_renewal_date)
-            ws_benefits.cell(row=row_idx, column=21, value=benefit.ltd_carrier)
-            ws_benefits.cell(row=row_idx, column=22, value=benefit.std_renewal_date)
-            ws_benefits.cell(row=row_idx, column=23, value=benefit.std_carrier)
-            ws_benefits.cell(row=row_idx, column=24, value=benefit.k401_renewal_date)
-            ws_benefits.cell(row=row_idx, column=25, value=benefit.k401_carrier)
-            ws_benefits.cell(row=row_idx, column=26, value=benefit.critical_illness_renewal_date)
-            ws_benefits.cell(row=row_idx, column=27, value=benefit.critical_illness_carrier)
-            ws_benefits.cell(row=row_idx, column=28, value=benefit.accident_renewal_date)
-            ws_benefits.cell(row=row_idx, column=29, value=benefit.accident_carrier)
-            ws_benefits.cell(row=row_idx, column=30, value=benefit.hospital_renewal_date)
-            ws_benefits.cell(row=row_idx, column=31, value=benefit.hospital_carrier)
-            ws_benefits.cell(row=row_idx, column=32, value=benefit.voluntary_life_renewal_date)
-            ws_benefits.cell(row=row_idx, column=33, value=benefit.voluntary_life_carrier)
-            ws_benefits.cell(row=row_idx, column=34, value=benefit.employer_contribution)
-            ws_benefits.cell(row=row_idx, column=35, value=benefit.employee_contribution)
+            c = 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.tax_id); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=client_name); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.status); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.outstanding_item); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.remarks); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.form_fire_code); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.enrollment_poc); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value='None'); c += 1  # Other Broker
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.funding); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.num_employees_at_renewal); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.waiting_period); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.deductible_accumulation); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.previous_carrier); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.cobra_carrier); c += 1
+
+            # Multi-plan types: write dynamic columns
+            plans_by_type = {}
+            for plan in benefit.plans:
+                plans_by_type.setdefault(plan.plan_type, []).append(plan)
+            for plan_type, _ in multi_plan_defs:
+                type_plans = sorted(plans_by_type.get(plan_type, []), key=lambda p: p.plan_number)
+                start = multi_plan_col_map[plan_type]
+                for i in range(max_plans[plan_type]):
+                    if i < len(type_plans):
+                        ws_benefits.cell(row=row_idx, column=start + i * 2, value=type_plans[i].carrier)
+                        ws_benefits.cell(row=row_idx, column=start + i * 2 + 1, value=type_plans[i].renewal_date)
+                    # else leave blank
+
+            # Single-plan types
+            sc = single_plan_col_start
+            for prefix, label in single_plan_types:
+                ws_benefits.cell(row=row_idx, column=sc, value=getattr(benefit, f'{prefix}_renewal_date'))
+                ws_benefits.cell(row=row_idx, column=sc + 1, value=getattr(benefit, f'{prefix}_carrier'))
+                sc += 2
+
+            # 1095
+            ws_benefits.cell(row=row_idx, column=sc, value=benefit.employee_contribution)
 
         # ========== COMMERCIAL SHEET ==========
         ws_commercial = wb.create_sheet("Commercial")
 
         # Row 1: Section headers for each insurance type
         commercial_sections = [
-            (1, 4, ''),  # Tax ID, Client Name, Remarks, Status
-            (5, 8, 'Commercial General Liability'),
-            (9, 12, 'Commercial Property'),
-            (13, 16, 'Business Owners Policy'),
-            (17, 20, 'Umbrella Liability'),
-            (21, 24, 'Workers Compensation'),
-            (25, 28, 'Professional or E&O'),
-            (29, 32, 'Cyber Liability'),
-            (33, 36, 'Commercial Auto'),
-            (37, 40, 'EPLI'),
-            (41, 44, 'NYDBL'),
-            (45, 48, 'Surety Bond'),
-            (49, 52, 'Product Liability'),
-            (53, 56, 'Flood'),
-            (57, 60, 'Crime or Fidelity Bond'),
-            (61, 64, 'Directors & Officers'),
-            (65, 68, 'Fiduciary Bond'),
-            (69, 72, 'Inland Marine')
+            (1, 5, ''),  # Tax ID, Client Name, Remarks, Status, Outstanding Item
+            (6, 9, 'Commercial General Liability'),
+            (10, 13, 'Commercial Property'),
+            (14, 17, 'Business Owners Policy'),
+            (18, 21, 'Umbrella Liability'),
+            (22, 25, 'Workers Compensation'),
+            (26, 29, 'Professional or E&O'),
+            (30, 33, 'Cyber Liability'),
+            (34, 37, 'Commercial Auto'),
+            (38, 41, 'EPLI'),
+            (42, 45, 'NYDBL'),
+            (46, 49, 'Surety Bond'),
+            (50, 53, 'Product Liability'),
+            (54, 57, 'Flood'),
+            (58, 61, 'Crime or Fidelity Bond'),
+            (62, 65, 'Directors & Officers'),
+            (66, 69, 'Fiduciary Bond'),
+            (70, 73, 'Inland Marine')
         ]
         for start_col, end_col, title in commercial_sections:
             if title:
@@ -1451,7 +1623,7 @@ def export_to_excel():
                 cell.fill = section_fill
 
         # Row 2: Column headers
-        commercial_headers = ['Tax ID', 'Client Name ', ' Remarks ', ' Status ']
+        commercial_headers = ['Tax ID', 'Client Name ', ' Remarks ', ' Status ', 'Outstanding Item']
         for _ in range(17):  # 17 insurance types
             commercial_headers.extend(['Carrier', 'Limit', 'Premium', 'Renewal Date'])
 
@@ -1474,8 +1646,9 @@ def export_to_excel():
             ws_commercial.cell(row=row_idx, column=2, value=client_name)
             ws_commercial.cell(row=row_idx, column=3, value=comm.remarks)
             ws_commercial.cell(row=row_idx, column=4, value=comm.status)
+            ws_commercial.cell(row=row_idx, column=5, value=comm.outstanding_item)
 
-            col = 5
+            col = 6
             for product in insurance_products:
                 carrier = getattr(comm, f'{product}_carrier', None)
                 limit_val = getattr(comm, f'{product}_limit', None)
@@ -1583,15 +1756,71 @@ def import_from_excel():
         # ========== IMPORT EMPLOYEE BENEFITS ==========
         if 'Employee Benefits' in wb.sheetnames:
             ws_benefits = wb['Employee Benefits']
+
+            # Read headers from row 2 to detect multi-plan columns dynamically
+            headers = []
+            for cell in ws_benefits[2]:
+                headers.append(str(cell.value).strip() if cell.value else '')
+
+            # Detect multi-plan column positions by header pattern
+            import re
+            multi_plan_header_map = {
+                'medical': 'MEDICAL',
+                'dental': 'DENTAL',
+                'vision': 'VISION',
+                'life_adnd': 'Life & AD&D'
+            }
+
+            # Find column indices for each multi-plan type (carrier/renewal date pairs)
+            multi_plan_cols = {}  # plan_type -> [(carrier_col, renewal_col), ...]
+            for plan_type, label in multi_plan_header_map.items():
+                cols = []
+                for i, h in enumerate(headers):
+                    if h and label.upper() in h.upper() and 'CARRIER' in h.upper():
+                        # Find the corresponding renewal date column (should be next)
+                        renewal_col = i + 1 if i + 1 < len(headers) and 'RENEWAL' in headers[i + 1].upper() else None
+                        cols.append((i, renewal_col))
+                multi_plan_cols[plan_type] = cols
+
+            # Find single-plan type columns by header
+            single_plan_col_map = {}  # prefix -> (renewal_col, carrier_col)
+            single_plan_labels = {
+                'ltd': 'LTD', 'std': 'STD', 'k401': '401K',
+                'critical_illness': 'Critical Illness', 'accident': 'Accident',
+                'hospital': 'Hospital', 'voluntary_life': 'Voluntary Life'
+            }
+            for prefix, label in single_plan_labels.items():
+                for i, h in enumerate(headers):
+                    if h and label.upper() in h.upper() and 'RENEWAL' in h.upper():
+                        # This should NOT be a multi-plan type
+                        is_multi = any(label.upper() == ml.upper() for ml in multi_plan_header_map.values())
+                        if not is_multi:
+                            carrier_col = i + 1 if i + 1 < len(headers) and 'CARRIER' in headers[i + 1].upper() else None
+                            single_plan_col_map[prefix] = (i, carrier_col)
+                            break
+
+            # Find fixed column indices
+            def find_col(name):
+                name_upper = name.upper()
+                for i, h in enumerate(headers):
+                    if h.upper().strip() == name_upper:
+                        return i
+                return None
+
+            col_employee_contribution = None
+            for i, h in enumerate(headers):
+                if h and ('EMPLOYEE CONTRIBUTION' in h.upper() or 'EMPLOYER CONTRIBUTION' in h.upper()):
+                    col_employee_contribution = i
+                    break
+
             for row_idx, row in enumerate(ws_benefits.iter_rows(min_row=3, values_only=True), start=3):
-                if not row[0]:  # Skip empty rows
+                if not row[0]:
                     continue
                 try:
                     tax_id = str(row[0]).strip() if row[0] else None
                     if not tax_id:
                         continue
 
-                    # Verify client exists
                     client = session.query(Client).filter_by(tax_id=tax_id).first()
                     if not client:
                         stats['errors'].append(f"Benefits row {row_idx}: Client with tax_id {tax_id} not found")
@@ -1615,54 +1844,70 @@ def import_from_excel():
                         except:
                             return None
 
-                    # Check if benefit record exists for this client
+                    def safe_val(idx):
+                        return row[idx] if len(row) > idx and row[idx] else None
+
                     existing = session.query(EmployeeBenefit).filter_by(tax_id=tax_id).first()
 
                     benefit_data = {
                         'tax_id': tax_id,
-                        'form_fire_code': row[2] if len(row) > 2 else None,
-                        'enrollment_poc': row[3] if len(row) > 3 else None,
-                        'renewal_date': parse_excel_date(row[4]) if len(row) > 4 else None,
-                        'funding': row[6] if len(row) > 6 else None,
-                        'current_carrier': row[7] if len(row) > 7 else None,
-                        'num_employees_at_renewal': safe_int(row[8]) if len(row) > 8 else None,
-                        'waiting_period': row[9] if len(row) > 9 else None,
-                        'deductible_accumulation': row[10] if len(row) > 10 else None,
-                        'previous_carrier': row[11] if len(row) > 11 else None,
-                        'cobra_carrier': row[12] if len(row) > 12 else None,
-                        'dental_renewal_date': parse_excel_date(row[13]) if len(row) > 13 else None,
-                        'dental_carrier': row[14] if len(row) > 14 else None,
-                        'vision_renewal_date': parse_excel_date(row[15]) if len(row) > 15 else None,
-                        'vision_carrier': row[16] if len(row) > 16 else None,
-                        'life_adnd_renewal_date': parse_excel_date(row[17]) if len(row) > 17 else None,
-                        'life_adnd_carrier': row[18] if len(row) > 18 else None,
-                        'ltd_renewal_date': parse_excel_date(row[19]) if len(row) > 19 else None,
-                        'ltd_carrier': row[20] if len(row) > 20 else None,
-                        'std_renewal_date': parse_excel_date(row[21]) if len(row) > 21 else None,
-                        'std_carrier': row[22] if len(row) > 22 else None,
-                        'k401_renewal_date': parse_excel_date(row[23]) if len(row) > 23 else None,
-                        'k401_carrier': row[24] if len(row) > 24 else None,
-                        'critical_illness_renewal_date': parse_excel_date(row[25]) if len(row) > 25 else None,
-                        'critical_illness_carrier': row[26] if len(row) > 26 else None,
-                        'accident_renewal_date': parse_excel_date(row[27]) if len(row) > 27 else None,
-                        'accident_carrier': row[28] if len(row) > 28 else None,
-                        'hospital_renewal_date': parse_excel_date(row[29]) if len(row) > 29 else None,
-                        'hospital_carrier': row[30] if len(row) > 30 else None,
-                        'voluntary_life_renewal_date': parse_excel_date(row[31]) if len(row) > 31 else None,
-                        'voluntary_life_carrier': row[32] if len(row) > 32 else None,
-                        'employer_contribution': str(row[33]) if len(row) > 33 and row[33] else None,
-                        'employee_contribution': str(row[34]) if len(row) > 34 and row[34] else None
+                        'status': safe_val(2),
+                        'outstanding_item': safe_val(3),
+                        'remarks': safe_val(4),
+                        'form_fire_code': safe_val(5),
+                        'enrollment_poc': safe_val(6),
+                        'funding': safe_val(8),
+                        'num_employees_at_renewal': safe_int(safe_val(9)),
+                        'waiting_period': safe_val(10),
+                        'deductible_accumulation': safe_val(11),
+                        'previous_carrier': safe_val(12),
+                        'cobra_carrier': safe_val(13),
+                        'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution and len(row) > col_employee_contribution and row[col_employee_contribution] else None
                     }
+
+                    # Single-plan types
+                    for prefix, (renewal_col, carrier_col) in single_plan_col_map.items():
+                        if renewal_col is not None:
+                            benefit_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(renewal_col))
+                        if carrier_col is not None:
+                            benefit_data[f'{prefix}_carrier'] = safe_val(carrier_col)
 
                     if existing:
                         for key, val in benefit_data.items():
                             if val is not None:
                                 setattr(existing, key, val)
+                        benefit_obj = existing
                         stats['benefits_updated'] += 1
                     else:
-                        benefit = EmployeeBenefit(**benefit_data)
-                        session.add(benefit)
+                        benefit_obj = EmployeeBenefit(**benefit_data)
+                        session.add(benefit_obj)
+                        session.flush()
                         stats['benefits_created'] += 1
+
+                    # Multi-plan types: create BenefitPlan child records
+                    session.query(BenefitPlan).filter_by(employee_benefit_id=benefit_obj.id).delete()
+                    for plan_type, cols_list in multi_plan_cols.items():
+                        for plan_num, (carrier_col, renewal_col) in enumerate(cols_list, 1):
+                            carrier = safe_val(carrier_col)
+                            renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
+                            if carrier or renewal:
+                                plan = BenefitPlan(
+                                    employee_benefit_id=benefit_obj.id,
+                                    plan_type=plan_type,
+                                    plan_number=plan_num,
+                                    carrier=carrier,
+                                    renewal_date=renewal
+                                )
+                                session.add(plan)
+                                # Also set flat fields from first plan
+                                if plan_num == 1:
+                                    if plan_type == 'medical':
+                                        benefit_obj.current_carrier = carrier
+                                        benefit_obj.renewal_date = renewal
+                                    else:
+                                        setattr(benefit_obj, f'{plan_type}_carrier', carrier)
+                                        setattr(benefit_obj, f'{plan_type}_renewal_date', renewal)
+
                 except Exception as e:
                     stats['errors'].append(f"Benefits row {row_idx}: {str(e)}")
 
@@ -1714,11 +1959,12 @@ def import_from_excel():
                     commercial_data = {
                         'tax_id': tax_id,
                         'remarks': row[2] if len(row) > 2 else None,
-                        'status': row[3] if len(row) > 3 else None
+                        'status': row[3] if len(row) > 3 else None,
+                        'outstanding_item': row[4] if len(row) > 4 else None
                     }
 
-                    # Parse insurance products (starts at column 5, each product has 4 columns)
-                    col = 4
+                    # Parse insurance products (starts at column 6, each product has 4 columns)
+                    col = 5
                     for product in insurance_products:
                         if len(row) > col:
                             carrier = row[col] if row[col] and row[col] != 'None' else None

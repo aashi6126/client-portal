@@ -7,8 +7,29 @@ import {
   Button,
   TextField,
   Grid,
-  Box
+  Box,
+  MenuItem
 } from '@mui/material';
+
+const US_STATES = [
+  { code: 'AL', name: 'Alabama' }, { code: 'AK', name: 'Alaska' }, { code: 'AZ', name: 'Arizona' },
+  { code: 'AR', name: 'Arkansas' }, { code: 'CA', name: 'California' }, { code: 'CO', name: 'Colorado' },
+  { code: 'CT', name: 'Connecticut' }, { code: 'DE', name: 'Delaware' }, { code: 'FL', name: 'Florida' },
+  { code: 'GA', name: 'Georgia' }, { code: 'HI', name: 'Hawaii' }, { code: 'ID', name: 'Idaho' },
+  { code: 'IL', name: 'Illinois' }, { code: 'IN', name: 'Indiana' }, { code: 'IA', name: 'Iowa' },
+  { code: 'KS', name: 'Kansas' }, { code: 'KY', name: 'Kentucky' }, { code: 'LA', name: 'Louisiana' },
+  { code: 'ME', name: 'Maine' }, { code: 'MD', name: 'Maryland' }, { code: 'MA', name: 'Massachusetts' },
+  { code: 'MI', name: 'Michigan' }, { code: 'MN', name: 'Minnesota' }, { code: 'MS', name: 'Mississippi' },
+  { code: 'MO', name: 'Missouri' }, { code: 'MT', name: 'Montana' }, { code: 'NE', name: 'Nebraska' },
+  { code: 'NV', name: 'Nevada' }, { code: 'NH', name: 'New Hampshire' }, { code: 'NJ', name: 'New Jersey' },
+  { code: 'NM', name: 'New Mexico' }, { code: 'NY', name: 'New York' }, { code: 'NC', name: 'North Carolina' },
+  { code: 'ND', name: 'North Dakota' }, { code: 'OH', name: 'Ohio' }, { code: 'OK', name: 'Oklahoma' },
+  { code: 'OR', name: 'Oregon' }, { code: 'PA', name: 'Pennsylvania' }, { code: 'RI', name: 'Rhode Island' },
+  { code: 'SC', name: 'South Carolina' }, { code: 'SD', name: 'South Dakota' }, { code: 'TN', name: 'Tennessee' },
+  { code: 'TX', name: 'Texas' }, { code: 'UT', name: 'Utah' }, { code: 'VT', name: 'Vermont' },
+  { code: 'VA', name: 'Virginia' }, { code: 'WA', name: 'Washington' }, { code: 'WV', name: 'West Virginia' },
+  { code: 'WI', name: 'Wisconsin' }, { code: 'WY', name: 'Wyoming' }, { code: 'DC', name: 'District of Columbia' }
+];
 
 /**
  * ClientModal - Form for creating/editing client records
@@ -94,6 +115,10 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
       if (!emailRegex.test(formData.email)) {
         newErrors.email = 'Invalid email format';
       }
+    }
+
+    if (formData.zip_code && formData.zip_code.length !== 5) {
+      newErrors.zip_code = 'Zip code must be 5 digits';
     }
 
     setErrors(newErrors);
@@ -229,11 +254,30 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
             <Grid item xs={12} sm={4}>
               <TextField
                 label="State"
+                select
                 value={formData.state}
                 onChange={handleChange('state')}
                 fullWidth
                 size="small"
-              />
+                InputLabelProps={{ shrink: true }}
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (val) => {
+                    if (!val) return <em style={{ color: '#999' }}>Select State</em>;
+                    const found = US_STATES.find(s => s.code === val);
+                    return found ? `${found.name} (${found.code})` : val;
+                  }
+                }}
+              >
+                <MenuItem value="">
+                  <em>Select State</em>
+                </MenuItem>
+                {US_STATES.map((s) => (
+                  <MenuItem key={s.code} value={s.code}>
+                    {s.name} ({s.code})
+                  </MenuItem>
+                ))}
+              </TextField>
             </Grid>
 
             {/* Zip Code */}
@@ -241,9 +285,16 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
               <TextField
                 label="Zip Code"
                 value={formData.zip_code}
-                onChange={handleChange('zip_code')}
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 5);
+                  setFormData({ ...formData, zip_code: val });
+                  if (errors.zip_code) setErrors({ ...errors, zip_code: null });
+                }}
                 fullWidth
                 size="small"
+                error={Boolean(errors.zip_code)}
+                helperText={errors.zip_code}
+                inputProps={{ maxLength: 5 }}
               />
             </Grid>
           </Grid>

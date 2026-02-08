@@ -144,8 +144,7 @@ def import_employee_benefits(conn):
         'Deductible Accumulation': 'deductible_accumulation',
         'Previous Carrier': 'previous_carrier',
         'Cobra Administrator': 'cobra_carrier',
-        'Employer Contribution %': 'employer_contribution',
-        'Employee Contribution %': 'employee_contribution'
+        'Employee Contribution': 'employee_contribution'
     }
 
     # Benefit plan fields (renewal date + carrier for each)

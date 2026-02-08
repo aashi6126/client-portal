@@ -2,46 +2,104 @@ import React from 'react';
 import DataTable from './DataTable';
 import { Chip, Box, Tooltip } from '@mui/material';
 
-// Benefit plan configuration - 11 types including Medical
-const benefitPlans = [
-  { prefix: 'medical', name: 'Medical', shortName: 'Medical' },
-  { prefix: 'dental', name: 'Dental', shortName: 'Dental' },
-  { prefix: 'vision', name: 'Vision', shortName: 'Vision' },
-  { prefix: 'life_adnd', name: 'Life & AD&D', shortName: 'Life' },
-  { prefix: 'ltd', name: 'LTD', shortName: 'LTD' },
-  { prefix: 'std', name: 'STD', shortName: 'STD' },
-  { prefix: 'k401', name: '401K', shortName: '401K' },
-  { prefix: 'critical_illness', name: 'Critical Illness', shortName: 'CI' },
-  { prefix: 'accident', name: 'Accident', shortName: 'Accident' },
-  { prefix: 'hospital', name: 'Hospital', shortName: 'Hospital' },
-  { prefix: 'voluntary_life', name: 'Voluntary Life', shortName: 'Vol Life' }
+// Multi-plan types (support multiple plans via plans nested object)
+const MULTI_PLAN_TYPES = ['medical', 'dental', 'vision', 'life_adnd'];
+const MULTI_PLAN_LABELS = {
+  medical: 'Medical',
+  dental: 'Dental',
+  vision: 'Vision',
+  life_adnd: 'Life'
+};
+
+// Single-plan types (flat fields)
+const SINGLE_PLAN_TYPES = [
+  { prefix: 'ltd', shortName: 'LTD' },
+  { prefix: 'std', shortName: 'STD' },
+  { prefix: 'k401', shortName: '401K' },
+  { prefix: 'critical_illness', shortName: 'CI' },
+  { prefix: 'accident', shortName: 'Accident' },
+  { prefix: 'hospital', shortName: 'Hospital' },
+  { prefix: 'voluntary_life', shortName: 'Vol Life' }
 ];
 
-// Helper function to count active benefit plans
-const countActivePlans = (row) => {
+// Parse date string as local time (avoids UTC timezone shift)
+const parseDate = (d) => {
+  if (!d) return null;
+  const str = String(d);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return new Date(str + 'T00:00:00');
+  }
+  return new Date(str);
+};
+
+// Helper function to count active benefit types (not individual plans)
+const countActiveTypes = (row) => {
   let count = 0;
-  // Check Medical (uses current_carrier instead of medical_carrier)
-  if (row.current_carrier) count++;
-  // Check other plans
-  benefitPlans.slice(1).forEach(plan => {
+  // Multi-plan types: check plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      if (row.plans[pt] && row.plans[pt].length > 0) count++;
+    });
+  } else {
+    // Fallback to flat fields
+    if (row.current_carrier) count++;
+    if (row.dental_carrier) count++;
+    if (row.vision_carrier) count++;
+    if (row.life_adnd_carrier) count++;
+  }
+  // Single-plan types
+  SINGLE_PLAN_TYPES.forEach(plan => {
     if (row[`${plan.prefix}_carrier`]) count++;
   });
   return count;
 };
 
-// Helper function to get all active benefit plans
+// Helper function to get all active plans with details for display
 const getActivePlans = (row) => {
   const activePlans = [];
-  // Check Medical (uses current_carrier)
-  if (row.current_carrier) {
-    activePlans.push('Medical');
+
+  // Multi-plan types from plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      const typePlans = row.plans[pt] || [];
+      const label = MULTI_PLAN_LABELS[pt];
+      typePlans.forEach((plan, idx) => {
+        if (plan.carrier || plan.renewal_date) {
+          activePlans.push({
+            shortName: typePlans.length > 1 ? `${label} ${idx + 1}` : label,
+            carrier: plan.carrier,
+            renewalDate: plan.renewal_date
+          });
+        }
+      });
+    });
+  } else {
+    // Fallback to flat fields
+    if (row.current_carrier) {
+      activePlans.push({ shortName: 'Medical', carrier: row.current_carrier, renewalDate: row.renewal_date });
+    }
+    if (row.dental_carrier) {
+      activePlans.push({ shortName: 'Dental', carrier: row.dental_carrier, renewalDate: row.dental_renewal_date });
+    }
+    if (row.vision_carrier) {
+      activePlans.push({ shortName: 'Vision', carrier: row.vision_carrier, renewalDate: row.vision_renewal_date });
+    }
+    if (row.life_adnd_carrier) {
+      activePlans.push({ shortName: 'Life', carrier: row.life_adnd_carrier, renewalDate: row.life_adnd_renewal_date });
+    }
   }
-  // Check other plans
-  benefitPlans.slice(1).forEach(plan => {
+
+  // Single-plan types (always flat)
+  SINGLE_PLAN_TYPES.forEach(plan => {
     if (row[`${plan.prefix}_carrier`]) {
-      activePlans.push(plan.shortName);
+      activePlans.push({
+        shortName: plan.shortName,
+        carrier: row[`${plan.prefix}_carrier`],
+        renewalDate: row[`${plan.prefix}_renewal_date`]
+      });
     }
   });
+
   return activePlans;
 };
 
@@ -49,17 +107,27 @@ const getActivePlans = (row) => {
 const getNextRenewal = (row) => {
   const renewalDates = [];
 
-  // Check Medical renewal
-  if (row.renewal_date) {
-    renewalDates.push(new Date(row.renewal_date));
+  // Multi-plan types from plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      (row.plans[pt] || []).forEach(plan => {
+        if (plan.renewal_date) {
+          renewalDates.push(parseDate(plan.renewal_date));
+        }
+      });
+    });
+  } else {
+    // Fallback to flat fields
+    if (row.renewal_date) renewalDates.push(parseDate(row.renewal_date));
+    if (row.dental_renewal_date) renewalDates.push(parseDate(row.dental_renewal_date));
+    if (row.vision_renewal_date) renewalDates.push(parseDate(row.vision_renewal_date));
+    if (row.life_adnd_renewal_date) renewalDates.push(parseDate(row.life_adnd_renewal_date));
   }
 
-  // Check other plan renewals
-  benefitPlans.slice(1).forEach(plan => {
+  // Single-plan types
+  SINGLE_PLAN_TYPES.forEach(plan => {
     const date = row[`${plan.prefix}_renewal_date`];
-    if (date) {
-      renewalDates.push(new Date(date));
-    }
+    if (date) renewalDates.push(parseDate(date));
   });
 
   if (renewalDates.length === 0) return null;
@@ -77,27 +145,50 @@ export const benefitsColumns = [
     label: 'Tax ID',
     sticky: true,
     sortable: true,
-    minWidth: 120
+    minWidth: 90
   },
   {
     id: 'client_name',
     label: 'Client Name',
     sticky: true,
     sortable: true,
-    minWidth: 200
+    minWidth: 140
   },
   {
-    id: 'plan_count',
-    label: 'Plans',
-    sortable: false,
+    id: 'status',
+    label: 'Status',
+    sortable: true,
     minWidth: 100,
-    render: (value, row) => {
-      const count = countActivePlans(row);
+    render: (value) => {
+      if (!value) return <span style={{ color: '#999' }}>—</span>;
+      const color = value.toLowerCase() === 'active' ? 'success' : 'default';
       return (
         <Chip
-          label={`${count} / 11`}
+          label={value}
           size="small"
-          color={count > 0 ? 'primary' : 'default'}
+          color={color}
+        />
+      );
+    }
+  },
+  {
+    id: 'outstanding_item',
+    label: 'Outstanding Item',
+    sortable: true,
+    minWidth: 150,
+    render: (value) => {
+      if (!value) return <span style={{ color: '#999' }}>—</span>;
+      const colorMap = {
+        'Pending Premium': 'warning',
+        'In Audit': 'info',
+        'Pending Cancellation': 'error',
+        'Complete': 'success'
+      };
+      return (
+        <Chip
+          label={value}
+          size="small"
+          color={colorMap[value] || 'default'}
           variant="outlined"
         />
       );
@@ -114,24 +205,80 @@ export const benefitsColumns = [
         return <span style={{ color: '#999' }}>No coverage</span>;
       }
 
+      const formatDate = (d) => {
+        if (!d) return 'N/A';
+        try {
+          return parseDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        } catch { return d; }
+      };
+
+      const isUpForRenewal = (renewalDate) => {
+        if (!renewalDate) return false;
+        try {
+          const renewal = parseDate(renewalDate);
+          const today = new Date();
+          const daysUntil = Math.ceil((renewal - today) / (1000 * 60 * 60 * 24));
+          return daysUntil >= 0 && daysUntil <= 30;
+        } catch { return false; }
+      };
+
+      const renderChip = (plan, idx) => {
+        const renewing = isUpForRenewal(plan.renewalDate);
+        return (
+          <Tooltip
+            key={idx}
+            arrow
+            title={
+              <Box>
+                <div><strong>{plan.shortName}</strong></div>
+                <div>Carrier: {plan.carrier || 'N/A'}</div>
+                <div>Renewal: {formatDate(plan.renewalDate)}</div>
+              </Box>
+            }
+          >
+            <Chip
+              label={plan.shortName}
+              size="small"
+              variant={renewing ? 'filled' : 'outlined'}
+              sx={{
+                fontSize: '0.7rem',
+                height: '20px',
+                cursor: 'pointer',
+                ...(renewing && {
+                  backgroundColor: '#fff3cd',
+                  color: '#856404',
+                  borderColor: '#ffc107',
+                  fontWeight: 'bold'
+                })
+              }}
+            />
+          </Tooltip>
+        );
+      };
+
       return (
         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-          {plans.slice(0, 5).map((plan, idx) => (
-            <Chip
-              key={idx}
-              label={plan}
-              size="small"
-              variant="outlined"
-              sx={{ fontSize: '0.7rem', height: '20px' }}
-            />
-          ))}
+          {plans.slice(0, 5).map((plan, idx) => renderChip(plan, idx))}
           {plans.length > 5 && (
-            <Tooltip title={plans.slice(5).join(', ')} arrow>
+            <Tooltip
+              arrow
+              title={
+                <Box>
+                  {plans.slice(5).map((plan, idx) => (
+                    <Box key={idx} sx={{ mb: idx < plans.length - 6 ? 1 : 0 }}>
+                      <div><strong>{plan.shortName}</strong></div>
+                      <div>Carrier: {plan.carrier || 'N/A'}</div>
+                      <div>Renewal: {formatDate(plan.renewalDate)}</div>
+                    </Box>
+                  ))}
+                </Box>
+              }
+            >
               <Chip
                 label={`+${plans.length - 5} more`}
                 size="small"
                 color="primary"
-                sx={{ fontSize: '0.7rem', height: '20px' }}
+                sx={{ fontSize: '0.7rem', height: '20px', cursor: 'pointer' }}
               />
             </Tooltip>
           )}
@@ -140,9 +287,30 @@ export const benefitsColumns = [
     }
   },
   {
+    id: 'plan_count',
+    label: 'Plans',
+    sortable: false,
+    minWidth: 100,
+    render: (value, row) => {
+      const count = countActiveTypes(row);
+      return (
+        <Chip
+          label={`${count} / 11`}
+          size="small"
+          color={count > 0 ? 'primary' : 'default'}
+          variant="outlined"
+        />
+      );
+    }
+  },
+  {
     id: 'next_renewal',
     label: 'Next Renewal',
-    sortable: false,
+    sortable: true,
+    sortValue: (row) => {
+      const d = getNextRenewal(row);
+      return d ? d.getTime() : null;
+    },
     minWidth: 130,
     render: (value, row) => {
       const nextRenewal = getNextRenewal(row);
@@ -184,25 +352,11 @@ export const benefitsColumns = [
     minWidth: 100
   },
   {
-    id: 'employer_contribution',
-    label: 'Employer %',
+    id: 'remarks',
+    label: 'Remarks',
     sortable: true,
-    minWidth: 100,
-    render: (value) => {
-      if (!value) return <span style={{ color: '#999' }}>—</span>;
-      return `${(parseFloat(value) * 100).toFixed(0)}%`;
-    }
+    minWidth: 180
   },
-  {
-    id: 'employee_contribution',
-    label: 'Employee %',
-    sortable: true,
-    minWidth: 100,
-    render: (value) => {
-      if (!value) return <span style={{ color: '#999' }}>—</span>;
-      return `${(parseFloat(value) * 100).toFixed(0)}%`;
-    }
-  }
 ];
 
 /**
@@ -217,6 +371,7 @@ const BenefitsTable = ({ benefits, onEdit, onDelete, onClone }) => {
       onDelete={onDelete}
       onClone={onClone}
       idField="id"
+      defaultOrderBy="next_renewal"
     />
   );
 };
