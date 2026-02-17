@@ -28,9 +28,11 @@ if exist "%~dp0.pids" (
 )
 
 REM --- Load config from config.env ---
+echo [DEBUG] Step 1: Checking config.env...
 if not exist "%~dp0config.env" goto :no_config
-echo [OK] Loading configuration from config.env
+echo [DEBUG] Step 2: config.env found, loading...
 for /f "usebackq eol=# delims=" %%a in ("%~dp0config.env") do set "%%a"
+echo [DEBUG] Step 3: config loaded
 goto :done_config
 :no_config
 echo [!!] WARNING: config.env not found. Using default settings.
@@ -38,12 +40,14 @@ echo     Copy config.env.example to config.env and edit for your environment.
 echo.
 :done_config
 
+echo [DEBUG] Step 4: Create directories...
 REM --- Create directories if needed ---
 if defined BACKUP_DIR (
     if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 )
 if not exist "%~dp0backups" mkdir "%~dp0backups"
 
+echo [DEBUG] Step 5: Check Python venv...
 REM --- Check Python venv ---
 if not exist "%~dp0services\venv\Scripts\python.exe" (
     echo [!!] ERROR: Python venv not found at services\venv
@@ -55,6 +59,7 @@ if not exist "%~dp0services\venv\Scripts\python.exe" (
 
 set "PYTHON=%~dp0services\venv\Scripts\python.exe"
 
+echo [DEBUG] Step 6: Check React build...
 REM --- Build React app (so Flask can serve it on port 5000) ---
 if exist "%~dp0webapp\customer-app\package.json" (
     if not exist "%~dp0webapp\customer-app\build\index.html" (
@@ -71,6 +76,7 @@ if exist "%~dp0webapp\customer-app\package.json" (
         echo [OK] React build found
     )
 )
+echo [DEBUG] Step 7: Starting services...
 
 REM --- Start API server ---
 echo [..] Starting API server...
