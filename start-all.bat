@@ -28,16 +28,17 @@ if exist "%~dp0.pids" (
 )
 
 REM --- Load config from config.env ---
-if exist "%~dp0config.env" (
-    echo [OK] Loading configuration from config.env
-    for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%~dp0config.env") do (
-        if not "%%a"=="" set "%%a=%%b"
-    )
-) else (
-    echo [!!] WARNING: config.env not found. Using default settings.
-    echo     Copy config.env.example to config.env and edit for your environment.
-    echo.
+if not exist "%~dp0config.env" goto :no_config
+echo [OK] Loading configuration from config.env
+for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%~dp0config.env") do (
+    if not "%%a"=="" set "%%a=%%b"
 )
+goto :done_config
+:no_config
+echo [!!] WARNING: config.env not found. Using default settings.
+echo     Copy config.env.example to config.env and edit for your environment.
+echo.
+:done_config
 
 REM --- Create directories if needed ---
 if defined BACKUP_DIR (
