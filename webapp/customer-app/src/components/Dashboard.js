@@ -339,78 +339,70 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
       </Typography>
 
       {/* Section 1: Summary Cards + Renewals Chart */}
-      <Grid container spacing={3} sx={{ mb: 4 }}>
-        {/* Left: Summary Cards in a row */}
-        <Grid item xs={12} md={4}>
-          <Grid container spacing={2} sx={{ height: 220 }}>
-            <Grid item xs={12} sm={4}>
-              <Card
-                sx={{ backgroundColor: '#e8f4f8', border: '1px solid #b3d9e6', cursor: 'pointer', '&:hover': { boxShadow: 4 }, height: '100%' }}
-                onClick={() => onNavigateToTab && onNavigateToTab(1)}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Total Clients
-                      </Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                        {clients.length}
-                      </Typography>
-                    </Box>
-                    <BusinessIcon sx={{ fontSize: 60, color: '#5c9bb5', opacity: 0.6 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+      <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
+        {/* Left: Summary Cards side by side */}
+        <Box sx={{ display: 'flex', gap: 2, flex: '0 0 33.33%' }}>
+          <Card
+            sx={{ backgroundColor: '#e8f4f8', border: '1px solid #b3d9e6', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(1)}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Total Clients
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
+                    {clients.length}
+                  </Typography>
+                </Box>
+                <BusinessIcon sx={{ fontSize: 60, color: '#5c9bb5', opacity: 0.6 }} />
+              </Box>
+            </CardContent>
+          </Card>
 
-            <Grid item xs={12} sm={4}>
-              <Card
-                sx={{ backgroundColor: '#f0e8f4', border: '1px solid #d4b8e0', cursor: 'pointer', '&:hover': { boxShadow: 4 }, height: '100%' }}
-                onClick={() => onNavigateToTab && onNavigateToTab(2)}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Employee Benefits
-                      </Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                        {benefits.length}
-                      </Typography>
-                    </Box>
-                    <HealthAndSafetyIcon sx={{ fontSize: 60, color: '#8e7ba3', opacity: 0.6 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
+          <Card
+            sx={{ backgroundColor: '#f0e8f4', border: '1px solid #d4b8e0', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(2)}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Employee Benefits
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
+                    {benefits.length}
+                  </Typography>
+                </Box>
+                <HealthAndSafetyIcon sx={{ fontSize: 60, color: '#8e7ba3', opacity: 0.6 }} />
+              </Box>
+            </CardContent>
+          </Card>
 
-            <Grid item xs={12} sm={4}>
-              <Card
-                sx={{ backgroundColor: '#e8f5e9', border: '1px solid #b8d9ba', cursor: 'pointer', '&:hover': { boxShadow: 4 }, height: '100%' }}
-                onClick={() => onNavigateToTab && onNavigateToTab(3)}
-              >
-                <CardContent>
-                  <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Box>
-                      <Typography variant="body2" color="text.secondary" gutterBottom>
-                        Commercial Policies
-                      </Typography>
-                      <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                        {commercial.length}
-                      </Typography>
-                    </Box>
-                    <SecurityIcon sx={{ fontSize: 60, color: '#6b9b6e', opacity: 0.6 }} />
-                  </Box>
-                </CardContent>
-              </Card>
-            </Grid>
-          </Grid>
-        </Grid>
+          <Card
+            sx={{ backgroundColor: '#e8f5e9', border: '1px solid #b8d9ba', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(3)}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Commercial Policies
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
+                    {commercial.length}
+                  </Typography>
+                </Box>
+                <SecurityIcon sx={{ fontSize: 60, color: '#6b9b6e', opacity: 0.6 }} />
+              </Box>
+            </CardContent>
+          </Card>
+        </Box>
 
-        {/* Right: Renewals Chart (compact) */}
-        <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2, height: 220, display: 'flex', flexDirection: 'column' }}>
+        {/* Right: Renewals Chart */}
+        <Box sx={{ flex: 1 }}>
+          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
               <TrendingUpIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
               Renewals (Next 12 Months)
@@ -445,8 +437,8 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
               </Typography>
             )}
           </Paper>
-        </Grid>
-      </Grid>
+        </Box>
+      </Box>
 
       {/* Section 3: Upcoming Renewals with Time Range Tabs */}
       <Paper sx={{ p: 3, mb: 4 }}>
