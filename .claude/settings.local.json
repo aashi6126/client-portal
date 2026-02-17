@@ -1,0 +1,19 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(lsof:*)",
+      "Bash(test:*)",
+      "Bash(npm install:*)",
+      "Bash(npm start)",
+      "Bash(python3:*)",
+      "Bash(pip3 install:*)",
+      "Bash(curl:*)",
+      "Bash(/opt/anaconda3/bin/python:*)",
+      "Bash(sqlite3:*)",
+      "Bash(npx react-scripts build:*)",
+      "Bash(bash:*)",
+      "Bash(xargs kill:*)",
+      "Bash(git commit:*)"
+    ]
+  }
+}

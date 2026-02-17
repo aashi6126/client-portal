@@ -390,17 +390,36 @@ function NewApp() {
         }
       });
 
-      const { stats } = response.data;
+      const { stats, errors_file, errors_filename } = response.data;
       let message = 'Import completed!\n\n';
       message += `Clients: ${stats.clients_created} created, ${stats.clients_updated} updated\n`;
       message += `Benefits: ${stats.benefits_created} created, ${stats.benefits_updated} updated\n`;
       message += `Commercial: ${stats.commercial_created} created, ${stats.commercial_updated} updated`;
 
       if (stats.errors && stats.errors.length > 0) {
-        message += `\n\nWarnings (${stats.errors.length}):\n${stats.errors.slice(0, 5).join('\n')}`;
-        if (stats.errors.length > 5) {
-          message += `\n... and ${stats.errors.length - 5} more`;
+        message += `\n\n${stats.errors.length} row(s) had errors.`;
+        if (errors_file) {
+          message += '\nAn errors file has been downloaded with details.';
         }
+      }
+
+      // Download errors file if present
+      if (errors_file) {
+        const byteCharacters = atob(errors_file);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = window.URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = errors_filename || 'Import_Errors.xlsx';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
       }
 
       alert(message);

@@ -1,5 +1,6 @@
 import os
 import io
+import base64
 import logging
 import ipaddress
 from flask import Flask, jsonify, request, send_file, abort
@@ -2009,6 +2010,11 @@ def import_from_excel():
             'errors': []
         }
 
+        # Error row collectors for errors.xlsx generation
+        error_rows_clients = []      # [(row_tuple, error_msg), ...]
+        error_rows_benefits = []
+        error_rows_commercial = []
+
         # ========== IMPORT CLIENTS ==========
         if 'Clients' in wb.sheetnames:
             ws_clients = wb['Clients']
@@ -2058,6 +2064,7 @@ def import_from_excel():
                         session.add(client)
                         stats['clients_created'] += 1
                 except Exception as e:
+                    error_rows_clients.append((row, str(e)))
                     stats['errors'].append(f"Clients row {row_idx}: {str(e)}")
 
         session.flush()  # Flush to ensure clients are available for FK references
@@ -2132,6 +2139,7 @@ def import_from_excel():
 
                     client = session.query(Client).filter_by(tax_id=tax_id).first()
                     if not client:
+                        error_rows_benefits.append((row, f"Client with tax_id {tax_id} not found"))
                         stats['errors'].append(f"Benefits row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
 
@@ -2225,6 +2233,7 @@ def import_from_excel():
                                         setattr(benefit_obj, f'{plan_type}_renewal_date', renewal)
 
                 except Exception as e:
+                    error_rows_benefits.append((row, str(e)))
                     stats['errors'].append(f"Benefits row {row_idx}: {str(e)}")
 
         # ========== IMPORT COMMERCIAL INSURANCE ==========
@@ -2309,6 +2318,7 @@ def import_from_excel():
 
                     client = session.query(Client).filter_by(tax_id=tax_id).first()
                     if not client:
+                        error_rows_commercial.append((row, f"Client with tax_id {tax_id} not found"))
                         stats['errors'].append(f"Commercial row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
 
@@ -2400,14 +2410,88 @@ def import_from_excel():
                                     setattr(comm_obj, f'{plan_type}_renewal_date', renewal)
 
                 except Exception as e:
+                    error_rows_commercial.append((row, str(e)))
                     stats['errors'].append(f"Commercial row {row_idx}: {str(e)}")
 
         session.commit()
 
-        return jsonify({
+        # ========== BUILD ERRORS WORKBOOK ==========
+        response_data = {
             'message': 'Import completed successfully',
             'stats': stats
-        }), 200
+        }
+
+        has_errors = error_rows_clients or error_rows_benefits or error_rows_commercial
+        if has_errors:
+            error_wb = Workbook()
+            error_wb.remove(error_wb.active)  # Remove default sheet
+
+            # Helper: copy headers from source sheet to error sheet, append "Error" column
+            def copy_headers_and_write_errors(source_sheet_name, error_rows):
+                if not error_rows:
+                    return
+                src_ws = wb[source_sheet_name]
+                err_ws = error_wb.create_sheet(source_sheet_name)
+
+                # Find the max column used in row 2 (column headers)
+                max_col = 0
+                for cell in src_ws[2]:
+                    if cell.value is not None:
+                        max_col = cell.column
+
+                # Copy row 1 (section headers) with merged cells
+                for cell in src_ws[1]:
+                    if cell.value is not None:
+                        err_ws.cell(row=1, column=cell.column, value=cell.value)
+                        err_ws.cell(row=1, column=cell.column).font = Font(bold=True, size=11)
+                        err_ws.cell(row=1, column=cell.column).fill = PatternFill(start_color="DDDDDD", end_color="DDDDDD", fill_type="solid")
+
+                # Copy merged cells from row 1
+                for merged_range in src_ws.merged_cells.ranges:
+                    if merged_range.min_row == 1 and merged_range.max_row == 1:
+                        err_ws.merge_cells(start_row=1, start_column=merged_range.min_col,
+                                           end_row=1, end_column=merged_range.max_col)
+
+                # Copy row 2 (column headers)
+                for cell in src_ws[2]:
+                    if cell.value is not None:
+                        err_ws.cell(row=2, column=cell.column, value=cell.value)
+                        err_ws.cell(row=2, column=cell.column).font = Font(bold=True)
+
+                # Append "Error" column header
+                error_col = max_col + 1
+                err_ws.cell(row=2, column=error_col, value='Error')
+                err_ws.cell(row=2, column=error_col).font = Font(bold=True, color="FF0000")
+
+                # Write errored rows
+                for data_row_idx, (row_data, error_msg) in enumerate(error_rows, 3):
+                    for col_idx, val in enumerate(row_data, 1):
+                        # Convert date/datetime objects to string for safe writing
+                        if isinstance(val, datetime):
+                            val = val.strftime('%m/%d/%Y')
+                        elif hasattr(val, 'strftime'):
+                            val = val.strftime('%m/%d/%Y')
+                        err_ws.cell(row=data_row_idx, column=col_idx, value=val)
+                    err_ws.cell(row=data_row_idx, column=error_col, value=error_msg)
+
+            # Build error sheets for each tab that has errors
+            if 'Clients' in wb.sheetnames:
+                copy_headers_and_write_errors('Clients', error_rows_clients)
+            if 'Employee Benefits' in wb.sheetnames:
+                copy_headers_and_write_errors('Employee Benefits', error_rows_benefits)
+            if 'Commercial' in wb.sheetnames:
+                copy_headers_and_write_errors('Commercial', error_rows_commercial)
+
+            # Encode as base64
+            error_output = io.BytesIO()
+            error_wb.save(error_output)
+            error_output.seek(0)
+            errors_b64 = base64.b64encode(error_output.read()).decode('utf-8')
+
+            response_data['errors_file'] = errors_b64
+            response_data['errors_filename'] = f'Import_Errors_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
+
+        return jsonify(response_data), 200
     except Exception as e:
         session.rollback()
         logging.error(f"Error importing from Excel: {e}")
