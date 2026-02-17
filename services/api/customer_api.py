@@ -2580,6 +2580,29 @@ def delete_feedback(feedback_id):
 
 
 # ===========================================================================
+# HEALTH CHECK
+# ===========================================================================
+
+@app.route('/api/health')
+def health_check():
+    """Quick health check — verifies DB connectivity."""
+    try:
+        with app.app_context():
+            db.session.execute(db.text('SELECT 1'))
+        return jsonify({
+            'status': 'ok',
+            'database': db_uri.split('?')[0],  # show path without query params
+            'static_folder': app.static_folder or 'not configured'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'database': db_uri.split('?')[0],
+            'error': str(e)
+        }), 500
+
+
+# ===========================================================================
 # SERVE REACT APP (production mode)
 # ===========================================================================
 

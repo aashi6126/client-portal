@@ -90,7 +90,15 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
-        setError('Failed to load dashboard data');
+        let msg = 'Failed to load dashboard data';
+        if (err.response) {
+          msg += ` (${err.response.status}: ${err.response.data?.error || err.response.statusText})`;
+        } else if (err.request) {
+          msg += ' — API server is not responding. Check that the API service is running.';
+        } else {
+          msg += `: ${err.message}`;
+        }
+        setError(msg);
         setLoading(false);
       }
     };
