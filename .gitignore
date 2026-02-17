@@ -38,3 +38,9 @@ Thumbs.db
 .env
 .env.local
 .env.*.local
+config.env
+.pids
+
+# Backups
+backups/*.xlsx
+backups/*.log

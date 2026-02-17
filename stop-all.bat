@@ -1,0 +1,97 @@
+@echo off
+REM ==========================================================================
+REM Client Portal - Stop Services
+REM ==========================================================================
+REM Usage: stop-all.bat
+REM   Stops the API server and backup scheduler.
+REM ==========================================================================
+
+setlocal enabledelayedexpansion
+
+echo =============================================
+echo   Client Portal - Stopping Services
+echo =============================================
+echo.
+
+set "PIDS_FILE=%~dp0.pids"
+set "STOPPED=0"
+
+REM --- Method 1: Use saved PIDs ---
+if exist "%PIDS_FILE%" (
+    echo [..] Reading saved process IDs...
+    for /f "usebackq tokens=1,* delims==" %%a in ("%PIDS_FILE%") do (
+        set "%%a=%%b"
+    )
+
+    if defined API_PYTHON_PID (
+        echo [..] Stopping API server (PID: !API_PYTHON_PID!)...
+        taskkill /pid !API_PYTHON_PID! /f >nul 2>&1
+        if not errorlevel 1 (
+            echo [OK] API server stopped
+            set "STOPPED=1"
+        )
+    )
+
+    if defined API_PID (
+        taskkill /pid !API_PID! /f >nul 2>&1
+    )
+
+    if defined BACKUP_PYTHON_PID (
+        echo [..] Stopping backup scheduler (PID: !BACKUP_PYTHON_PID!)...
+        taskkill /pid !BACKUP_PYTHON_PID! /f >nul 2>&1
+        if not errorlevel 1 (
+            echo [OK] Backup scheduler stopped
+            set "STOPPED=1"
+        )
+    )
+
+    if defined BACKUP_PID (
+        taskkill /pid !BACKUP_PID! /f >nul 2>&1
+    )
+
+    del "%PIDS_FILE%" >nul 2>&1
+)
+
+REM --- Method 2: Find by window title (fallback) ---
+echo [..] Closing service windows...
+
+taskkill /fi "WINDOWTITLE eq ClientPortal-API*" /f >nul 2>&1
+if not errorlevel 1 (
+    echo [OK] Closed API window
+    set "STOPPED=1"
+)
+
+taskkill /fi "WINDOWTITLE eq ClientPortal-Backup*" /f >nul 2>&1
+if not errorlevel 1 (
+    echo [OK] Closed Backup window
+    set "STOPPED=1"
+)
+
+REM --- Method 3: Find by process command line (final fallback) ---
+for /f "tokens=2" %%p in ('wmic process where "commandline like '%%customer_api%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do (
+    echo [..] Killing remaining API process (PID: %%p)...
+    taskkill /pid %%p /f >nul 2>&1
+    set "STOPPED=1"
+)
+
+for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_scheduler%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do (
+    echo [..] Killing remaining backup process (PID: %%p)...
+    taskkill /pid %%p /f >nul 2>&1
+    set "STOPPED=1"
+)
+
+REM --- Clean up PID file ---
+if exist "%PIDS_FILE%" del "%PIDS_FILE%" >nul 2>&1
+
+echo.
+if "!STOPPED!"=="1" (
+    echo =============================================
+    echo   All services stopped.
+    echo =============================================
+) else (
+    echo =============================================
+    echo   No running services found.
+    echo =============================================
+)
+echo.
+pause

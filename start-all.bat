@@ -1,10 +1,9 @@
 @echo off
 REM ==========================================================================
-REM Client Portal - Windows Startup Script
+REM Client Portal - Start Services
 REM ==========================================================================
 REM Usage: start-all.bat
-REM   Starts the API server (which also serves the React build) and the
-REM   backup scheduler.
+REM   Starts the API server and backup scheduler.
 REM
 REM Prerequisites:
 REM   - Python 3.9+ with venv at services\venv
@@ -12,12 +11,25 @@ REM   - React app built: cd webapp\customer-app && npm run build
 REM   - config.env in project root (copy from config.env.example)
 REM ==========================================================================
 
-echo Starting Client Portal Services...
+setlocal enabledelayedexpansion
+
+echo =============================================
+echo   Client Portal - Starting Services
+echo =============================================
 echo.
 
-REM Load config from config.env if it exists
+REM --- Check for running instances ---
+if exist "%~dp0.pids" (
+    echo WARNING: Services may already be running.
+    echo Run stop-all.bat first, or delete .pids file if stale.
+    echo.
+    pause
+    exit /b 1
+)
+
+REM --- Load config from config.env ---
 if exist "%~dp0config.env" (
-    echo Loading configuration from config.env...
+    echo [OK] Loading configuration from config.env
     for /f "usebackq tokens=1,* delims==" %%a in ("%~dp0config.env") do (
         REM Skip comments and blank lines
         echo %%a | findstr /r "^#" >nul 2>&1
@@ -28,38 +40,84 @@ if exist "%~dp0config.env" (
         )
     )
 ) else (
-    echo WARNING: config.env not found. Using default settings.
-    echo Copy config.env.example to config.env and edit for your environment.
+    echo [!!] WARNING: config.env not found. Using default settings.
+    echo     Copy config.env.example to config.env and edit for your environment.
     echo.
 )
 
-REM Create data directory if needed
-if not exist "%~dp0data" mkdir "%~dp0data"
+REM --- Create directories if needed ---
+if defined BACKUP_DIR (
+    if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
+)
 if not exist "%~dp0backups" mkdir "%~dp0backups"
 
-REM Activate Python venv
-call "%~dp0services\venv\Scripts\activate.bat"
+REM --- Check Python venv ---
+if not exist "%~dp0services\venv\Scripts\python.exe" (
+    echo [!!] ERROR: Python venv not found at services\venv
+    echo     Run: python -m venv services\venv
+    echo     Then: services\venv\Scripts\activate ^&^& pip install -r services\requirements.txt
+    pause
+    exit /b 1
+)
 
-REM Start API server (also serves React build from webapp\customer-app\build)
-echo Starting API server (serves both API and web app)...
-start "ClientPortal-API" cmd /c "cd /d %~dp0 && python services\api\customer_api.py"
+set "PYTHON=%~dp0services\venv\Scripts\python.exe"
 
-REM Wait for API to start
+REM --- Start API server ---
+echo [..] Starting API server...
+start "ClientPortal-API" /min cmd /c "cd /d %~dp0 && "%PYTHON%" services\api\customer_api.py"
+
+REM Get the PID of the cmd window we just launched
+timeout /t 2 /nobreak >nul
+
+REM Find the python process for customer_api
+for /f "tokens=2" %%p in ('tasklist /fi "WINDOWTITLE eq ClientPortal-API*" /fo list 2^>nul ^| findstr "PID:"') do (
+    set "API_PID=%%p"
+)
+
+REM Also find python.exe running customer_api
+for /f "tokens=2" %%p in ('wmic process where "commandline like '%%customer_api%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do (
+    set "API_PYTHON_PID=%%p"
+)
+
+echo [OK] API server started
+
+REM --- Wait for API to be ready ---
+echo [..] Waiting for API to be ready...
 timeout /t 3 /nobreak >nul
+echo [OK] API ready at http://localhost:%API_PORT%
 
-REM Start backup scheduler
-echo Starting backup scheduler (12 AM and 12 PM daily)...
-start "ClientPortal-Backup" cmd /c "cd /d %~dp0 && python services\backup_scheduler.py"
+REM --- Start backup scheduler ---
+echo [..] Starting backup scheduler...
+start "ClientPortal-Backup" /min cmd /c "cd /d %~dp0 && "%PYTHON%" services\backup_scheduler.py"
+
+timeout /t 1 /nobreak >nul
+
+for /f "tokens=2" %%p in ('tasklist /fi "WINDOWTITLE eq ClientPortal-Backup*" /fo list 2^>nul ^| findstr "PID:"') do (
+    set "BACKUP_PID=%%p"
+)
+
+for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_scheduler%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do (
+    set "BACKUP_PYTHON_PID=%%p"
+)
+
+echo [OK] Backup scheduler started (12 AM and 12 PM daily)
+
+REM --- Save PIDs to file for stop script ---
+(
+    echo API_PID=!API_PID!
+    echo API_PYTHON_PID=!API_PYTHON_PID!
+    echo BACKUP_PID=!BACKUP_PID!
+    echo BACKUP_PYTHON_PID=!BACKUP_PYTHON_PID!
+) > "%~dp0.pids"
 
 echo.
 echo =============================================
-echo   Services started successfully!
+echo   All services started successfully!
 echo.
-echo   App: http://localhost:5000
+echo   App:    http://localhost:%API_PORT%
 echo   Backup: 12 AM and 12 PM daily
-echo =============================================
 echo.
-echo To stop: close the command windows titled
-echo   ClientPortal-API, ClientPortal-Backup
+echo   To stop: run stop-all.bat
+echo =============================================
 echo.
 pause
