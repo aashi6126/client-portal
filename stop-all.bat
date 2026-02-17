@@ -3,7 +3,7 @@ REM ==========================================================================
 REM Client Portal - Stop Services
 REM ==========================================================================
 REM Usage: stop-all.bat
-REM   Stops the API server and backup scheduler.
+REM   Stops the API server, backup scheduler, and web app.
 REM ==========================================================================
 
 setlocal enabledelayedexpansion
@@ -49,6 +49,15 @@ if exist "%PIDS_FILE%" (
         taskkill /pid !BACKUP_PID! /f >nul 2>&1
     )
 
+    if defined WEB_PID (
+        echo [..] Stopping web app (PID: !WEB_PID!)...
+        taskkill /pid !WEB_PID! /f >nul 2>&1
+        if not errorlevel 1 (
+            echo [OK] Web app stopped
+            set "STOPPED=1"
+        )
+    )
+
     del "%PIDS_FILE%" >nul 2>&1
 )
 
@@ -64,6 +73,12 @@ if not errorlevel 1 (
 taskkill /fi "WINDOWTITLE eq ClientPortal-Backup*" /f >nul 2>&1
 if not errorlevel 1 (
     echo [OK] Closed Backup window
+    set "STOPPED=1"
+)
+
+taskkill /fi "WINDOWTITLE eq ClientPortal-WebApp*" /f >nul 2>&1
+if not errorlevel 1 (
+    echo [OK] Closed WebApp window
     set "STOPPED=1"
 )
 

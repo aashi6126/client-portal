@@ -102,20 +102,34 @@ for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_schedu
 
 echo [OK] Backup scheduler started (12 AM and 12 PM daily)
 
+REM --- Start Web App (React dev server) ---
+echo [..] Starting web app...
+start "ClientPortal-WebApp" /min cmd /c "cd /d %~dp0webapp\customer-app && npm start"
+
+timeout /t 2 /nobreak >nul
+
+for /f "tokens=2" %%p in ('tasklist /fi "WINDOWTITLE eq ClientPortal-WebApp*" /fo list 2^>nul ^| findstr "PID:"') do (
+    set "WEB_PID=%%p"
+)
+
+echo [OK] Web app starting at http://localhost:3000
+
 REM --- Save PIDs to file for stop script ---
 (
     echo API_PID=!API_PID!
     echo API_PYTHON_PID=!API_PYTHON_PID!
     echo BACKUP_PID=!BACKUP_PID!
     echo BACKUP_PYTHON_PID=!BACKUP_PYTHON_PID!
+    echo WEB_PID=!WEB_PID!
 ) > "%~dp0.pids"
 
 echo.
 echo =============================================
 echo   All services started successfully!
 echo.
-echo   App:    http://localhost:%API_PORT%
-echo   Backup: 12 AM and 12 PM daily
+echo   Web App: http://localhost:3000
+echo   API:     http://localhost:%API_PORT%
+echo   Backup:  12 AM and 12 PM daily
 echo.
 echo   To stop: run stop-all.bat
 echo =============================================
