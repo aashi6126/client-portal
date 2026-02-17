@@ -1,5 +1,6 @@
 import React from 'react';
 import DataTable from './DataTable';
+import { Chip } from '@mui/material';
 
 // Column definitions for Clients table
 export const clientColumns = [
@@ -8,14 +9,55 @@ export const clientColumns = [
     label: 'Tax ID',
     sticky: true,
     sortable: true,
-    minWidth: 120
+    minWidth: 90
   },
   {
     id: 'client_name',
     label: 'Client Name',
     sticky: true,
     sortable: true,
-    minWidth: 200
+    minWidth: 140
+  },
+  {
+    id: 'status',
+    label: 'Status',
+    sortable: true,
+    minWidth: 100,
+    render: (value) => {
+      if (!value) return <span style={{ color: '#999' }}>—</span>;
+      const colorMap = {
+        'Active': 'success',
+        'Quoting': 'warning',
+        'Prospect': 'info'
+      };
+      return (
+        <Chip
+          label={value}
+          size="small"
+          color={colorMap[value] || 'default'}
+        />
+      );
+    }
+  },
+  {
+    id: 'gross_revenue',
+    label: 'Gross Revenue',
+    sortable: true,
+    minWidth: 130,
+    render: (value) => {
+      if (value == null) return <span style={{ color: '#999' }}>—</span>;
+      return `$${parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+    }
+  },
+  {
+    id: 'total_ees',
+    label: 'Total EEs',
+    sortable: true,
+    minWidth: 100,
+    render: (value) => {
+      if (value == null) return <span style={{ color: '#999' }}>—</span>;
+      return value.toLocaleString('en-US');
+    }
   },
   {
     id: 'contact_person',

@@ -38,6 +38,9 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
   const [formData, setFormData] = useState({
     tax_id: '',
     client_name: '',
+    status: 'Active',
+    gross_revenue: '',
+    total_ees: '',
     contact_person: '',
     email: '',
     phone_number: '',
@@ -56,6 +59,9 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
       setFormData({
         tax_id: client.tax_id || '',
         client_name: client.client_name || '',
+        status: client.status || 'Active',
+        gross_revenue: client.gross_revenue ?? '',
+        total_ees: client.total_ees ?? '',
         contact_person: client.contact_person || '',
         email: client.email || '',
         phone_number: client.phone_number || '',
@@ -70,6 +76,9 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
       setFormData({
         tax_id: '',
         client_name: '',
+        status: 'Active',
+        gross_revenue: '',
+        total_ees: '',
         contact_person: '',
         email: '',
         phone_number: '',
@@ -130,7 +139,9 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
     if (validate()) {
       onSave({
         ...client,
-        ...formData
+        ...formData,
+        gross_revenue: formData.gross_revenue !== '' ? parseFloat(formData.gross_revenue) : null,
+        total_ees: formData.total_ees !== '' ? parseInt(formData.total_ees, 10) : null
       });
     }
   };
@@ -178,6 +189,47 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
                 size="small"
                 error={Boolean(errors.client_name)}
                 helperText={errors.client_name}
+              />
+            </Grid>
+
+            {/* Status */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Status"
+                select
+                value={formData.status}
+                onChange={handleChange('status')}
+                fullWidth
+                size="small"
+              >
+                <MenuItem value="Active">Active</MenuItem>
+                <MenuItem value="Quoting">Quoting</MenuItem>
+                <MenuItem value="Prospect">Prospect</MenuItem>
+              </TextField>
+            </Grid>
+
+            {/* Gross Revenue */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Gross Revenue"
+                type="number"
+                value={formData.gross_revenue}
+                onChange={handleChange('gross_revenue')}
+                fullWidth
+                size="small"
+                InputProps={{ startAdornment: <span style={{ marginRight: 4, color: '#999' }}>$</span> }}
+              />
+            </Grid>
+
+            {/* Total EEs */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="Total EEs"
+                type="number"
+                value={formData.total_ees}
+                onChange={handleChange('total_ees')}
+                fullWidth
+                size="small"
               />
             </Grid>
 

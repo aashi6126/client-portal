@@ -42,6 +42,16 @@ const API_COMMERCIAL = '/api/commercial';
 const API_DASHBOARD_RENEWALS = '/api/dashboard/renewals';
 const API_DASHBOARD_CROSS_SELL = '/api/dashboard/cross-sell';
 
+// Parse date string as local time (avoids UTC timezone shift)
+const parseDate = (d) => {
+  if (!d) return null;
+  const str = String(d);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+    return new Date(str + 'T00:00:00');
+  }
+  return new Date(str);
+};
+
 /**
  * NewDashboard - Complete rebuild with 4 sections:
  * 1. Summary Cards
@@ -49,7 +59,7 @@ const API_DASHBOARD_CROSS_SELL = '/api/dashboard/cross-sell';
  * 3. Next Month Focus
  * 4. Cross-Sell Opportunities
  */
-const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateToTab }) => {
+const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateToTab, dataVersion }) => {
   const [clients, setClients] = useState([]);
   const [benefits, setBenefits] = useState([]);
   const [commercial, setCommercial] = useState([]);
@@ -86,7 +96,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
     };
 
     fetchDashboardData();
-  }, []);
+  }, [dataVersion]);
 
   // Group renewals by month for chart
   const monthlyRenewals = useMemo(() => {
@@ -123,10 +133,10 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
 
     return renewals
       .filter(renewal => {
-        const renewalDate = new Date(renewal.renewal_date);
-        return renewalDate.getUTCFullYear() === targetYear && renewalDate.getUTCMonth() === targetMon;
+        const renewalDate = parseDate(renewal.renewal_date);
+        return renewalDate.getFullYear() === targetYear && renewalDate.getMonth() === targetMon;
       })
-      .sort((a, b) => new Date(a.renewal_date) - new Date(b.renewal_date));
+      .sort((a, b) => parseDate(a.renewal_date) - parseDate(b.renewal_date));
   };
 
   // Get month name for tab labels
@@ -157,13 +167,13 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
         renewal_date: renewal.renewal_date
       });
       // Track earliest renewal date for this client/type combo
-      if (new Date(renewal.renewal_date) < new Date(grouped[key].earliest_date)) {
+      if (parseDate(renewal.renewal_date) < parseDate(grouped[key].earliest_date)) {
         grouped[key].earliest_date = renewal.renewal_date;
       }
     });
 
     return Object.values(grouped).sort((a, b) =>
-      new Date(a.earliest_date) - new Date(b.earliest_date)
+      parseDate(a.earliest_date) - parseDate(b.earliest_date)
     );
   };
 
@@ -196,8 +206,8 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
   // Format date for display
   const formatDate = (dateString) => {
     try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+      const date = parseDate(dateString);
+      return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
     } catch (e) {
       return dateString;
     }
@@ -206,7 +216,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
   // Check if renewal is urgent (< 7 days)
   const isUrgent = (dateString) => {
     const today = new Date();
-    const renewalDate = new Date(dateString);
+    const renewalDate = parseDate(dateString);
     const daysUntil = Math.ceil((renewalDate - today) / (1000 * 60 * 60 * 24));
     return daysUntil <= 7 && daysUntil >= 0;
   };
@@ -233,25 +243,30 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
 
     const totalBenefitTypes = multiPlanDefs.length + singlePlanDefs.length; // 11
 
-    const commercialProductDefs = [
+    // Commercial: multi-plan types checked via plans nested object
+    const commercialMultiPlanDefs = [
+      { planType: 'umbrella', name: 'Umbrella' },
+      { planType: 'professional_eo', name: 'E&O' },
+      { planType: 'cyber', name: 'Cyber' },
+      { planType: 'crime', name: 'Crime' }
+    ];
+    // Commercial: single-plan types checked via flat carrier field
+    const commercialSinglePlanDefs = [
       { key: 'general_liability_carrier', name: 'GL' },
       { key: 'property_carrier', name: 'Property' },
       { key: 'bop_carrier', name: 'BOP' },
-      { key: 'umbrella_carrier', name: 'Umbrella' },
       { key: 'workers_comp_carrier', name: 'WC' },
-      { key: 'professional_eo_carrier', name: 'E&O' },
-      { key: 'cyber_carrier', name: 'Cyber' },
       { key: 'auto_carrier', name: 'Auto' },
       { key: 'epli_carrier', name: 'EPLI' },
       { key: 'nydbl_carrier', name: 'NYDBL' },
       { key: 'surety_carrier', name: 'Surety' },
       { key: 'product_liability_carrier', name: 'Product' },
       { key: 'flood_carrier', name: 'Flood' },
-      { key: 'crime_carrier', name: 'Crime' },
       { key: 'directors_officers_carrier', name: 'D&O' },
       { key: 'fiduciary_carrier', name: 'Fiduciary' },
       { key: 'inland_marine_carrier', name: 'Marine' }
     ];
+    const totalCommercialTypes = commercialMultiPlanDefs.length + commercialSinglePlanDefs.length; // 17
 
     const benefitGaps = benefits
       .map(b => {
@@ -273,8 +288,17 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
 
     const commercialGaps = commercial
       .map(c => {
-        const missing = commercialProductDefs.filter(p => !c[p.key]).map(p => p.name);
-        const active = commercialProductDefs.length - missing.length;
+        const missing = [];
+        // Check multi-plan types via plans nested object
+        commercialMultiPlanDefs.forEach(p => {
+          const hasPlans = c.plans && c.plans[p.planType] && c.plans[p.planType].length > 0;
+          if (!hasPlans) missing.push(p.name);
+        });
+        // Check single-plan types via flat carrier field
+        commercialSinglePlanDefs.forEach(p => {
+          if (!c[p.key]) missing.push(p.name);
+        });
+        const active = totalCommercialTypes - missing.length;
         return { client_name: c.client_name, tax_id: c.tax_id, missing, active };
       })
       .filter(c => c.missing.length > 0 && c.active > 0)

@@ -38,6 +38,29 @@ const DataTable = ({
   const [orderBy, setOrderBy] = useState(defaultOrderBy);
   const [order, setOrder] = useState(defaultOrder);
 
+  // Pre-compute sticky column left offsets
+  const actionsWidth = 80;
+  const stickyOffsets = React.useMemo(() => {
+    const offsets = {};
+    let left = actionsWidth;
+    columns.forEach((col) => {
+      if (col.sticky) {
+        offsets[col.id] = left;
+        left += (col.minWidth || 150);
+      }
+    });
+    return offsets;
+  }, [columns]);
+
+  // Find last sticky column for box-shadow
+  const lastStickyId = React.useMemo(() => {
+    let last = null;
+    columns.forEach((col) => {
+      if (col.sticky) last = col.id;
+    });
+    return last;
+  }, [columns]);
+
   // Handle sorting
   const handleRequestSort = (property) => {
     const isAsc = orderBy === property && order === 'asc';
@@ -93,7 +116,7 @@ const DataTable = ({
         const str = String(value);
         const date = /^\d{4}-\d{2}-\d{2}$/.test(str) ? new Date(str + 'T00:00:00') : new Date(str);
         if (!isNaN(date.getTime())) {
-          return date.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+          return date.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
         }
       } catch (e) {
         // Not a date, render as-is
@@ -143,7 +166,15 @@ const DataTable = ({
                   backgroundColor: '#f5f5f5',
                   whiteSpace: 'nowrap',
                   minWidth: column.minWidth || 150,
-                  maxWidth: column.maxWidth || 300
+                  maxWidth: column.maxWidth || 300,
+                  ...(column.sticky && {
+                    position: 'sticky',
+                    left: stickyOffsets[column.id],
+                    zIndex: 3,
+                    ...(column.id === lastStickyId && {
+                      boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    })
+                  })
                 }}
               >
                 {column.sortable !== false ? (
@@ -218,7 +249,18 @@ const DataTable = ({
 
                 {/* Data cells */}
                 {columns.map((column) => (
-                  <TableCell key={column.id}>
+                  <TableCell
+                    key={column.id}
+                    sx={column.sticky ? {
+                      position: 'sticky',
+                      left: stickyOffsets[column.id],
+                      zIndex: 1,
+                      backgroundColor: 'white',
+                      ...(column.id === lastStickyId && {
+                        boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                      })
+                    } : undefined}
+                  >
                     {renderCell(column, row)}
                   </TableCell>
                 ))}

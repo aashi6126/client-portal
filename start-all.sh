@@ -20,6 +20,11 @@ API_PID=$!
 # Wait a moment for API to start
 sleep 2
 
+# Start backup scheduler in background
+echo "💾 Starting backup scheduler (12 AM & 12 PM daily)..."
+/opt/anaconda3/bin/python services/backup_scheduler.py &
+BACKUP_PID=$!
+
 # Start web app
 echo "🌐 Starting web app on http://localhost:3000..."
 cd webapp/customer-app
@@ -30,10 +35,11 @@ WEB_PID=$!
 echo ""
 echo "✅ Services started successfully!"
 echo "   API Service: http://127.0.0.1:5000 (PID: $API_PID)"
+echo "   Backup Scheduler: PID $BACKUP_PID (12 AM & 12 PM)"
 echo "   Web App: http://localhost:3000 (PID: $WEB_PID)"
 echo ""
 echo "📝 To stop services:"
-echo "   kill $API_PID $WEB_PID"
+echo "   kill $API_PID $BACKUP_PID $WEB_PID"
 echo "   or press Ctrl+C"
 echo ""
 

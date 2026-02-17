@@ -4,6 +4,7 @@ import {
   AppBar,
   Box,
   Button,
+  Chip,
   Container,
   Toolbar,
   Typography,
@@ -16,12 +17,20 @@ import {
   DialogContent,
   DialogContentText,
   DialogActions,
-  TextField
+  TextField,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  IconButton,
+  Tooltip
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
-import BugReportIcon from '@mui/icons-material/BugReport';
+import DeleteIcon from '@mui/icons-material/Delete';
 import MenuItem from '@mui/material/MenuItem';
 
 // Import new components
@@ -37,6 +46,7 @@ import CommercialModal from './components/CommercialModal';
 const API_CLIENTS = '/api/clients';
 const API_BENEFITS = '/api/benefits';
 const API_COMMERCIAL = '/api/commercial';
+const API_FEEDBACK = '/api/feedback';
 
 function NewApp() {
   // Tab state
@@ -75,8 +85,12 @@ function NewApp() {
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
 
-  // Feedback dialog state
-  const [feedbackOpen, setFeedbackOpen] = useState(false);
+  // Data version counter — incremented on every data change to trigger Dashboard refresh
+  const [dataVersion, setDataVersion] = useState(0);
+
+  // Feedback state
+  const [feedback, setFeedback] = useState([]);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
   const [feedbackData, setFeedbackData] = useState({ type: 'Bug', subject: '', description: '' });
 
   // Fetch data on mount
@@ -89,6 +103,7 @@ function NewApp() {
     fetchClients();
     fetchBenefits();
     fetchCommercial();
+    fetchFeedback();
   };
 
   // ========== CLIENT OPERATIONS ==========
@@ -113,6 +128,7 @@ function NewApp() {
         .then(() => {
           setClientModalOpen(false);
           fetchClients();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error updating client:', error));
     } else {
@@ -121,6 +137,7 @@ function NewApp() {
         .then(() => {
           setClientModalOpen(false);
           fetchClients();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error creating client:', error));
     }
@@ -134,6 +151,7 @@ function NewApp() {
     axios.post(`${API_CLIENTS}/${client.id}/clone`)
       .then(() => {
         fetchClients();
+        setDataVersion(v => v + 1);
       })
       .catch(error => console.error('Error cloning client:', error));
   };
@@ -160,6 +178,7 @@ function NewApp() {
         .then(() => {
           setBenefitsModalOpen(false);
           fetchBenefits();
+          setDataVersion(v => v + 1);
         })
         .catch(error => {
           console.error('Error updating benefit:', error);
@@ -171,6 +190,7 @@ function NewApp() {
         .then(() => {
           setBenefitsModalOpen(false);
           fetchBenefits();
+          setDataVersion(v => v + 1);
         })
         .catch(error => {
           console.error('Error creating benefit:', error);
@@ -187,6 +207,7 @@ function NewApp() {
     axios.post(`${API_BENEFITS}/${benefit.id}/clone`)
       .then(() => {
         fetchBenefits();
+        setDataVersion(v => v + 1);
       })
       .catch(error => console.error('Error cloning benefit:', error));
   };
@@ -213,6 +234,7 @@ function NewApp() {
         .then(() => {
           setCommercialModalOpen(false);
           fetchCommercial();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error updating commercial:', error));
     } else {
@@ -221,6 +243,7 @@ function NewApp() {
         .then(() => {
           setCommercialModalOpen(false);
           fetchCommercial();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error creating commercial:', error));
     }
@@ -234,6 +257,7 @@ function NewApp() {
     axios.post(`${API_COMMERCIAL}/${commercialRecord.id}/clone`)
       .then(() => {
         fetchCommercial();
+        setDataVersion(v => v + 1);
       })
       .catch(error => console.error('Error cloning commercial:', error));
   };
@@ -250,20 +274,29 @@ function NewApp() {
           // Also refresh benefits and commercial as they may cascade delete
           fetchBenefits();
           fetchCommercial();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error deleting client:', error));
     } else if (type === 'benefit') {
       axios.delete(`${API_BENEFITS}/${item.id}`)
         .then(() => {
           fetchBenefits();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error deleting benefit:', error));
     } else if (type === 'commercial') {
       axios.delete(`${API_COMMERCIAL}/${item.id}`)
         .then(() => {
           fetchCommercial();
+          setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error deleting commercial:', error));
+    } else if (type === 'feedback') {
+      axios.delete(`${API_FEEDBACK}/${item.id}`)
+        .then(() => {
+          fetchFeedback();
+        })
+        .catch(error => console.error('Error deleting feedback:', error));
     }
 
     setDeleteDialog({ open: false, type: null, item: null });
@@ -372,6 +405,7 @@ function NewApp() {
 
       alert(message);
       fetchAllData();
+      setDataVersion(v => v + 1);
     } catch (error) {
       console.error('Import error:', error);
       alert('Import failed: ' + (error.response?.data?.error || error.message));
@@ -381,16 +415,34 @@ function NewApp() {
     }
   };
 
-  // ========== FEEDBACK ==========
+  // ========== FEEDBACK OPERATIONS ==========
+
+  const fetchFeedback = () => {
+    axios.get(API_FEEDBACK)
+      .then(response => {
+        setFeedback(response.data.feedback || []);
+      })
+      .catch(error => console.error('Error fetching feedback:', error));
+  };
 
   const handleFeedbackSubmit = () => {
-    const subject = encodeURIComponent(`[${feedbackData.type}] ${feedbackData.subject}`);
-    const body = encodeURIComponent(
-      `Type: ${feedbackData.type}\nSubject: ${feedbackData.subject}\n\nDescription:\n${feedbackData.description}`
-    );
-    window.location.href = `mailto:aman22@gmail.com,aminkhatri@gmail.com?subject=${subject}&body=${body}`;
-    setFeedbackOpen(false);
-    setFeedbackData({ type: 'Bug', subject: '', description: '' });
+    axios.post(API_FEEDBACK, feedbackData)
+      .then(() => {
+        setFeedbackModalOpen(false);
+        setFeedbackData({ type: 'Bug', subject: '', description: '' });
+        fetchFeedback();
+      })
+      .catch(error => console.error('Error creating feedback:', error));
+  };
+
+  const updateFeedbackStatus = (id, status) => {
+    axios.put(`${API_FEEDBACK}/${id}`, { status })
+      .then(() => fetchFeedback())
+      .catch(error => console.error('Error updating feedback:', error));
+  };
+
+  const deleteFeedbackItem = (item) => {
+    setDeleteDialog({ open: true, type: 'feedback', item });
   };
 
   return (
@@ -431,15 +483,6 @@ function NewApp() {
               >
                 Export
               </Button>
-              <Button
-                variant="outlined"
-                color="inherit"
-                startIcon={<BugReportIcon />}
-                onClick={() => setFeedbackOpen(true)}
-                size="small"
-              >
-                Feedback
-              </Button>
             </Stack>
           </Toolbar>
         </Container>
@@ -453,6 +496,7 @@ function NewApp() {
             <Tab label="Clients" />
             <Tab label="Employee Benefits" />
             <Tab label="Commercial Insurance" />
+            <Tab label="Feedback" />
           </Tabs>
         </Box>
 
@@ -462,6 +506,7 @@ function NewApp() {
             onOpenBenefitsModal={openBenefitsModal}
             onOpenCommercialModal={openCommercialModal}
             onNavigateToTab={setActiveTab}
+            dataVersion={dataVersion}
           />
         )}
 
@@ -566,6 +611,98 @@ function NewApp() {
             />
           </Box>
         )}
+
+        {/* Tab 4: Feedback */}
+        {activeTab === 4 && (
+          <Box mt={2}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
+                <Typography variant="h6">
+                  Feedback ({feedback.length})
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => setFeedbackModalOpen(true)}
+                >
+                  Add Feedback
+                </Button>
+              </Stack>
+            </Paper>
+            <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)' }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 80 }}>Actions</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 100 }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 200 }}>Subject</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 300 }}>Description</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 130 }}>Status</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', minWidth: 130 }}>Created</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {feedback.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                        No feedback items yet
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    feedback.map((item) => (
+                      <TableRow key={item.id} hover>
+                        <TableCell>
+                          <Tooltip title="Delete">
+                            <IconButton size="small" color="error" onClick={() => deleteFeedbackItem(item)}>
+                              <DeleteIcon fontSize="small" />
+                            </IconButton>
+                          </Tooltip>
+                        </TableCell>
+                        <TableCell>
+                          <Chip
+                            label={item.type}
+                            size="small"
+                            color={item.type === 'Bug' ? 'error' : 'info'}
+                            variant="outlined"
+                          />
+                        </TableCell>
+                        <TableCell>{item.subject}</TableCell>
+                        <TableCell>
+                          {item.description && item.description.length > 80 ? (
+                            <Tooltip title={item.description} arrow>
+                              <span>{item.description.substring(0, 77)}...</span>
+                            </Tooltip>
+                          ) : (
+                            item.description || <span style={{ color: '#999' }}>--</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <TextField
+                            select
+                            value={item.status}
+                            onChange={(e) => updateFeedbackStatus(item.id, e.target.value)}
+                            size="small"
+                            sx={{ minWidth: 120 }}
+                          >
+                            <MenuItem value="New">New</MenuItem>
+                            <MenuItem value="In Progress">In Progress</MenuItem>
+                            <MenuItem value="Fixed">Fixed</MenuItem>
+                          </TextField>
+                        </TableCell>
+                        <TableCell>
+                          {item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', {
+                            month: '2-digit', day: '2-digit', year: 'numeric'
+                          }) : '--'}
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Box>
+        )}
       </Container>
 
       {/* Modals */}
@@ -620,17 +757,17 @@ function NewApp() {
         </DialogActions>
       </Dialog>
 
-      {/* Feedback Dialog */}
+      {/* Add Feedback Dialog */}
       <Dialog
-        open={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
+        open={feedbackModalOpen}
+        onClose={() => setFeedbackModalOpen(false)}
         maxWidth="sm"
         fullWidth
       >
-        <DialogTitle>Submit Feedback</DialogTitle>
+        <DialogTitle>Add Feedback</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
-            Report a bug or request a feature. This will open your email client to send to aman22@gmail.com and aminkhatri@gmail.com.
+            Report a bug or request a feature.
           </DialogContentText>
           <TextField
             label="Type"
@@ -664,16 +801,16 @@ function NewApp() {
           />
         </DialogContent>
         <DialogActions sx={{ p: 2 }}>
-          <Button onClick={() => setFeedbackOpen(false)} color="inherit">
+          <Button onClick={() => setFeedbackModalOpen(false)} color="inherit">
             Cancel
           </Button>
           <Button
             onClick={handleFeedbackSubmit}
             variant="contained"
             color="primary"
-            disabled={!feedbackData.subject.trim() || !feedbackData.description.trim()}
+            disabled={!feedbackData.subject.trim()}
           >
-            Send Email
+            Submit
           </Button>
         </DialogActions>
       </Dialog>

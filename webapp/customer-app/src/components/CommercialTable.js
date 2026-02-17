@@ -1,6 +1,33 @@
 import React from 'react';
 import DataTable from './DataTable';
 import { Chip, Box, Tooltip } from '@mui/material';
+import FlagIcon from '@mui/icons-material/Flag';
+
+// Multi-plan types (support multiple plans via plans nested object)
+const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
+const MULTI_PLAN_LABELS = {
+  umbrella: 'Umbrella',
+  professional_eo: 'E&O',
+  cyber: 'Cyber',
+  crime: 'Crime'
+};
+
+// Single-plan product names
+const SINGLE_PLAN_PRODUCTS = {
+  general_liability: 'GL',
+  property: 'Property',
+  bop: 'BOP',
+  workers_comp: 'WC',
+  auto: 'Auto',
+  epli: 'EPLI',
+  nydbl: 'NYDBL',
+  surety: 'Surety',
+  product_liability: 'Product',
+  flood: 'Flood',
+  directors_officers: 'D&O',
+  fiduciary: 'Fiduciary',
+  inland_marine: 'Marine'
+};
 
 // Parse date string as local time (avoids UTC timezone shift)
 const parseDate = (d) => {
@@ -12,81 +39,151 @@ const parseDate = (d) => {
   return new Date(str);
 };
 
-// Helper function to count active products
+// Helper function to count active products (types, not individual plans)
 const countActiveProducts = (row) => {
-  const products = [
-    'general_liability', 'property', 'bop', 'umbrella', 'workers_comp',
-    'professional_eo', 'cyber', 'auto', 'epli', 'nydbl', 'surety',
-    'product_liability', 'flood', 'crime', 'directors_officers',
-    'fiduciary', 'inland_marine'
-  ];
-
-  return products.filter(p => row[`${p}_carrier`]).length;
+  let count = 0;
+  // Multi-plan types: check plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      if (row.plans[pt] && row.plans[pt].length > 0) count++;
+    });
+  } else {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      if (row[`${pt}_carrier`]) count++;
+    });
+  }
+  // Single-plan types
+  Object.keys(SINGLE_PLAN_PRODUCTS).forEach(key => {
+    if (row[`${key}_carrier`]) count++;
+  });
+  return count;
 };
 
 // Helper function to get all active products with details
 const getActiveProducts = (row) => {
-  const productNames = {
-    general_liability: 'GL',
-    property: 'Property',
-    bop: 'BOP',
-    umbrella: 'Umbrella',
-    workers_comp: 'WC',
-    professional_eo: 'E&O',
-    cyber: 'Cyber',
-    auto: 'Auto',
-    epli: 'EPLI',
-    nydbl: 'NYDBL',
-    surety: 'Surety',
-    product_liability: 'Product',
-    flood: 'Flood',
-    crime: 'Crime',
-    directors_officers: 'D&O',
-    fiduciary: 'Fiduciary',
-    inland_marine: 'Marine'
-  };
+  const products = [];
 
-  return Object.entries(productNames)
-    .filter(([key]) => row[`${key}_carrier`])
-    .map(([key, name]) => ({
-      shortName: name,
-      carrier: row[`${key}_carrier`],
-      renewalDate: row[`${key}_renewal_date`],
-      premium: row[`${key}_premium`],
-      limit: row[`${key}_limit`]
-    }));
+  // Multi-plan types from plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      const typePlans = row.plans[pt] || [];
+      const label = MULTI_PLAN_LABELS[pt];
+      typePlans.forEach((plan, idx) => {
+        if (plan.carrier || plan.renewal_date || plan.limit || plan.premium) {
+          products.push({
+            shortName: typePlans.length > 1 ? `${label} ${idx + 1}` : label,
+            carrier: plan.carrier,
+            renewalDate: plan.renewal_date,
+            premium: plan.premium,
+            limit: plan.limit,
+            flag: plan.flag
+          });
+        }
+      });
+    });
+  } else {
+    // Fallback to flat fields
+    MULTI_PLAN_TYPES.forEach(pt => {
+      if (row[`${pt}_carrier`]) {
+        products.push({
+          shortName: MULTI_PLAN_LABELS[pt],
+          carrier: row[`${pt}_carrier`],
+          renewalDate: row[`${pt}_renewal_date`],
+          premium: row[`${pt}_premium`],
+          limit: row[`${pt}_limit`],
+          flag: false
+        });
+      }
+    });
+  }
+
+  // Single-plan types (always flat)
+  Object.entries(SINGLE_PLAN_PRODUCTS).forEach(([key, name]) => {
+    if (row[`${key}_carrier`]) {
+      products.push({
+        shortName: name,
+        carrier: row[`${key}_carrier`],
+        renewalDate: row[`${key}_renewal_date`],
+        premium: row[`${key}_premium`],
+        limit: row[`${key}_limit`],
+        flag: row[`${key}_flag`]
+      });
+    }
+  });
+
+  // Flagged coverages first
+  return products.sort((a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0));
+};
+
+// Helper function to check if any coverage is flagged
+const hasAnyFlag = (row) => {
+  if (row.plans) {
+    for (const pt of MULTI_PLAN_TYPES) {
+      for (const plan of (row.plans[pt] || [])) {
+        if (plan.flag) return true;
+      }
+    }
+  }
+  for (const key of Object.keys(SINGLE_PLAN_PRODUCTS)) {
+    if (row[`${key}_flag`]) return true;
+  }
+  return false;
 };
 
 // Helper function to get next renewal date
 const getNextRenewal = (row) => {
-  const products = [
-    'general_liability', 'property', 'bop', 'umbrella', 'workers_comp',
-    'professional_eo', 'cyber', 'auto', 'epli', 'nydbl', 'surety',
-    'product_liability', 'flood', 'crime', 'directors_officers',
-    'fiduciary', 'inland_marine'
-  ];
+  const renewalDates = [];
 
-  const renewalDates = products
-    .map(p => row[`${p}_renewal_date`])
-    .filter(d => d)
-    .map(d => parseDate(d))
-    .sort((a, b) => a - b);
+  // Multi-plan types from plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      (row.plans[pt] || []).forEach(plan => {
+        if (plan.renewal_date) {
+          renewalDates.push(parseDate(plan.renewal_date));
+        }
+      });
+    });
+  } else {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      if (row[`${pt}_renewal_date`]) renewalDates.push(parseDate(row[`${pt}_renewal_date`]));
+    });
+  }
 
-  return renewalDates.length > 0 ? renewalDates[0] : null;
+  // Single-plan types
+  Object.keys(SINGLE_PLAN_PRODUCTS).forEach(key => {
+    if (row[`${key}_renewal_date`]) renewalDates.push(parseDate(row[`${key}_renewal_date`]));
+  });
+
+  if (renewalDates.length === 0) return null;
+
+  const today = new Date();
+  const futureDates = renewalDates.filter(d => d >= today).sort((a, b) => a - b);
+  return futureDates.length > 0 ? futureDates[0] : renewalDates.sort((a, b) => b - a)[0];
 };
 
 // Helper function to calculate total premium
 const getTotalPremium = (row) => {
-  const products = [
-    'general_liability', 'property', 'bop', 'umbrella', 'workers_comp',
-    'professional_eo', 'cyber', 'auto', 'epli', 'nydbl', 'surety',
-    'product_liability', 'flood', 'crime', 'directors_officers',
-    'fiduciary', 'inland_marine'
-  ];
+  let total = 0;
 
-  return products
-    .map(p => parseFloat(row[`${p}_premium`]) || 0)
-    .reduce((sum, premium) => sum + premium, 0);
+  // Multi-plan types from plans nested object
+  if (row.plans) {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      (row.plans[pt] || []).forEach(plan => {
+        total += parseFloat(plan.premium) || 0;
+      });
+    });
+  } else {
+    MULTI_PLAN_TYPES.forEach(pt => {
+      total += parseFloat(row[`${pt}_premium`]) || 0;
+    });
+  }
+
+  // Single-plan types
+  Object.keys(SINGLE_PLAN_PRODUCTS).forEach(key => {
+    total += parseFloat(row[`${key}_premium`]) || 0;
+  });
+
+  return total;
 };
 
 // Column definitions for Commercial Insurance table
@@ -96,14 +193,14 @@ export const commercialColumns = [
     label: 'Tax ID',
     sticky: true,
     sortable: true,
-    minWidth: 120
+    minWidth: 90
   },
   {
     id: 'client_name',
     label: 'Client Name',
     sticky: true,
     sortable: true,
-    minWidth: 200
+    minWidth: 140
   },
   {
     id: 'status',
@@ -124,7 +221,7 @@ export const commercialColumns = [
   },
   {
     id: 'outstanding_item',
-    label: 'Outstanding Item',
+    label: 'Follow Up',
     sortable: true,
     minWidth: 150,
     render: (value) => {
@@ -159,7 +256,7 @@ export const commercialColumns = [
       const formatDate = (d) => {
         if (!d) return 'N/A';
         try {
-          return parseDate(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+          return parseDate(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
         } catch { return d; }
       };
 
@@ -191,6 +288,7 @@ export const commercialColumns = [
                 <div>Limit: {product.limit || 'N/A'}</div>
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
+                {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
               </Box>
             }
           >
@@ -198,10 +296,15 @@ export const commercialColumns = [
               label={product.shortName}
               size="small"
               variant={renewing ? 'filled' : 'outlined'}
+              icon={product.flag ? <FlagIcon sx={{ fontSize: '0.75rem !important', color: '#d32f2f !important' }} /> : undefined}
               sx={{
                 fontSize: '0.7rem',
                 height: '20px',
                 cursor: 'pointer',
+                ...(product.flag && !renewing && {
+                  borderColor: '#d32f2f',
+                  color: '#d32f2f'
+                }),
                 ...(renewing && {
                   backgroundColor: '#fff3cd',
                   color: '#856404',
@@ -229,6 +332,7 @@ export const commercialColumns = [
                       <div>Limit: {product.limit || 'N/A'}</div>
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
+                      {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
                     </Box>
                   ))}
                 </Box>
@@ -268,8 +372,10 @@ export const commercialColumns = [
     label: 'Next Renewal',
     sortable: true,
     sortValue: (row) => {
+      const flagged = hasAnyFlag(row) ? 0 : 1;
       const d = getNextRenewal(row);
-      return d ? d.getTime() : null;
+      const time = d ? d.getTime() : Number.MAX_SAFE_INTEGER;
+      return flagged * 1e15 + time;
     },
     minWidth: 130,
     render: (value, row) => {
@@ -285,7 +391,7 @@ export const commercialColumns = [
       return (
         <Box>
           <div style={{ fontWeight: isUrgent ? 'bold' : 'normal' }}>
-            {nextRenewal.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+            {nextRenewal.toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' })}
           </div>
           {isUrgent && (
             <Chip

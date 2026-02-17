@@ -16,6 +16,9 @@ CREATE TABLE IF NOT EXISTS clients (
     city VARCHAR(100),
     state VARCHAR(50),
     zip_code VARCHAR(20),
+    status VARCHAR(50) DEFAULT 'Active',
+    gross_revenue DECIMAL(15, 2),
+    total_ees INTEGER,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -102,6 +105,8 @@ CREATE TABLE IF NOT EXISTS benefit_plans (
     plan_number INTEGER NOT NULL DEFAULT 1,
     carrier VARCHAR(200),
     renewal_date DATE,
+    flag BOOLEAN DEFAULT 0,
+    waiting_period VARCHAR(100),
 
     FOREIGN KEY (employee_benefit_id) REFERENCES employee_benefits(id) ON DELETE CASCADE
 );
@@ -231,3 +236,39 @@ CREATE TABLE IF NOT EXISTS commercial_insurance (
 
 CREATE INDEX idx_commercial_insurance_tax_id ON commercial_insurance(tax_id);
 CREATE INDEX idx_commercial_insurance_status ON commercial_insurance(status);
+
+-- ============================================================================
+-- COMMERCIAL PLANS TABLE (Child of Commercial Insurance - supports multiple plans)
+-- Covers: Umbrella, Professional E&O, Cyber, Crime
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS commercial_plans (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    commercial_insurance_id INTEGER NOT NULL,
+    plan_type VARCHAR(50) NOT NULL,   -- umbrella, professional_eo, cyber, crime
+    plan_number INTEGER NOT NULL DEFAULT 1,
+    carrier VARCHAR(200),
+    coverage_limit VARCHAR(100),
+    premium DECIMAL(12, 2),
+    renewal_date DATE,
+    flag BOOLEAN DEFAULT 0,
+
+    FOREIGN KEY (commercial_insurance_id) REFERENCES commercial_insurance(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_commercial_plans_commercial_insurance_id ON commercial_plans(commercial_insurance_id);
+CREATE INDEX idx_commercial_plans_plan_type ON commercial_plans(plan_type);
+
+-- ============================================================================
+-- FEEDBACK TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS feedback (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    type VARCHAR(50) NOT NULL DEFAULT 'Bug',
+    subject VARCHAR(200) NOT NULL,
+    description TEXT,
+    status VARCHAR(50) NOT NULL DEFAULT 'New',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX idx_feedback_status ON feedback(status);
