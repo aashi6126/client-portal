@@ -62,6 +62,23 @@ if not exist "%~dp0services\venv\Scripts\python.exe" (
 
 set "PYTHON=%~dp0services\venv\Scripts\python.exe"
 
+REM --- Build React app (so Flask can serve it on port 5000) ---
+if exist "%~dp0webapp\customer-app\package.json" (
+    if not exist "%~dp0webapp\customer-app\build\index.html" (
+        echo [..] Building React app (first time)...
+        pushd "%~dp0webapp\customer-app"
+        call npm run build
+        popd
+        if not exist "%~dp0webapp\customer-app\build\index.html" (
+            echo [!!] WARNING: React build failed. App will only be available via npm start on port 3000.
+        ) else (
+            echo [OK] React app built successfully
+        )
+    ) else (
+        echo [OK] React build found
+    )
+)
+
 REM --- Start API server ---
 echo [..] Starting API server...
 start "ClientPortal-API" /min cmd /c "cd /d %~dp0 && "%PYTHON%" services\api\customer_api.py"
@@ -127,8 +144,8 @@ echo.
 echo =============================================
 echo   All services started successfully!
 echo.
-echo   Web App: http://localhost:3000
-echo   API:     http://localhost:%API_PORT%
+echo   App:     http://localhost:%API_PORT%
+echo   Dev:     http://localhost:3000 (React dev server)
 echo   Backup:  12 AM and 12 PM daily
 echo.
 echo   To stop: run stop-all.bat
