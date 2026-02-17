@@ -339,10 +339,10 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
       </Typography>
 
       {/* Section 1: Summary Cards + Renewals Chart */}
-      <Grid container spacing={3} sx={{ mb: 4, alignItems: 'stretch' }}>
+      <Grid container spacing={3} sx={{ mb: 4 }}>
         {/* Left: Summary Cards in a row */}
         <Grid item xs={12} md={4}>
-          <Grid container spacing={2} sx={{ height: '100%' }}>
+          <Grid container spacing={2} sx={{ height: 220 }}>
             <Grid item xs={12} sm={4}>
               <Card
                 sx={{ backgroundColor: '#e8f4f8', border: '1px solid #b3d9e6', cursor: 'pointer', '&:hover': { boxShadow: 4 }, height: '100%' }}
@@ -410,7 +410,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
 
         {/* Right: Renewals Chart (compact) */}
         <Grid item xs={12} md={8}>
-          <Paper sx={{ p: 2, height: '100%', display: 'flex', flexDirection: 'column' }}>
+          <Paper sx={{ p: 2, height: 220, display: 'flex', flexDirection: 'column' }}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
               <TrendingUpIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
               Renewals (Next 12 Months)
