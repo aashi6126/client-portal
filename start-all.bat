@@ -140,15 +140,24 @@ REM --- Save PIDs to file for stop script ---
     echo WEB_PID=!WEB_PID!
 ) > "%~dp0.pids"
 
+REM --- Default port if not set ---
+if not defined API_PORT set "API_PORT=5000"
+
 echo.
 echo =============================================
 echo   All services started successfully!
+echo =============================================
 echo.
-echo   App:     http://localhost:%API_PORT%
-echo   Dev:     http://localhost:3000 (React dev server)
-echo   Backup:  12 AM and 12 PM daily
+echo   URLS:
+echo     App:     http://localhost:!API_PORT!
+echo     Dev:     http://localhost:3000 (React dev server)
 echo.
-echo   To stop: run stop-all.bat
+echo   PROCESSES:
+echo     API Server          PID: !API_PYTHON_PID!
+echo     Backup Scheduler    PID: !BACKUP_PYTHON_PID!  (runs at 12 AM and 12 PM)
+echo     Web App (React)     PID: !WEB_PID!
+echo.
+echo   To stop all: run stop-all.bat
 echo =============================================
 echo.
 pause
