@@ -30,8 +30,8 @@ if exist "%~dp0.pids" (
 REM --- Load config from config.env ---
 if exist "%~dp0config.env" (
     echo [OK] Loading configuration from config.env
-    for /f "tokens=1,* delims==" %%a in ('findstr /v /r "^#" "%~dp0config.env" ^| findstr "="') do (
-        set "%%a=%%b"
+    for /f "usebackq eol=# tokens=1,* delims==" %%a in ("%~dp0config.env") do (
+        if not "%%a"=="" set "%%a=%%b"
     )
 ) else (
     echo [!!] WARNING: config.env not found. Using default settings.
