@@ -115,11 +115,23 @@ def after_request(response):
 # DATABASE CONFIGURATION
 # ===========================================================================
 db_uri = os.environ.get('DATABASE_URI', 'sqlite://///Users/amandetail/workspaces/client-portal/client-portal/services/customer.db')
+
+# Ensure database directory exists (SQLite can create the file but not the directory)
+if db_uri.startswith('sqlite'):
+    # Extract path from URI: sqlite:///path or sqlite:////path
+    db_path = db_uri.split('sqlite:///')[1] if 'sqlite:///' in db_uri else None
+    if db_path:
+        db_dir = os.path.dirname(os.path.abspath(db_path))
+        if not os.path.isdir(db_dir):
+            logging.info(f"Creating database directory: {db_dir}")
+            os.makedirs(db_dir, exist_ok=True)
+
 app.config['SQLALCHEMY_DATABASE_URI'] = db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'])
 db = SQLAlchemy(app)
 Session = sessionmaker(bind=engine)
+logging.info(f"Database URI: {db_uri}")
 
 # ===========================================================================
 # DATABASE MODELS

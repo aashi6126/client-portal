@@ -72,29 +72,36 @@ if not exist "%~dp0webapp\customer-app\build\index.html" echo [!!] WARNING: Reac
 :skip_build
 echo [DEBUG] Step 7: Starting services...
 
-REM --- Start API server ---
-echo [..] Starting API server...
-start "ClientPortal-API" /min cmd /c "cd /d %~dp0 && "%PYTHON%" services\api\customer_api.py"
+REM --- Default port if not set ---
+if not defined API_PORT set "API_PORT=5000"
 
-REM Get the PID of the cmd window we just launched
-timeout /t 2 /nobreak >nul
+REM --- Start API server (window stays open on crash so you can see errors) ---
+echo [..] Starting API server...
+start "ClientPortal-API" /min cmd /k "cd /d %~dp0 && "%PYTHON%" services\api\customer_api.py || (echo. && echo [!!] API SERVER CRASHED - see error above && pause)"
+
+REM Wait for API to start
+echo [..] Waiting for API to be ready...
+timeout /t 5 /nobreak >nul
 
 REM Find the python process for customer_api
-for /f "tokens=2" %%p in ('tasklist /fi "WINDOWTITLE eq ClientPortal-API*" /fo list 2^>nul ^| findstr "PID:"') do (
-    set "API_PID=%%p"
-)
+for /f "tokens=2" %%p in ('tasklist /fi "WINDOWTITLE eq ClientPortal-API*" /fo list 2^>nul ^| findstr "PID:"') do set "API_PID=%%p"
+for /f "tokens=2" %%p in ('wmic process where "commandline like '%%customer_api%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do set "API_PYTHON_PID=%%p"
 
-REM Also find python.exe running customer_api
-for /f "tokens=2" %%p in ('wmic process where "commandline like '%%customer_api%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do (
-    set "API_PYTHON_PID=%%p"
-)
-
-echo [OK] API server started
-
-REM --- Wait for API to be ready ---
-echo [..] Waiting for API to be ready...
-timeout /t 3 /nobreak >nul
-echo [OK] API ready at http://localhost:%API_PORT%
+REM --- Verify API is running with health check ---
+curl -s -o nul -w "%%{http_code}" http://127.0.0.1:!API_PORT!/api/health >"%~dp0.healthcheck" 2>nul
+set /p HEALTH_STATUS=<"%~dp0.healthcheck"
+del "%~dp0.healthcheck" >nul 2>&1
+if "!HEALTH_STATUS!"=="200" goto :api_ok
+echo [!!] WARNING: API server is NOT responding on port !API_PORT!
+echo     Check the ClientPortal-API window for error messages.
+echo     Common causes:
+echo       - Wrong DATABASE_URI in config.env (Windows needs 3 slashes: sqlite:///C:/path)
+echo       - Database directory does not exist
+echo       - Port !API_PORT! already in use
+echo.
+goto :skip_backup
+:api_ok
+echo [OK] API server running at http://localhost:!API_PORT!
 
 REM --- Start backup scheduler ---
 echo [..] Starting backup scheduler...
@@ -111,6 +118,7 @@ for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_schedu
 )
 
 echo [OK] Backup scheduler started (12 AM and 12 PM daily)
+:skip_backup
 
 REM --- Start Web App (React dev server) ---
 echo [..] Starting web app...
@@ -133,12 +141,9 @@ REM --- Save PIDs to file for stop script ---
     echo WEB_PID=!WEB_PID!
 ) > "%~dp0.pids"
 
-REM --- Default port if not set ---
-if not defined API_PORT set "API_PORT=5000"
-
 echo.
 echo =============================================
-echo   All services started successfully!
+echo   All services started!
 echo =============================================
 echo.
 echo   URLS:
