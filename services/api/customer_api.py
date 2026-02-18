@@ -2762,6 +2762,17 @@ if __name__ == '__main__':
                                 _cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_type}")
                                 logging.info(f"Migration: added column '{col_name}' to {tbl}")
 
+                    # Rename outstanding_item values
+                    _renames = [
+                        ('Pending Premium', 'Premium Due'),
+                        ('Pending Cancellation', 'Cancel Due'),
+                    ]
+                    for _old_val, _new_val in _renames:
+                        for _tbl in ('employee_benefits', 'commercial_insurance'):
+                            _cursor.execute(f"UPDATE {_tbl} SET outstanding_item = ? WHERE outstanding_item = ?", (_new_val, _old_val))
+                            if _cursor.rowcount > 0:
+                                logging.info(f"Migration: renamed '{_old_val}' to '{_new_val}' in {_tbl} ({_cursor.rowcount} rows)")
+
                     _conn.commit()
                     _conn.close()
             except Exception as e:
