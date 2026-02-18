@@ -209,7 +209,7 @@ export const commercialColumns = [
     id: 'status',
     label: 'Status',
     sortable: true,
-    minWidth: 100,
+    minWidth: 70,
     render: (value) => {
       if (!value) return <span style={{ color: '#999' }}>—</span>;
       const color = value.toLowerCase() === 'active' ? 'success' : 'default';
@@ -226,13 +226,13 @@ export const commercialColumns = [
     id: 'outstanding_item',
     label: 'Follow Up',
     sortable: true,
-    minWidth: 150,
+    minWidth: 110,
     render: (value) => {
       if (!value) return <span style={{ color: '#999' }}>—</span>;
       const colorMap = {
-        'Pending Premium': 'warning',
+        'Premium Due': 'warning',
         'In Audit': 'info',
-        'Pending Cancellation': 'error',
+        'Cancel Due': 'error',
         'Complete': 'success'
       };
       return (
@@ -288,8 +288,8 @@ export const commercialColumns = [
               <Box>
                 <div><strong>{product.shortName}</strong></div>
                 <div>Carrier: {product.carrier || 'N/A'}</div>
-                <div>Occ Limit: {product.occ_limit || 'N/A'}</div>
-                <div>Agg Limit: {product.agg_limit || 'N/A'}</div>
+                <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : 'N/A'}</div>
+                <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
                 {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
@@ -333,8 +333,8 @@ export const commercialColumns = [
                     <Box key={idx} sx={{ mb: idx < products.length - 6 ? 1 : 0 }}>
                       <div><strong>{product.shortName}</strong></div>
                       <div>Carrier: {product.carrier || 'N/A'}</div>
-                      <div>Occ Limit: {product.occ_limit || 'N/A'}</div>
-                <div>Agg Limit: {product.agg_limit || 'N/A'}</div>
+                      <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : 'N/A'}</div>
+                      <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
                       {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}

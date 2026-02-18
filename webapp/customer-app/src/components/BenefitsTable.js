@@ -177,7 +177,7 @@ export const benefitsColumns = [
     id: 'status',
     label: 'Status',
     sortable: true,
-    minWidth: 100,
+    minWidth: 70,
     render: (value) => {
       if (!value) return <span style={{ color: '#999' }}>—</span>;
       const color = value.toLowerCase() === 'active' ? 'success' : 'default';
@@ -194,28 +194,21 @@ export const benefitsColumns = [
     id: 'outstanding_item',
     label: 'Follow Up',
     sortable: true,
-    minWidth: 150,
+    minWidth: 110,
     render: (value) => {
       if (!value) return <span style={{ color: '#999' }}>—</span>;
       const colorMap = {
-        'Pending Premium': 'warning',
+        'Premium Due': 'warning',
         'In Audit': 'info',
-        'Pending Cancellation': 'error',
+        'Cancel Due': 'error',
         'Complete': 'success'
       };
-      const multiLine = {
-        'Pending Premium': ['Pending', 'Premium'],
-        'Pending Cancellation': ['Pending', 'Cancellation']
-      };
-      const lines = multiLine[value];
-      const chipLabel = lines ? <>{lines[0]}<br />{lines[1]}</> : value;
       return (
         <Chip
-          label={chipLabel}
+          label={value}
           size="small"
           color={colorMap[value] || 'default'}
           variant="outlined"
-          sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', textAlign: 'center', py: 0.5 } }}
         />
       );
     }

@@ -18,7 +18,8 @@ import {
   IconButton,
   Paper,
   Chip,
-  Tooltip
+  Tooltip,
+  InputAdornment
 } from '@mui/material';
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -330,19 +331,31 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
               <Grid item xs={12} sm={3}>
                 <TextField
                   label="Occ Limit"
+                  type="number"
                   value={plan.occ_limit || ''}
                   onChange={(e) => updatePlan(planType, idx, 'occ_limit', e.target.value)}
                   fullWidth
                   size="small"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                    inputProps: { min: 0, step: 0.01 }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={3}>
                 <TextField
                   label="Agg Limit"
+                  type="number"
                   value={plan.agg_limit || ''}
                   onChange={(e) => updatePlan(planType, idx, 'agg_limit', e.target.value)}
                   fullWidth
                   size="small"
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                    endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                    inputProps: { min: 0, step: 0.01 }
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -457,9 +470,9 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                 InputLabelProps={{ shrink: true }}
               >
                 <MenuItem value="">None</MenuItem>
-                <MenuItem value="Pending Premium">Pending Premium</MenuItem>
+                <MenuItem value="Premium Due">Premium Due</MenuItem>
                 <MenuItem value="In Audit">In Audit</MenuItem>
-                <MenuItem value="Pending Cancellation">Pending Cancellation</MenuItem>
+                <MenuItem value="Cancel Due">Cancel Due</MenuItem>
                 <MenuItem value="Complete">Complete</MenuItem>
               </TextField>
             </Grid>
@@ -573,19 +586,31 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                         <Grid item xs={12} sm={3}>
                           <TextField
                             label="Occ Limit"
+                            type="number"
                             value={formData[`${product.prefix}_occ_limit`] || ''}
                             onChange={handleChange(`${product.prefix}_occ_limit`)}
                             fullWidth
                             size="small"
+                            InputProps={{
+                              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                              endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                              inputProps: { min: 0, step: 0.01 }
+                            }}
                           />
                         </Grid>
                         <Grid item xs={12} sm={3}>
                           <TextField
                             label="Agg Limit"
+                            type="number"
                             value={formData[`${product.prefix}_agg_limit`] || ''}
                             onChange={handleChange(`${product.prefix}_agg_limit`)}
                             fullWidth
                             size="small"
+                            InputProps={{
+                              startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                              endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                              inputProps: { min: 0, step: 0.01 }
+                            }}
                           />
                         </Grid>
                         <Grid item xs={12} sm={6}>

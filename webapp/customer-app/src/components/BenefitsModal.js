@@ -474,9 +474,9 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
                 select
               >
                 <MenuItem value="">None</MenuItem>
-                <MenuItem value="Pending Premium">Pending Premium</MenuItem>
+                <MenuItem value="Premium Due">Premium Due</MenuItem>
                 <MenuItem value="In Audit">In Audit</MenuItem>
-                <MenuItem value="Pending Cancellation">Pending Cancellation</MenuItem>
+                <MenuItem value="Cancel Due">Cancel Due</MenuItem>
                 <MenuItem value="Complete">Complete</MenuItem>
               </TextField>
             </Grid>

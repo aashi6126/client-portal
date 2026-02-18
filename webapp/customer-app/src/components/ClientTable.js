@@ -22,7 +22,7 @@ export const clientColumns = [
     id: 'status',
     label: 'Status',
     sortable: true,
-    minWidth: 100,
+    minWidth: 70,
     render: (value) => {
       if (!value) return <span style={{ color: '#999' }}>—</span>;
       const colorMap = {
