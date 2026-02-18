@@ -376,7 +376,8 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
                   onChange={(e) => updatePlan(planType, idx, 'waiting_period', e.target.value)}
                   fullWidth
                   size="small"
-                  InputLabelProps={{ shrink: true }}
+                  InputLabelProps={{ shrink: !!plan.waiting_period }}
+                  slotProps={{ select: { renderValue: (v) => v || '' } }}
                 >
                   <MenuItem value="">None</MenuItem>
                   <MenuItem value="1st of Month after DOH">1st of Month after DOH</MenuItem>

@@ -17,70 +17,44 @@ set "PIDS_FILE=%~dp0.pids"
 set "STOPPED=0"
 
 REM --- Method 1: Use saved PIDs ---
-if exist "%PIDS_FILE%" (
-    echo [..] Reading saved process IDs...
-    for /f "usebackq tokens=1,* delims==" %%a in ("%PIDS_FILE%") do (
-        set "%%a=%%b"
-    )
+if not exist "%PIDS_FILE%" goto :no_pids
 
-    if defined API_PYTHON_PID (
-        echo [..] Stopping API server (PID: !API_PYTHON_PID!)...
-        taskkill /pid !API_PYTHON_PID! /f >nul 2>&1
-        if not errorlevel 1 (
-            echo [OK] API server stopped
-            set "STOPPED=1"
-        )
-    )
+echo [..] Reading saved process IDs...
+for /f "usebackq tokens=1,* delims==" %%a in ("%PIDS_FILE%") do set "%%a=%%b"
 
-    if defined API_PID (
-        taskkill /pid !API_PID! /f >nul 2>&1
-    )
+if not defined API_PYTHON_PID goto :skip_api_pid
+echo [..] Stopping API server (PID: !API_PYTHON_PID!)...
+taskkill /pid !API_PYTHON_PID! /f >nul 2>&1
+echo [OK] API server stopped
+set "STOPPED=1"
+:skip_api_pid
 
-    if defined BACKUP_PYTHON_PID (
-        echo [..] Stopping backup scheduler (PID: !BACKUP_PYTHON_PID!)...
-        taskkill /pid !BACKUP_PYTHON_PID! /f >nul 2>&1
-        if not errorlevel 1 (
-            echo [OK] Backup scheduler stopped
-            set "STOPPED=1"
-        )
-    )
+if defined API_PID taskkill /pid !API_PID! /f >nul 2>&1
 
-    if defined BACKUP_PID (
-        taskkill /pid !BACKUP_PID! /f >nul 2>&1
-    )
+if not defined BACKUP_PYTHON_PID goto :skip_backup_pid
+echo [..] Stopping backup scheduler (PID: !BACKUP_PYTHON_PID!)...
+taskkill /pid !BACKUP_PYTHON_PID! /f >nul 2>&1
+echo [OK] Backup scheduler stopped
+set "STOPPED=1"
+:skip_backup_pid
 
-    if defined WEB_PID (
-        echo [..] Stopping web app (PID: !WEB_PID!)...
-        taskkill /pid !WEB_PID! /f >nul 2>&1
-        if not errorlevel 1 (
-            echo [OK] Web app stopped
-            set "STOPPED=1"
-        )
-    )
+if defined BACKUP_PID taskkill /pid !BACKUP_PID! /f >nul 2>&1
 
-    del "%PIDS_FILE%" >nul 2>&1
-)
+if not defined WEB_PID goto :skip_web_pid
+echo [..] Stopping web app (PID: !WEB_PID!)...
+taskkill /pid !WEB_PID! /f >nul 2>&1
+echo [OK] Web app stopped
+set "STOPPED=1"
+:skip_web_pid
+
+:no_pids
 
 REM --- Method 2: Find by window title (fallback) ---
 echo [..] Closing service windows...
 
 taskkill /fi "WINDOWTITLE eq ClientPortal-API*" /f >nul 2>&1
-if not errorlevel 1 (
-    echo [OK] Closed API window
-    set "STOPPED=1"
-)
-
 taskkill /fi "WINDOWTITLE eq ClientPortal-Backup*" /f >nul 2>&1
-if not errorlevel 1 (
-    echo [OK] Closed Backup window
-    set "STOPPED=1"
-)
-
 taskkill /fi "WINDOWTITLE eq ClientPortal-WebApp*" /f >nul 2>&1
-if not errorlevel 1 (
-    echo [OK] Closed WebApp window
-    set "STOPPED=1"
-)
 
 REM --- Method 3: Find by process command line (final fallback) ---
 for /f "tokens=2" %%p in ('wmic process where "commandline like '%%customer_api%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do (
@@ -96,17 +70,11 @@ for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_schedu
 )
 
 REM --- Clean up PID file ---
-if exist "%PIDS_FILE%" del "%PIDS_FILE%" >nul 2>&1
+if exist "%PIDS_FILE%" del /f /q "%PIDS_FILE%"
 
 echo.
-if "!STOPPED!"=="1" (
-    echo =============================================
-    echo   All services stopped.
-    echo =============================================
-) else (
-    echo =============================================
-    echo   No running services found.
-    echo =============================================
-)
+echo =============================================
+echo   All services stopped.
+echo =============================================
 echo.
 pause
