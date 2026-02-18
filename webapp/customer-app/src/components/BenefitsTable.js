@@ -368,6 +368,12 @@ export const benefitsColumns = [
     }
   },
   {
+    id: 'enrollment_poc',
+    label: 'Enrollment POC',
+    sortable: true,
+    minWidth: 140
+  },
+  {
     id: 'funding',
     label: 'Funding',
     sortable: true,
@@ -378,6 +384,12 @@ export const benefitsColumns = [
     label: '# Employees',
     sortable: true,
     minWidth: 100
+  },
+  {
+    id: 'enrolled_ees',
+    label: 'Enrolled EEs',
+    sortable: true,
+    minWidth: 110
   },
   {
     id: 'remarks',

@@ -196,6 +196,7 @@ class EmployeeBenefit(db.Model):
     funding = db.Column(db.String(100))
     current_carrier = db.Column(db.String(200))
     num_employees_at_renewal = db.Column(db.Integer)
+    enrolled_ees = db.Column(db.Integer)
     waiting_period = db.Column(db.String(100))
     deductible_accumulation = db.Column(db.String(100))
     previous_carrier = db.Column(db.String(200))
@@ -273,6 +274,7 @@ class EmployeeBenefit(db.Model):
             'funding': self.funding,
             'current_carrier': self.current_carrier,
             'num_employees_at_renewal': self.num_employees_at_renewal,
+            'enrolled_ees': self.enrolled_ees,
             'waiting_period': self.waiting_period,
             'deductible_accumulation': self.deductible_accumulation,
             'previous_carrier': self.previous_carrier,
@@ -956,6 +958,7 @@ def create_benefit():
             funding=data.get('funding'),
             current_carrier=data.get('current_carrier'),
             num_employees_at_renewal=data.get('num_employees_at_renewal'),
+            enrolled_ees=data.get('enrolled_ees'),
             waiting_period=data.get('waiting_period'),
             deductible_accumulation=data.get('deductible_accumulation'),
             previous_carrier=data.get('previous_carrier'),
@@ -1037,6 +1040,7 @@ def update_benefit(benefit_id):
         benefit.funding = data.get('funding', benefit.funding)
         benefit.current_carrier = data.get('current_carrier', benefit.current_carrier)
         benefit.num_employees_at_renewal = data.get('num_employees_at_renewal', benefit.num_employees_at_renewal)
+        benefit.enrolled_ees = data.get('enrolled_ees', benefit.enrolled_ees)
         benefit.waiting_period = data.get('waiting_period', benefit.waiting_period)
         benefit.deductible_accumulation = data.get('deductible_accumulation', benefit.deductible_accumulation)
         benefit.previous_carrier = data.get('previous_carrier', benefit.previous_carrier)
@@ -1152,6 +1156,7 @@ def clone_benefit(benefit_id):
             funding=original.funding,
             current_carrier=original.current_carrier,
             num_employees_at_renewal=original.num_employees_at_renewal,
+            enrolled_ees=original.enrolled_ees,
             waiting_period=original.waiting_period,
             deductible_accumulation=original.deductible_accumulation,
             previous_carrier=original.previous_carrier,
@@ -1763,12 +1768,12 @@ def export_to_excel():
 
         benefit_headers = ['Tax ID', 'Client Name ', 'Status', 'Outstanding Item', 'Remarks',
                            'Form Fire Code', 'Enrollment POC', 'Other Broker', 'Funding',
-                           '# of Emp at renewal', 'Waiting Period', 'Deductible Accumulation',
+                           '# of Emp at renewal', 'Enrolled EEs', 'Waiting Period', 'Deductible Accumulation',
                            'Previous Carrier', 'Cobra Administrator']
         # Track col position (1-based) — after fixed cols
         col_pos = len(benefit_headers) + 1  # Next col to use
 
-        benefit_sections = [(1, 5, ''), (6, 14, 'MEDICAL GLOBAL')]
+        benefit_sections = [(1, 5, ''), (6, 15, 'MEDICAL GLOBAL')]
 
         # Multi-plan type dynamic columns
         multi_plan_col_map = {}  # plan_type -> start_col (for data writing)
@@ -1832,6 +1837,7 @@ def export_to_excel():
             ws_benefits.cell(row=row_idx, column=c, value='None'); c += 1  # Other Broker
             ws_benefits.cell(row=row_idx, column=c, value=benefit.funding); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.num_employees_at_renewal); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.enrolled_ees); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.waiting_period); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.deductible_accumulation); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.previous_carrier); c += 1
@@ -2187,10 +2193,11 @@ def import_from_excel():
                         'enrollment_poc': safe_val(6),
                         'funding': safe_val(8),
                         'num_employees_at_renewal': safe_int(safe_val(9)),
-                        'waiting_period': safe_val(10),
-                        'deductible_accumulation': safe_val(11),
-                        'previous_carrier': safe_val(12),
-                        'cobra_carrier': safe_val(13),
+                        'enrolled_ees': safe_int(safe_val(10)),
+                        'waiting_period': safe_val(11),
+                        'deductible_accumulation': safe_val(12),
+                        'previous_carrier': safe_val(13),
+                        'cobra_carrier': safe_val(14),
                         'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution and len(row) > col_employee_contribution and row[col_employee_contribution] else None
                     }
 
@@ -2637,9 +2644,31 @@ def serve_react(path):
 # ===========================================================================
 
 if __name__ == '__main__':
-    # Create tables
+    # Create tables and run migrations
     with app.app_context():
         db.create_all()
+
+        # Auto-migrate: add missing columns to existing tables
+        import sqlite3 as _sqlite3
+        if db_uri.startswith('sqlite'):
+            try:
+                _db_path = db_uri.split('sqlite:///')[1].split('?')[0] if 'sqlite:///' in db_uri else None
+                if _db_path:
+                    _conn = _sqlite3.connect(_db_path)
+                    _cursor = _conn.cursor()
+                    _cursor.execute("PRAGMA table_info(employee_benefits)")
+                    _existing_cols = {row[1] for row in _cursor.fetchall()}
+                    _migrations = [
+                        ('enrolled_ees', 'INTEGER'),
+                    ]
+                    for col_name, col_type in _migrations:
+                        if col_name not in _existing_cols:
+                            _cursor.execute(f"ALTER TABLE employee_benefits ADD COLUMN {col_name} {col_type}")
+                            logging.info(f"Migration: added column '{col_name}' to employee_benefits")
+                    _conn.commit()
+                    _conn.close()
+            except Exception as e:
+                logging.warning(f"Auto-migration check failed: {e}")
 
     # Run app (host/port configurable via env vars)
     host = os.environ.get('API_HOST', '127.0.0.1')

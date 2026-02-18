@@ -60,6 +60,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
     enrollment_poc: '',
     funding: '',
     num_employees_at_renewal: '',
+    enrolled_ees: '',
     waiting_period: '',
     deductible_accumulation: '',
     previous_carrier: '',
@@ -531,6 +532,16 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
                     type="number"
                     value={formData.num_employees_at_renewal || ''}
                     onChange={handleChange('num_employees_at_renewal')}
+                    fullWidth
+                    size="small"
+                  />
+                </Grid>
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    label="Enrolled EEs"
+                    type="number"
+                    value={formData.enrolled_ees || ''}
+                    onChange={handleChange('enrolled_ees')}
                     fullWidth
                     size="small"
                   />
