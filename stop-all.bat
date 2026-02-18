@@ -22,6 +22,9 @@ if not exist "%PIDS_FILE%" goto :no_pids
 echo [..] Reading saved process IDs...
 for /f "usebackq tokens=1,* delims==" %%a in ("%PIDS_FILE%") do set "%%a=%%b"
 
+REM Delete PID file immediately after reading (before file handle issues)
+del /f /q "%~dp0.pids" >nul 2>&1
+
 if not defined API_PYTHON_PID goto :skip_api_pid
 echo [..] Stopping API server (PID: !API_PYTHON_PID!)...
 taskkill /pid !API_PYTHON_PID! /f >nul 2>&1
@@ -69,8 +72,8 @@ for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_schedu
     set "STOPPED=1"
 )
 
-REM --- Clean up PID file ---
-if exist "%PIDS_FILE%" del /f /q "%PIDS_FILE%"
+REM --- Clean up PID file (fallback) ---
+if exist "%~dp0.pids" del /f /q "%~dp0.pids" >nul 2>&1
 
 echo.
 echo =============================================
