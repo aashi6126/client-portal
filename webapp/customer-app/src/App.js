@@ -57,6 +57,20 @@ function NewApp() {
   const [benefits, setBenefits] = useState([]);
   const [commercial, setCommercial] = useState([]);
 
+  // Backend health state
+  const [apiStatus, setApiStatus] = useState('checking'); // 'up', 'down', 'checking'
+
+  useEffect(() => {
+    const checkHealth = () => {
+      axios.get('/api/health', { timeout: 5000 })
+        .then(() => setApiStatus('up'))
+        .catch(() => setApiStatus('down'));
+    };
+    checkHealth();
+    const interval = setInterval(checkHealth, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
   // Modal states for Clients
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [currentClient, setCurrentClient] = useState(null);
@@ -479,8 +493,19 @@ function NewApp() {
       <AppBar position="static" sx={{ background: 'linear-gradient(to left, #000000, #434343)' }}>
         <Container maxWidth="xl">
           <Toolbar sx={{ minHeight: '48px', py: 1, px: 0 }}>
-            <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600 }}>
+            <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1.5 }}>
               Client Hub
+              <Tooltip title={apiStatus === 'up' ? 'API Connected' : apiStatus === 'down' ? 'API Disconnected' : 'Checking...'}>
+                <Box
+                  sx={{
+                    width: 10,
+                    height: 10,
+                    borderRadius: '50%',
+                    backgroundColor: apiStatus === 'up' ? '#4caf50' : apiStatus === 'down' ? '#f44336' : '#ff9800',
+                    boxShadow: apiStatus === 'up' ? '0 0 6px #4caf50' : apiStatus === 'down' ? '0 0 6px #f44336' : 'none',
+                  }}
+                />
+              </Tooltip>
             </Typography>
             <Stack direction="row" spacing={1}>
               <Button

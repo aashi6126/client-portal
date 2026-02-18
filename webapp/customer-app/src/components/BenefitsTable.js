@@ -203,12 +203,19 @@ export const benefitsColumns = [
         'Pending Cancellation': 'error',
         'Complete': 'success'
       };
+      const multiLine = {
+        'Pending Premium': ['Pending', 'Premium'],
+        'Pending Cancellation': ['Pending', 'Cancellation']
+      };
+      const lines = multiLine[value];
+      const chipLabel = lines ? <>{lines[0]}<br />{lines[1]}</> : value;
       return (
         <Chip
-          label={value}
+          label={chipLabel}
           size="small"
           color={colorMap[value] || 'default'}
           variant="outlined"
+          sx={{ height: 'auto', '& .MuiChip-label': { whiteSpace: 'normal', textAlign: 'center', py: 0.5 } }}
         />
       );
     }
@@ -380,10 +387,10 @@ export const benefitsColumns = [
     minWidth: 120
   },
   {
-    id: 'num_employees_at_renewal',
-    label: '# Employees',
+    id: 'form_fire_code',
+    label: 'Form Fire Code',
     sortable: true,
-    minWidth: 100
+    minWidth: 120
   },
   {
     id: 'enrolled_ees',

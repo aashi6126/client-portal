@@ -58,31 +58,31 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
     status: 'Active',
     outstanding_item: '',
     // Single-plan types (flat fields)
-    general_liability_carrier: '', general_liability_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_flag: false,
-    property_carrier: '', property_limit: '', property_premium: '', property_renewal_date: '', property_flag: false,
-    bop_carrier: '', bop_limit: '', bop_premium: '', bop_renewal_date: '', bop_flag: false,
-    workers_comp_carrier: '', workers_comp_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_flag: false,
-    auto_carrier: '', auto_limit: '', auto_premium: '', auto_renewal_date: '', auto_flag: false,
-    epli_carrier: '', epli_limit: '', epli_premium: '', epli_renewal_date: '', epli_flag: false,
-    nydbl_carrier: '', nydbl_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_flag: false,
-    surety_carrier: '', surety_limit: '', surety_premium: '', surety_renewal_date: '', surety_flag: false,
-    product_liability_carrier: '', product_liability_limit: '', product_liability_premium: '', product_liability_renewal_date: '', product_liability_flag: false,
-    flood_carrier: '', flood_limit: '', flood_premium: '', flood_renewal_date: '', flood_flag: false,
-    directors_officers_carrier: '', directors_officers_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_flag: false,
-    fiduciary_carrier: '', fiduciary_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_flag: false,
-    inland_marine_carrier: '', inland_marine_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_flag: false,
+    general_liability_carrier: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_flag: false,
+    property_carrier: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_flag: false,
+    bop_carrier: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_flag: false,
+    workers_comp_carrier: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_flag: false,
+    auto_carrier: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_flag: false,
+    epli_carrier: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_flag: false,
+    nydbl_carrier: '', nydbl_occ_limit: '', nydbl_agg_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_flag: false,
+    surety_carrier: '', surety_occ_limit: '', surety_agg_limit: '', surety_premium: '', surety_renewal_date: '', surety_flag: false,
+    product_liability_carrier: '', product_liability_occ_limit: '', product_liability_agg_limit: '', product_liability_premium: '', product_liability_renewal_date: '', product_liability_flag: false,
+    flood_carrier: '', flood_occ_limit: '', flood_agg_limit: '', flood_premium: '', flood_renewal_date: '', flood_flag: false,
+    directors_officers_carrier: '', directors_officers_occ_limit: '', directors_officers_agg_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_flag: false,
+    fiduciary_carrier: '', fiduciary_occ_limit: '', fiduciary_agg_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_flag: false,
+    inland_marine_carrier: '', inland_marine_occ_limit: '', inland_marine_agg_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_flag: false,
     // Multi-plan flat fields (backward compat, set by save_commercial_plans)
-    umbrella_carrier: '', umbrella_limit: '', umbrella_premium: '', umbrella_renewal_date: '',
-    professional_eo_carrier: '', professional_eo_limit: '', professional_eo_premium: '', professional_eo_renewal_date: '',
-    cyber_carrier: '', cyber_limit: '', cyber_premium: '', cyber_renewal_date: '',
-    crime_carrier: '', crime_limit: '', crime_premium: '', crime_renewal_date: ''
+    umbrella_carrier: '', umbrella_occ_limit: '', umbrella_agg_limit: '', umbrella_premium: '', umbrella_renewal_date: '',
+    professional_eo_carrier: '', professional_eo_occ_limit: '', professional_eo_agg_limit: '', professional_eo_premium: '', professional_eo_renewal_date: '',
+    cyber_carrier: '', cyber_occ_limit: '', cyber_agg_limit: '', cyber_premium: '', cyber_renewal_date: '',
+    crime_carrier: '', crime_occ_limit: '', crime_agg_limit: '', crime_premium: '', crime_renewal_date: ''
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
   const [errors, setErrors] = useState({});
   const [activeCoverages, setActiveCoverages] = useState([]);
 
-  // Multi-plan state: { umbrella: [{carrier, limit, premium, renewal_date, flag}, ...], ... }
+  // Multi-plan state: { umbrella: [{carrier, occ_limit, agg_limit, premium, renewal_date, flag}, ...], ... }
   const [plans, setPlans] = useState({
     umbrella: [],
     professional_eo: [],
@@ -124,7 +124,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
           if (typePlans.length > 0) {
             newPlans[planType] = typePlans.map(p => ({
               carrier: p.carrier || '',
-              limit: p.limit || '',
+              occ_limit: p.occ_limit || '',
+              agg_limit: p.agg_limit || '',
               premium: p.premium || '',
               renewal_date: p.renewal_date || '',
               flag: p.flag || false
@@ -137,10 +138,11 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
       if (!commercial.plans || Object.values(commercial.plans).every(arr => arr.length === 0)) {
         for (const planType of MULTI_PLAN_TYPES) {
           if (commercial[`${planType}_carrier`] || commercial[`${planType}_renewal_date`] ||
-              commercial[`${planType}_limit`] || commercial[`${planType}_premium`]) {
+              commercial[`${planType}_occ_limit`] || commercial[`${planType}_agg_limit`] || commercial[`${planType}_premium`]) {
             newPlans[planType] = [{
               carrier: commercial[`${planType}_carrier`] || '',
-              limit: commercial[`${planType}_limit`] || '',
+              occ_limit: commercial[`${planType}_occ_limit`] || '',
+              agg_limit: commercial[`${planType}_agg_limit`] || '',
               premium: commercial[`${planType}_premium`] || '',
               renewal_date: commercial[`${planType}_renewal_date`] || '',
               flag: false
@@ -200,7 +202,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
   const addPlan = (planType) => {
     setPlans(prev => ({
       ...prev,
-      [planType]: [...prev[planType], { carrier: '', limit: '', premium: '', renewal_date: '', flag: false }]
+      [planType]: [...prev[planType], { carrier: '', occ_limit: '', agg_limit: '', premium: '', renewal_date: '', flag: false }]
     }));
   };
 
@@ -238,7 +240,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
       // Filter out empty plans
       const cleanPlans = {};
       for (const planType of MULTI_PLAN_TYPES) {
-        cleanPlans[planType] = plans[planType].filter(p => p.carrier || p.limit || p.premium || p.renewal_date);
+        cleanPlans[planType] = plans[planType].filter(p => p.carrier || p.occ_limit || p.agg_limit || p.premium || p.renewal_date);
       }
 
       onSave({
@@ -325,11 +327,20 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={3}>
                 <TextField
-                  label="Limit"
-                  value={plan.limit || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'limit', e.target.value)}
+                  label="Occ Limit"
+                  value={plan.occ_limit || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'occ_limit', e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  label="Agg Limit"
+                  value={plan.agg_limit || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'agg_limit', e.target.value)}
                   fullWidth
                   size="small"
                 />
@@ -559,11 +570,20 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                             size="small"
                           />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12} sm={3}>
                           <TextField
-                            label="Limit"
-                            value={formData[`${product.prefix}_limit`] || ''}
-                            onChange={handleChange(`${product.prefix}_limit`)}
+                            label="Occ Limit"
+                            value={formData[`${product.prefix}_occ_limit`] || ''}
+                            onChange={handleChange(`${product.prefix}_occ_limit`)}
+                            fullWidth
+                            size="small"
+                          />
+                        </Grid>
+                        <Grid item xs={12} sm={3}>
+                          <TextField
+                            label="Agg Limit"
+                            value={formData[`${product.prefix}_agg_limit`] || ''}
+                            onChange={handleChange(`${product.prefix}_agg_limit`)}
                             fullWidth
                             size="small"
                           />

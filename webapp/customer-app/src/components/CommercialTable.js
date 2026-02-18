@@ -69,13 +69,14 @@ const getActiveProducts = (row) => {
       const typePlans = row.plans[pt] || [];
       const label = MULTI_PLAN_LABELS[pt];
       typePlans.forEach((plan, idx) => {
-        if (plan.carrier || plan.renewal_date || plan.limit || plan.premium) {
+        if (plan.carrier || plan.renewal_date || plan.occ_limit || plan.agg_limit || plan.premium) {
           products.push({
             shortName: typePlans.length > 1 ? `${label} ${idx + 1}` : label,
             carrier: plan.carrier,
             renewalDate: plan.renewal_date,
             premium: plan.premium,
-            limit: plan.limit,
+            occ_limit: plan.occ_limit,
+            agg_limit: plan.agg_limit,
             flag: plan.flag
           });
         }
@@ -90,7 +91,8 @@ const getActiveProducts = (row) => {
           carrier: row[`${pt}_carrier`],
           renewalDate: row[`${pt}_renewal_date`],
           premium: row[`${pt}_premium`],
-          limit: row[`${pt}_limit`],
+          occ_limit: row[`${pt}_occ_limit`],
+          agg_limit: row[`${pt}_agg_limit`],
           flag: false
         });
       }
@@ -105,7 +107,8 @@ const getActiveProducts = (row) => {
         carrier: row[`${key}_carrier`],
         renewalDate: row[`${key}_renewal_date`],
         premium: row[`${key}_premium`],
-        limit: row[`${key}_limit`],
+        occ_limit: row[`${key}_occ_limit`],
+        agg_limit: row[`${key}_agg_limit`],
         flag: row[`${key}_flag`]
       });
     }
@@ -285,7 +288,8 @@ export const commercialColumns = [
               <Box>
                 <div><strong>{product.shortName}</strong></div>
                 <div>Carrier: {product.carrier || 'N/A'}</div>
-                <div>Limit: {product.limit || 'N/A'}</div>
+                <div>Occ Limit: {product.occ_limit || 'N/A'}</div>
+                <div>Agg Limit: {product.agg_limit || 'N/A'}</div>
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
                 {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
@@ -329,7 +333,8 @@ export const commercialColumns = [
                     <Box key={idx} sx={{ mb: idx < products.length - 6 ? 1 : 0 }}>
                       <div><strong>{product.shortName}</strong></div>
                       <div>Carrier: {product.carrier || 'N/A'}</div>
-                      <div>Limit: {product.limit || 'N/A'}</div>
+                      <div>Occ Limit: {product.occ_limit || 'N/A'}</div>
+                <div>Agg Limit: {product.agg_limit || 'N/A'}</div>
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
                       {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
