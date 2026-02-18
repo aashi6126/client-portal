@@ -2656,15 +2656,27 @@ if __name__ == '__main__':
                 if _db_path:
                     _conn = _sqlite3.connect(_db_path)
                     _cursor = _conn.cursor()
-                    _cursor.execute("PRAGMA table_info(employee_benefits)")
-                    _existing_cols = {row[1] for row in _cursor.fetchall()}
-                    _migrations = [
-                        ('enrolled_ees', 'INTEGER'),
+
+                    # Migrations per table: (table_name, column_name, column_type)
+                    _table_migrations = [
+                        ('employee_benefits', 'enrolled_ees', 'INTEGER'),
+                        ('clients', 'gross_revenue', 'DECIMAL(15,2)'),
+                        ('clients', 'total_ees', 'INTEGER'),
                     ]
-                    for col_name, col_type in _migrations:
-                        if col_name not in _existing_cols:
-                            _cursor.execute(f"ALTER TABLE employee_benefits ADD COLUMN {col_name} {col_type}")
-                            logging.info(f"Migration: added column '{col_name}' to employee_benefits")
+
+                    # Group by table
+                    _tables = {}
+                    for tbl, col, ctype in _table_migrations:
+                        _tables.setdefault(tbl, []).append((col, ctype))
+
+                    for tbl, cols in _tables.items():
+                        _cursor.execute(f"PRAGMA table_info({tbl})")
+                        _existing_cols = {row[1] for row in _cursor.fetchall()}
+                        for col_name, col_type in cols:
+                            if col_name not in _existing_cols:
+                                _cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_type}")
+                                logging.info(f"Migration: added column '{col_name}' to {tbl}")
+
                     _conn.commit()
                     _conn.close()
             except Exception as e:

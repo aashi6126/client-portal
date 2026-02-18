@@ -14,6 +14,14 @@ def migrate():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
 
+    # Check if the clients table exists at all
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='clients'")
+    if not cursor.fetchone():
+        print("Table 'clients' does not exist — run the API server first to create tables.")
+        print("  python services/api/customer_api.py")
+        conn.close()
+        return
+
     # Check existing columns
     cursor.execute("PRAGMA table_info(clients)")
     columns = [col[1] for col in cursor.fetchall()]
