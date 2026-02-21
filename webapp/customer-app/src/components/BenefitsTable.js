@@ -175,12 +175,13 @@ export const benefitsColumns = [
   },
   {
     id: 'status',
-    label: 'Status',
+    label: 'Group Status',
     sortable: true,
     minWidth: 70,
     render: (value) => {
       if (!value) return <span style={{ color: '#999' }}>—</span>;
-      const color = value.toLowerCase() === 'active' ? 'success' : 'default';
+      const colorMap = { 'Active': 'success', 'Quoting': 'warning' };
+      const color = colorMap[value] || 'default';
       return (
         <Chip
           label={value}

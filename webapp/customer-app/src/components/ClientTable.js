@@ -1,6 +1,5 @@
 import React from 'react';
 import DataTable from './DataTable';
-import { Chip } from '@mui/material';
 
 // Column definitions for Clients table
 export const clientColumns = [
@@ -16,26 +15,21 @@ export const clientColumns = [
     label: 'Client Name',
     sticky: true,
     sortable: true,
-    minWidth: 140
-  },
-  {
-    id: 'status',
-    label: 'Status',
-    sortable: true,
-    minWidth: 70,
-    render: (value) => {
-      if (!value) return <span style={{ color: '#999' }}>—</span>;
-      const colorMap = {
-        'Active': 'success',
-        'Quoting': 'warning',
-        'Prospect': 'info'
-      };
+    minWidth: 140,
+    render: (value, row) => {
+      const dotColor = row.status === 'Active' ? '#4caf50' : row.status === 'Prospect' ? '#ff9800' : '#999';
       return (
-        <Chip
-          label={value}
-          size="small"
-          color={colorMap[value] || 'default'}
-        />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            backgroundColor: dotColor,
+            display: 'inline-block',
+            flexShrink: 0
+          }} />
+          {value}
+        </span>
       );
     }
   },

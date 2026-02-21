@@ -451,7 +451,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={4}>
               <TextField
-                label="Status"
+                label="Group Status"
                 value={formData.status || ''}
                 onChange={handleChange('status')}
                 fullWidth
@@ -461,7 +461,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
               >
                 <MenuItem value="">None</MenuItem>
                 <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
+                <MenuItem value="Quoting">Quoting</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={4}>

@@ -203,7 +203,6 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
                 size="small"
               >
                 <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Quoting">Quoting</MenuItem>
                 <MenuItem value="Prospect">Prospect</MenuItem>
               </TextField>
             </Grid>

@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "description": "Client Portal - Full Stack Application",
   "scripts": {
-    "start:api": "python3 services/api/customer_api.py",
+    "start:api": "/opt/anaconda3/bin/python3 services/api/customer_api.py",
     "start:web": "cd webapp/customer-app && npm start",
     "start": "concurrently \"npm:start:api\" \"npm:start:web\"",
     "test": "cd services && python3 -m pytest",

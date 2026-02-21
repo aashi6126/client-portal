@@ -343,7 +343,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
         {/* Left: Summary Cards side by side */}
         <Box sx={{ display: 'flex', gap: 2, flex: '0 0 33.33%' }}>
           <Card
-            sx={{ backgroundColor: '#e8f4f8', border: '1px solid #b3d9e6', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            sx={{ backgroundColor: '#e8f5e9', border: '1px solid #a5d6a7', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
             onClick={() => onNavigateToTab && onNavigateToTab(1)}
           >
             <CardContent>
@@ -356,13 +356,13 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                     {clients.length}
                   </Typography>
                 </Box>
-                <BusinessIcon sx={{ fontSize: 60, color: '#5c9bb5', opacity: 0.6 }} />
+                <BusinessIcon sx={{ fontSize: 60, color: '#4caf50', opacity: 0.6 }} />
               </Box>
             </CardContent>
           </Card>
 
           <Card
-            sx={{ backgroundColor: '#f0e8f4', border: '1px solid #d4b8e0', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            sx={{ backgroundColor: '#fff3e0', border: '1px solid #ffcc80', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
             onClick={() => onNavigateToTab && onNavigateToTab(2)}
           >
             <CardContent>
@@ -375,13 +375,13 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                     {benefits.length}
                   </Typography>
                 </Box>
-                <HealthAndSafetyIcon sx={{ fontSize: 60, color: '#8e7ba3', opacity: 0.6 }} />
+                <HealthAndSafetyIcon sx={{ fontSize: 60, color: '#fb8c00', opacity: 0.6 }} />
               </Box>
             </CardContent>
           </Card>
 
           <Card
-            sx={{ backgroundColor: '#e8f5e9', border: '1px solid #b8d9ba', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            sx={{ backgroundColor: '#e3f2fd', border: '1px solid #90caf9', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
             onClick={() => onNavigateToTab && onNavigateToTab(3)}
           >
             <CardContent>
@@ -394,7 +394,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                     {commercial.length}
                   </Typography>
                 </Box>
-                <SecurityIcon sx={{ fontSize: 60, color: '#6b9b6e', opacity: 0.6 }} />
+                <SecurityIcon sx={{ fontSize: 60, color: '#1976d2', opacity: 0.6 }} />
               </Box>
             </CardContent>
           </Card>
@@ -426,8 +426,8 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                       labelFormatter={formatMonth}
                       formatter={(value, name) => [value, name === 'benefits' ? 'Benefits' : 'Commercial']}
                     />
-                    <Bar dataKey="benefits" stackId="a" fill="#8e7ba3" />
-                    <Bar dataKey="commercial" stackId="a" fill="#6b9b6e" />
+                    <Bar dataKey="benefits" stackId="a" fill="#fb8c00" />
+                    <Bar dataKey="commercial" stackId="a" fill="#1976d2" />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -483,7 +483,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                       <Chip
                         label={client.type === 'benefits' ? 'Benefits' : 'Commercial'}
                         size="small"
-                        color={client.type === 'benefits' ? 'secondary' : 'success'}
+                        color={client.type === 'benefits' ? 'warning' : 'info'}
                       />
                     </TableCell>
                     <TableCell>
@@ -528,7 +528,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
             </Typography>
 
             {/* Benefits Only */}
-            <Box sx={{ p: 2, backgroundColor: '#f0e8f4', borderRadius: 1, border: '1px solid #d4b8e0', mb: 2 }}>
+            <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 1, border: '1px solid #ffcc80', mb: 2 }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Benefits Only ({crossSell.benefits_only.length})
               </Typography>
@@ -545,7 +545,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                         mb: 1,
                         backgroundColor: 'white',
                         borderRadius: 1,
-                        border: '1px solid #d4b8e0',
+                        border: '1px solid #ffcc80',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
@@ -562,7 +562,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                       <Button
                         size="small"
                         variant="outlined"
-                        sx={{ borderColor: '#8e7ba3', color: '#8e7ba3', '&:hover': { borderColor: '#6d5f7f', backgroundColor: '#f0e8f4' } }}
+                        sx={{ borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}
                         onClick={() => onOpenCommercialModal && onOpenCommercialModal(client)}
                       >
                         Add Commercial
@@ -578,7 +578,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
             </Box>
 
             {/* Commercial Only */}
-            <Box sx={{ p: 2, backgroundColor: '#e8f5e9', borderRadius: 1, border: '1px solid #b8d9ba' }}>
+            <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Commercial Only ({crossSell.commercial_only.length})
               </Typography>
@@ -595,7 +595,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                         mb: 1,
                         backgroundColor: 'white',
                         borderRadius: 1,
-                        border: '1px solid #b8d9ba',
+                        border: '1px solid #90caf9',
                         display: 'flex',
                         justifyContent: 'space-between',
                         alignItems: 'center'
@@ -612,7 +612,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                       <Button
                         size="small"
                         variant="outlined"
-                        sx={{ borderColor: '#6b9b6e', color: '#6b9b6e', '&:hover': { borderColor: '#5a8060', backgroundColor: '#e8f5e9' } }}
+                        sx={{ borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}
                         onClick={() => onOpenBenefitsModal && onOpenBenefitsModal(client)}
                       >
                         Add Benefits
@@ -637,7 +637,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
             </Typography>
 
             {/* Benefits Gaps */}
-            <Box sx={{ p: 2, backgroundColor: '#f0e8f4', borderRadius: 1, border: '1px solid #d4b8e0', mb: 2 }}>
+            <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 1, border: '1px solid #ffcc80', mb: 2 }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Employee Benefits Gaps ({withinProductOpportunities.benefitGaps.length})
               </Typography>
@@ -656,7 +656,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                         mb: 1,
                         backgroundColor: 'white',
                         borderRadius: 1,
-                        border: '1px solid #d4b8e0'
+                        border: '1px solid #ffcc80'
                       }}
                     >
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -676,7 +676,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                               size="small"
                               variant="outlined"
                               startIcon={<EditIcon />}
-                              sx={{ fontSize: '0.7rem', py: 0.25, borderColor: '#8e7ba3', color: '#8e7ba3', '&:hover': { borderColor: '#6d5f7f', backgroundColor: '#f0e8f4' } }}
+                              sx={{ fontSize: '0.7rem', py: 0.25, borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}
                               onClick={() => onOpenBenefitsModal && onOpenBenefitsModal(benefitRecord)}
                             >
                               Edit
@@ -690,7 +690,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                             key={pIdx}
                             label={plan}
                             size="small"
-                            sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#f3e5f5', color: '#6a1b9a' }}
+                            sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#fff3e0', color: '#e65100' }}
                           />
                         ))}
                       </Box>
@@ -706,7 +706,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
             </Box>
 
             {/* Commercial Gaps */}
-            <Box sx={{ p: 2, backgroundColor: '#e8f5e9', borderRadius: 1, border: '1px solid #b8d9ba' }}>
+            <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
               <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
                 Commercial Insurance Gaps ({withinProductOpportunities.commercialGaps.length})
               </Typography>
@@ -725,7 +725,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                         mb: 1,
                         backgroundColor: 'white',
                         borderRadius: 1,
-                        border: '1px solid #b8d9ba'
+                        border: '1px solid #90caf9'
                       }}
                     >
                       <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
@@ -736,7 +736,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                           <Chip
                             label={`${client.active} / 17 active`}
                             size="small"
-                            color="success"
+                            color="info"
                             variant="outlined"
                             sx={{ fontSize: '0.7rem' }}
                           />
@@ -745,7 +745,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                               size="small"
                               variant="outlined"
                               startIcon={<EditIcon />}
-                              sx={{ fontSize: '0.7rem', py: 0.25, borderColor: '#6b9b6e', color: '#6b9b6e', '&:hover': { borderColor: '#5a8060', backgroundColor: '#e8f5e9' } }}
+                              sx={{ fontSize: '0.7rem', py: 0.25, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}
                               onClick={() => onOpenCommercialModal && onOpenCommercialModal(commercialRecord)}
                             >
                               Edit
@@ -759,7 +759,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                             key={pIdx}
                             label={product}
                             size="small"
-                            sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#e8f5e9', color: '#2e7d32' }}
+                            sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#e3f2fd', color: '#1565c0' }}
                           />
                         ))}
                       </Box>

@@ -448,7 +448,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
           <Grid container spacing={2} sx={{ mb: 3 }}>
             <Grid item xs={12} sm={6}>
               <TextField
-                label="Status"
+                label="Policy Status"
                 select
                 value={formData.status || 'Active'}
                 onChange={handleChange('status')}
@@ -456,7 +456,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                 size="small"
               >
                 <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Inactive">Inactive</MenuItem>
+                <MenuItem value="Quoting">Quoting</MenuItem>
               </TextField>
             </Grid>
             <Grid item xs={12} sm={6}>
@@ -473,6 +473,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                 <MenuItem value="Premium Due">Premium Due</MenuItem>
                 <MenuItem value="In Audit">In Audit</MenuItem>
                 <MenuItem value="Cancel Due">Cancel Due</MenuItem>
+                <MenuItem value="Add Line">Add Line</MenuItem>
                 <MenuItem value="Complete">Complete</MenuItem>
               </TextField>
             </Grid>
