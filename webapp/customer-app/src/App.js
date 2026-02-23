@@ -541,8 +541,8 @@ function NewApp() {
             <Tab label="Clients" />
             <Tab label="Employee Benefits" />
             <Tab label="Commercial Insurance" />
-            <Tab label="Feedback" />
             <Tab label="PoC Management" />
+            <Tab label="Feedback" />
           </Tabs>
         </Box>
 
@@ -658,8 +658,13 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 4: Feedback */}
+        {/* Tab 4: PoC Management */}
         {activeTab === 4 && (
+          <PocManagement dataVersion={dataVersion} />
+        )}
+
+        {/* Tab 5: Feedback */}
+        {activeTab === 5 && (
           <Box mt={2}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
@@ -750,10 +755,6 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 5: PoC Management */}
-        {activeTab === 5 && (
-          <PocManagement dataVersion={dataVersion} />
-        )}
       </Container>
 
       {/* Modals */}

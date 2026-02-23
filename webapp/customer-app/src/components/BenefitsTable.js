@@ -171,7 +171,23 @@ export const benefitsColumns = [
     label: 'Client Name',
     sticky: true,
     sortable: true,
-    minWidth: 140
+    minWidth: 140,
+    render: (value, row) => {
+      const dotColor = row.client_status === 'Active' ? '#4caf50' : row.client_status === 'Prospect' ? '#ff9800' : '#999';
+      return (
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+          <span style={{
+            width: 8,
+            height: 8,
+            borderRadius: '50%',
+            backgroundColor: dotColor,
+            display: 'inline-block',
+            flexShrink: 0
+          }} />
+          {value}
+        </span>
+      );
+    }
   },
   {
     id: 'status',
