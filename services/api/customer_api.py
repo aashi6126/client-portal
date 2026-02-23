@@ -2695,6 +2695,99 @@ def health_check():
 
 
 # ===========================================================================
+# POC MANAGEMENT
+# ===========================================================================
+
+@app.route('/api/benefits/poc-summary', methods=['GET'])
+def get_poc_summary():
+    """Get unique enrollment PoCs with their record counts."""
+    session = Session()
+    try:
+        results = (
+            session.query(
+                EmployeeBenefit.enrollment_poc,
+                func.count(EmployeeBenefit.id).label('count')
+            )
+            .filter(
+                EmployeeBenefit.enrollment_poc.isnot(None),
+                EmployeeBenefit.enrollment_poc != ''
+            )
+            .group_by(EmployeeBenefit.enrollment_poc)
+            .order_by(EmployeeBenefit.enrollment_poc)
+            .all()
+        )
+
+        unassigned_count = (
+            session.query(func.count(EmployeeBenefit.id))
+            .filter(
+                or_(
+                    EmployeeBenefit.enrollment_poc.is_(None),
+                    EmployeeBenefit.enrollment_poc == ''
+                )
+            )
+            .scalar()
+        )
+
+        poc_list = [{'poc': r[0], 'count': r[1]} for r in results]
+
+        return jsonify({
+            'pocs': poc_list,
+            'unassigned_count': unassigned_count
+        }), 200
+    except Exception as e:
+        logging.error(f"Error fetching PoC summary: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/benefits/poc-reassign', methods=['PUT'])
+def reassign_poc():
+    """Bulk reassign enrollment PoC. Supports full or partial reassignment via record_ids."""
+    session = Session()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        to_poc = data.get('to_poc')
+        record_ids = data.get('record_ids')  # optional list of IDs for partial reassign
+        from_poc = data.get('from_poc')
+
+        if not to_poc:
+            return jsonify({'error': 'to_poc is required'}), 400
+
+        if record_ids:
+            # Partial reassignment by specific record IDs
+            query = session.query(EmployeeBenefit).filter(
+                EmployeeBenefit.id.in_(record_ids)
+            )
+        elif from_poc:
+            # Full reassignment by source PoC name
+            if from_poc == to_poc:
+                return jsonify({'error': 'Source and target PoC cannot be the same'}), 400
+            query = session.query(EmployeeBenefit).filter(
+                EmployeeBenefit.enrollment_poc == from_poc
+            )
+        else:
+            return jsonify({'error': 'Either from_poc or record_ids is required'}), 400
+
+        updated_count = query.update({EmployeeBenefit.enrollment_poc: to_poc})
+        session.commit()
+
+        return jsonify({
+            'message': f'Successfully reassigned {updated_count} record(s) to "{to_poc}"',
+            'updated_count': updated_count
+        }), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error reassigning PoC: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+# ===========================================================================
 # SERVE REACT APP (production mode)
 # ===========================================================================
 

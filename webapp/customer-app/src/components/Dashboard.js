@@ -520,8 +520,8 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
 
       {/* Section 4: Cross-Sell & Within-Product Opportunities (side by side) */}
       <Grid container spacing={3}>
-        {/* Left: Cross-Sell Opportunities */}
-        <Grid item xs={12} md={6}>
+        {/* Cross-Sell Opportunities */}
+        <Grid item xs={12}>
           <Paper sx={{ p: 3, height: '100%' }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
               Cross-Sell Opportunities
@@ -629,8 +629,8 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
           </Paper>
         </Grid>
 
-        {/* Right: Within-Product Sell Opportunities */}
-        <Grid item xs={12} md={6}>
+        {/* Within-Product Sell Opportunities */}
+        <Grid item xs={12}>
           <Paper sx={{ p: 3, height: '100%' }}>
             <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
               Within-Product Sell Opportunities

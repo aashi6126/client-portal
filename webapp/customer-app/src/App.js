@@ -41,6 +41,7 @@ import BenefitsTable from './components/BenefitsTable';
 import BenefitsModal from './components/BenefitsModal';
 import CommercialTable from './components/CommercialTable';
 import CommercialModal from './components/CommercialModal';
+import PocManagement from './components/PocManagement';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
@@ -541,6 +542,7 @@ function NewApp() {
             <Tab label="Employee Benefits" />
             <Tab label="Commercial Insurance" />
             <Tab label="Feedback" />
+            <Tab label="PoC Management" />
           </Tabs>
         </Box>
 
@@ -746,6 +748,11 @@ function NewApp() {
               </Table>
             </TableContainer>
           </Box>
+        )}
+
+        {/* Tab 5: PoC Management */}
+        {activeTab === 5 && (
+          <PocManagement dataVersion={dataVersion} />
         )}
       </Container>
 
