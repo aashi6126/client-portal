@@ -55,6 +55,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
   // Initialize form with all fields
   const getInitialFormData = () => ({
     tax_id: '',
+    parent_client: '',
     remarks: '',
     status: 'Active',
     outstanding_item: '',
@@ -445,8 +446,20 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
             General Information
           </Typography>
-          <Grid container spacing={2} sx={{ mb: 3 }}>
-            <Grid item xs={12} sm={6}>
+          <Grid container spacing={2} sx={{ mb: 3, width: '100%', flexGrow: 1 }}>
+            <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
+              <Autocomplete
+                freeSolo
+                options={clients.map(c => c.client_name).filter(Boolean)}
+                value={formData.parent_client || ''}
+                onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+                onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+                renderInput={(params) => (
+                  <TextField {...params} label="Parent Client" size="small" fullWidth />
+                )}
+              />
+            </Grid>
+            <Grid item xs={12} sm={6} sx={{ width: '100%', flexGrow: 1 }}>
               <TextField
                 label="Policy Status"
                 select
@@ -459,7 +472,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                 <MenuItem value="Quoting">Quoting</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={6} sx={{ width: '100%', flexGrow: 1 }}>
               <TextField
                 label="Outstanding Item"
                 value={formData.outstanding_item || ''}
@@ -477,15 +490,13 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                 <MenuItem value="Complete">Complete</MenuItem>
               </TextField>
             </Grid>
-            <Grid item xs={12}>
+            <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
               <TextField
                 label="Remarks"
                 value={formData.remarks || ''}
                 onChange={handleChange('remarks')}
                 fullWidth
                 size="small"
-                multiline
-                rows={2}
               />
             </Grid>
           </Grid>

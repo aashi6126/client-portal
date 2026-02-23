@@ -222,6 +222,12 @@ export const commercialColumns = [
     }
   },
   {
+    id: 'parent_client',
+    label: 'Parent Client',
+    sortable: true,
+    minWidth: 140
+  },
+  {
     id: 'status',
     label: 'Policy Status',
     sortable: true,

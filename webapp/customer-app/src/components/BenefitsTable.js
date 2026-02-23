@@ -190,6 +190,12 @@ export const benefitsColumns = [
     }
   },
   {
+    id: 'parent_client',
+    label: 'Parent Client',
+    sortable: true,
+    minWidth: 140
+  },
+  {
     id: 'status',
     label: 'Group Status',
     sortable: true,

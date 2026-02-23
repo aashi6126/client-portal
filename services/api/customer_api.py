@@ -185,6 +185,7 @@ class EmployeeBenefit(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
+    parent_client = db.Column(db.String(200))
 
     # Core fields
     status = db.Column(db.String(50))
@@ -266,6 +267,7 @@ class EmployeeBenefit(db.Model):
             'tax_id': self.tax_id,
             'client_name': self.client.client_name if self.client else None,
             'client_status': self.client.status if self.client else None,
+            'parent_client': self.parent_client,
             'status': self.status,
             'outstanding_item': self.outstanding_item,
             'remarks': self.remarks,
@@ -357,6 +359,8 @@ class CommercialInsurance(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
+
+    parent_client = db.Column(db.String(200))
 
     # Core fields
     remarks = db.Column(db.Text)
@@ -513,6 +517,7 @@ class CommercialInsurance(db.Model):
             'tax_id': self.tax_id,
             'client_name': self.client.client_name if self.client else None,
             'client_status': self.client.status if self.client else None,
+            'parent_client': self.parent_client,
             'remarks': self.remarks,
             'status': self.status,
             'outstanding_item': self.outstanding_item,
@@ -990,6 +995,7 @@ def create_benefit():
 
         benefit = EmployeeBenefit(
             tax_id=data.get('tax_id'),
+            parent_client=data.get('parent_client'),
             status=data.get('status'),
             outstanding_item=data.get('outstanding_item'),
             remarks=data.get('remarks'),
@@ -1072,6 +1078,7 @@ def update_benefit(benefit_id):
 
         # Update all fields
         benefit.tax_id = data.get('tax_id', benefit.tax_id)
+        benefit.parent_client = data.get('parent_client', benefit.parent_client)
         benefit.status = data.get('status', benefit.status)
         benefit.outstanding_item = data.get('outstanding_item', benefit.outstanding_item)
         benefit.remarks = data.get('remarks', benefit.remarks)
@@ -1311,6 +1318,7 @@ def create_commercial():
 
         commercial = CommercialInsurance(
             tax_id=data.get('tax_id'),
+            parent_client=data.get('parent_client'),
             remarks=data.get('remarks'),
             status=data.get('status'),
             outstanding_item=data.get('outstanding_item'),
@@ -1368,6 +1376,7 @@ def update_commercial(commercial_id):
 
         # Update core fields
         commercial.tax_id = data.get('tax_id', commercial.tax_id)
+        commercial.parent_client = data.get('parent_client', commercial.parent_client)
         commercial.remarks = data.get('remarks', commercial.remarks)
         commercial.status = data.get('status', commercial.status)
         commercial.outstanding_item = data.get('outstanding_item', commercial.outstanding_item)
@@ -1831,14 +1840,14 @@ def export_to_excel():
         # Then single-plan types (7 types x 2 cols = 14 cols)
         # Then 1095 (2 cols)
 
-        benefit_headers = ['Tax ID', 'Client Name ', 'Status', 'Outstanding Item', 'Remarks',
+        benefit_headers = ['Tax ID', 'Client Name ', 'Parent Client', 'Status', 'Outstanding Item', 'Remarks',
                            'Form Fire Code', 'Enrollment POC', 'Other Broker', 'Funding',
                            '# of Emp at renewal', 'Enrolled EEs', 'Waiting Period', 'Deductible Accumulation',
                            'Previous Carrier', 'Cobra Administrator']
         # Track col position (1-based) — after fixed cols
         col_pos = len(benefit_headers) + 1  # Next col to use
 
-        benefit_sections = [(1, 5, ''), (6, 15, 'MEDICAL GLOBAL')]
+        benefit_sections = [(1, 6, ''), (7, 16, 'MEDICAL GLOBAL')]
 
         # Multi-plan type dynamic columns
         multi_plan_col_map = {}  # plan_type -> start_col (for data writing)
@@ -1894,6 +1903,7 @@ def export_to_excel():
             c = 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.tax_id); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=client_name); c += 1
+            ws_benefits.cell(row=row_idx, column=c, value=benefit.parent_client); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.status); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.outstanding_item); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.remarks); c += 1
@@ -1975,9 +1985,9 @@ def export_to_excel():
             comm_max_plans[plan_type] = max_count
 
         # Build headers dynamically
-        commercial_headers = ['Tax ID', 'Client Name ', ' Remarks ', ' Status ', 'Outstanding Item']
-        commercial_sections = [(1, 5, '')]
-        col_pos = 6
+        commercial_headers = ['Tax ID', 'Client Name ', 'Parent Client', ' Remarks ', ' Status ', 'Outstanding Item']
+        commercial_sections = [(1, 6, '')]
+        col_pos = 7
 
         # Single-plan type columns (6 cols each: carrier, occ_limit, agg_limit, premium, renewal, flag)
         comm_single_col_start = col_pos
@@ -2018,9 +2028,10 @@ def export_to_excel():
             client_name = comm.client.client_name if comm.client else None
             ws_commercial.cell(row=row_idx, column=1, value=comm.tax_id)
             ws_commercial.cell(row=row_idx, column=2, value=client_name)
-            ws_commercial.cell(row=row_idx, column=3, value=comm.remarks)
-            ws_commercial.cell(row=row_idx, column=4, value=comm.status)
-            ws_commercial.cell(row=row_idx, column=5, value=comm.outstanding_item)
+            ws_commercial.cell(row=row_idx, column=3, value=comm.parent_client)
+            ws_commercial.cell(row=row_idx, column=4, value=comm.remarks)
+            ws_commercial.cell(row=row_idx, column=5, value=comm.status)
+            ws_commercial.cell(row=row_idx, column=6, value=comm.outstanding_item)
 
             # Single-plan types (6 cols each: carrier, occ_limit, agg_limit, premium, renewal, flag)
             sc = comm_single_col_start
@@ -2253,18 +2264,19 @@ def import_from_excel():
 
                     benefit_data = {
                         'tax_id': tax_id,
-                        'status': safe_val(2),
-                        'outstanding_item': safe_val(3),
-                        'remarks': safe_val(4),
-                        'form_fire_code': safe_val(5),
-                        'enrollment_poc': safe_val(6),
-                        'funding': safe_val(8),
-                        'num_employees_at_renewal': safe_int(safe_val(9)),
-                        'enrolled_ees': safe_int(safe_val(10)),
-                        'waiting_period': safe_val(11),
-                        'deductible_accumulation': safe_val(12),
-                        'previous_carrier': safe_val(13),
-                        'cobra_carrier': safe_val(14),
+                        'parent_client': safe_val(2),
+                        'status': safe_val(3),
+                        'outstanding_item': safe_val(4),
+                        'remarks': safe_val(5),
+                        'form_fire_code': safe_val(6),
+                        'enrollment_poc': safe_val(7),
+                        'funding': safe_val(9),
+                        'num_employees_at_renewal': safe_int(safe_val(10)),
+                        'enrolled_ees': safe_int(safe_val(11)),
+                        'waiting_period': safe_val(12),
+                        'deductible_accumulation': safe_val(13),
+                        'previous_carrier': safe_val(14),
+                        'cobra_carrier': safe_val(15),
                         'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution and len(row) > col_employee_contribution and row[col_employee_contribution] else None
                     }
 
@@ -2434,9 +2446,10 @@ def import_from_excel():
 
                     commercial_data = {
                         'tax_id': tax_id,
-                        'remarks': row[2] if len(row) > 2 else None,
-                        'status': row[3] if len(row) > 3 else None,
-                        'outstanding_item': row[4] if len(row) > 4 else None
+                        'parent_client': row[2] if len(row) > 2 else None,
+                        'remarks': row[3] if len(row) > 3 else None,
+                        'status': row[4] if len(row) > 4 else None,
+                        'outstanding_item': row[5] if len(row) > 5 else None
                     }
 
                     # Single-plan types (6 cols each: carrier, occ_limit, agg_limit, premium, renewal, flag)
@@ -2834,6 +2847,8 @@ if __name__ == '__main__':
                     ]
                     _table_migrations = [
                         ('employee_benefits', 'enrolled_ees', 'INTEGER'),
+                        ('employee_benefits', 'parent_client', 'VARCHAR(200)'),
+                        ('commercial_insurance', 'parent_client', 'VARCHAR(200)'),
                         ('clients', 'gross_revenue', 'DECIMAL(15,2)'),
                         ('clients', 'total_ees', 'INTEGER'),
                     ]
