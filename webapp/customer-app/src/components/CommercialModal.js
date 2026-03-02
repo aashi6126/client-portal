@@ -10,24 +10,20 @@ import {
   Box,
   Autocomplete,
   Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Divider,
   MenuItem,
   IconButton,
   Paper,
   Chip,
   Tooltip,
-  InputAdornment
+  InputAdornment,
+  Tabs,
+  Tab
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import FlagIcon from '@mui/icons-material/Flag';
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
 
 // Multi-plan types: support multiple carrier/limit/premium/renewal per type
 const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
@@ -51,28 +47,25 @@ const isPastDate = (dateStr) => {
 /**
  * CommercialModal - Form for creating/editing commercial insurance records
  */
-const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) => {
+const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], initialCoverageTab = null }) => {
   // Initialize form with all fields
   const getInitialFormData = () => ({
     tax_id: '',
     parent_client: '',
-    remarks: '',
-    status: 'Active',
-    outstanding_item: '',
     // Single-plan types (flat fields)
-    general_liability_carrier: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_flag: false,
-    property_carrier: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_flag: false,
-    bop_carrier: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_flag: false,
-    workers_comp_carrier: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_flag: false,
-    auto_carrier: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_flag: false,
-    epli_carrier: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_flag: false,
-    nydbl_carrier: '', nydbl_occ_limit: '', nydbl_agg_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_flag: false,
-    surety_carrier: '', surety_occ_limit: '', surety_agg_limit: '', surety_premium: '', surety_renewal_date: '', surety_flag: false,
-    product_liability_carrier: '', product_liability_occ_limit: '', product_liability_agg_limit: '', product_liability_premium: '', product_liability_renewal_date: '', product_liability_flag: false,
-    flood_carrier: '', flood_occ_limit: '', flood_agg_limit: '', flood_premium: '', flood_renewal_date: '', flood_flag: false,
-    directors_officers_carrier: '', directors_officers_occ_limit: '', directors_officers_agg_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_flag: false,
-    fiduciary_carrier: '', fiduciary_occ_limit: '', fiduciary_agg_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_flag: false,
-    inland_marine_carrier: '', inland_marine_occ_limit: '', inland_marine_agg_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_flag: false,
+    general_liability_carrier: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '',
+    property_carrier: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
+    bop_carrier: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '',
+    workers_comp_carrier: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_remarks: '', workers_comp_outstanding_item: '',
+    auto_carrier: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_remarks: '', auto_outstanding_item: '',
+    epli_carrier: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_remarks: '', epli_outstanding_item: '',
+    nydbl_carrier: '', nydbl_occ_limit: '', nydbl_agg_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_remarks: '', nydbl_outstanding_item: '',
+    surety_carrier: '', surety_occ_limit: '', surety_agg_limit: '', surety_premium: '', surety_renewal_date: '', surety_remarks: '', surety_outstanding_item: '',
+    product_liability_carrier: '', product_liability_occ_limit: '', product_liability_agg_limit: '', product_liability_premium: '', product_liability_renewal_date: '', product_liability_remarks: '', product_liability_outstanding_item: '',
+    flood_carrier: '', flood_occ_limit: '', flood_agg_limit: '', flood_premium: '', flood_renewal_date: '', flood_remarks: '', flood_outstanding_item: '',
+    directors_officers_carrier: '', directors_officers_occ_limit: '', directors_officers_agg_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_remarks: '', directors_officers_outstanding_item: '',
+    fiduciary_carrier: '', fiduciary_occ_limit: '', fiduciary_agg_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_remarks: '', fiduciary_outstanding_item: '',
+    inland_marine_carrier: '', inland_marine_occ_limit: '', inland_marine_agg_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_remarks: '', inland_marine_outstanding_item: '',
     // Multi-plan flat fields (backward compat, set by save_commercial_plans)
     umbrella_carrier: '', umbrella_occ_limit: '', umbrella_agg_limit: '', umbrella_premium: '', umbrella_renewal_date: '',
     professional_eo_carrier: '', professional_eo_occ_limit: '', professional_eo_agg_limit: '', professional_eo_premium: '', professional_eo_renewal_date: '',
@@ -83,8 +76,9 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
   const [formData, setFormData] = useState(getInitialFormData());
   const [errors, setErrors] = useState({});
   const [activeCoverages, setActiveCoverages] = useState([]);
+  const [selectedTab, setSelectedTab] = useState(0);
 
-  // Multi-plan state: { umbrella: [{carrier, occ_limit, agg_limit, premium, renewal_date, flag}, ...], ... }
+  // Multi-plan state: { umbrella: [{carrier, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item}, ...], ... }
   const [plans, setPlans] = useState({
     umbrella: [],
     professional_eo: [],
@@ -94,23 +88,23 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
 
   // Insurance product types configuration
   const insuranceProducts = [
-    { name: 'Commercial General Liability', prefix: 'general_liability' },
-    { name: 'Commercial Property', prefix: 'property' },
-    { name: 'Business Owners Policy (BOP)', prefix: 'bop' },
-    { name: 'Umbrella Liability', prefix: 'umbrella', multiPlan: true },
-    { name: 'Workers Compensation', prefix: 'workers_comp' },
-    { name: 'Professional or E&O', prefix: 'professional_eo', multiPlan: true },
-    { name: 'Cyber Liability', prefix: 'cyber', multiPlan: true },
-    { name: 'Commercial Auto', prefix: 'auto' },
-    { name: 'EPLI (Employment Practices Liability)', prefix: 'epli' },
-    { name: 'NYDBL (NY Disability Benefit Law)', prefix: 'nydbl' },
-    { name: 'Surety Bond', prefix: 'surety' },
-    { name: 'Product Liability', prefix: 'product_liability' },
-    { name: 'Flood', prefix: 'flood' },
-    { name: 'Crime or Fidelity Bond', prefix: 'crime', multiPlan: true },
-    { name: 'Directors & Officers', prefix: 'directors_officers' },
-    { name: 'Fiduciary Bond', prefix: 'fiduciary' },
-    { name: 'Inland Marine', prefix: 'inland_marine' }
+    { name: 'Commercial General Liability', tabLabel: 'GL', prefix: 'general_liability' },
+    { name: 'Commercial Property', tabLabel: 'Property', prefix: 'property' },
+    { name: 'Business Owners Policy (BOP)', tabLabel: 'BOP', prefix: 'bop' },
+    { name: 'Umbrella Liability', tabLabel: 'Umbrella', prefix: 'umbrella', multiPlan: true },
+    { name: 'Workers Compensation', tabLabel: 'WC', prefix: 'workers_comp' },
+    { name: 'Professional or E&O', tabLabel: 'E&O', prefix: 'professional_eo', multiPlan: true },
+    { name: 'Cyber Liability', tabLabel: 'Cyber', prefix: 'cyber', multiPlan: true },
+    { name: 'Commercial Auto', tabLabel: 'Auto', prefix: 'auto' },
+    { name: 'EPLI (Employment Practices Liability)', tabLabel: 'EPLI', prefix: 'epli' },
+    { name: 'NYDBL (NY Disability Benefit Law)', tabLabel: 'NYDBL', prefix: 'nydbl' },
+    { name: 'Surety Bond', tabLabel: 'Surety', prefix: 'surety' },
+    { name: 'Product Liability', tabLabel: 'Product', prefix: 'product_liability' },
+    { name: 'Flood', tabLabel: 'Flood', prefix: 'flood' },
+    { name: 'Crime or Fidelity Bond', tabLabel: 'Crime', prefix: 'crime', multiPlan: true },
+    { name: 'Directors & Officers', tabLabel: 'D&O', prefix: 'directors_officers' },
+    { name: 'Fiduciary Bond', tabLabel: 'Fiduciary', prefix: 'fiduciary' },
+    { name: 'Inland Marine', tabLabel: 'Marine', prefix: 'inland_marine' }
   ];
 
   // Initialize form data when modal opens or commercial changes
@@ -130,7 +124,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
               agg_limit: p.agg_limit || '',
               premium: p.premium || '',
               renewal_date: p.renewal_date || '',
-              flag: p.flag || false
+              remarks: p.remarks || '',
+              outstanding_item: p.outstanding_item || ''
             }));
           }
         }
@@ -147,7 +142,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
               agg_limit: commercial[`${planType}_agg_limit`] || '',
               premium: commercial[`${planType}_premium`] || '',
               renewal_date: commercial[`${planType}_renewal_date`] || '',
-              flag: false
+              remarks: '',
+              outstanding_item: ''
             }];
           }
         }
@@ -170,14 +166,22 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
         }
       });
       setActiveCoverages(active);
+      // If an initial coverage tab was requested, jump to it
+      if (initialCoverageTab) {
+        const tabIdx = active.indexOf(initialCoverageTab);
+        setSelectedTab(tabIdx >= 0 ? tabIdx : 0);
+      } else {
+        setSelectedTab(0);
+      }
     } else {
       setFormData(getInitialFormData());
       setPlans({ umbrella: [], professional_eo: [], cyber: [], crime: [] });
       setActiveCoverages([]);
+      setSelectedTab(0);
     }
     setErrors({});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [commercial, open]);
+  }, [commercial, open, initialCoverageTab]);
 
   // Handle input changes
   const handleChange = (field) => (event) => {
@@ -204,7 +208,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
   const addPlan = (planType) => {
     setPlans(prev => ({
       ...prev,
-      [planType]: [...prev[planType], { carrier: '', occ_limit: '', agg_limit: '', premium: '', renewal_date: '', flag: false }]
+      [planType]: [...prev[planType], { carrier: '', occ_limit: '', agg_limit: '', premium: '', renewal_date: '', remarks: '', outstanding_item: '' }]
     }));
   };
 
@@ -264,28 +268,41 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
   // Add a new coverage type
   const handleAddCoverage = (prefix) => {
     if (prefix && !activeCoverages.includes(prefix)) {
-      setActiveCoverages([...activeCoverages, prefix]);
+      const newActive = [...activeCoverages, prefix];
+      setActiveCoverages(newActive);
       // For multi-plan types, add one empty plan
       if (MULTI_PLAN_TYPES.includes(prefix)) {
         addPlan(prefix);
       }
+      // Switch to the newly added tab
+      setSelectedTab(newActive.length - 1);
     }
   };
 
   // Remove a coverage type and clear its data
   const handleRemoveCoverage = (prefix) => {
-    setActiveCoverages(activeCoverages.filter(p => p !== prefix));
+    const idx = activeCoverages.indexOf(prefix);
+    const newActive = activeCoverages.filter(p => p !== prefix);
+    setActiveCoverages(newActive);
     if (MULTI_PLAN_TYPES.includes(prefix)) {
       setPlans(prev => ({ ...prev, [prefix]: [] }));
     } else {
       setFormData({
         ...formData,
         [`${prefix}_carrier`]: '',
-        [`${prefix}_limit`]: '',
+        [`${prefix}_occ_limit`]: '',
+        [`${prefix}_agg_limit`]: '',
         [`${prefix}_premium`]: '',
         [`${prefix}_renewal_date`]: '',
-        [`${prefix}_flag`]: false
+        [`${prefix}_remarks`]: '',
+        [`${prefix}_outstanding_item`]: ''
       });
+    }
+    // Adjust selected tab
+    if (selectedTab >= newActive.length) {
+      setSelectedTab(Math.max(0, newActive.length - 1));
+    } else if (idx < selectedTab) {
+      setSelectedTab(selectedTab - 1);
     }
   };
 
@@ -300,24 +317,13 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
           <Box key={idx} sx={{ mb: 1.5, p: 1.5, backgroundColor: '#fafafa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
               <Typography variant="body2" sx={{ fontWeight: 500, color: '#666' }}>
-                Plan {idx + 1}
+                {label} Plan {idx + 1}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Tooltip title={plan.flag ? 'Remove flag' : 'Flag this plan'}>
-                  <IconButton
-                    size="small"
-                    onClick={() => updatePlan(planType, idx, 'flag', !plan.flag)}
-                    sx={{ color: plan.flag ? '#d32f2f' : '#999' }}
-                  >
-                    {plan.flag ? <FlagIcon fontSize="small" /> : <FlagOutlinedIcon fontSize="small" />}
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={`Remove Plan ${idx + 1}`}>
-                  <IconButton size="small" color="error" onClick={() => removePlan(planType, idx)}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+              <Tooltip title={`Remove ${label} Plan ${idx + 1}`}>
+                <IconButton size="small" color="error" onClick={() => removePlan(planType, idx)}>
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -385,6 +391,32 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                   slotProps={{ formHelperText: isPastDate(plan.renewal_date?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
                 />
               </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Outstanding Item"
+                  select
+                  value={plan.outstanding_item || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
+                  size="small"
+                  sx={{ minWidth: 180 }}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="Premium Due">Premium Due</MenuItem>
+                  <MenuItem value="In Audit">In Audit</MenuItem>
+                  <MenuItem value="Cancel Due">Cancel Due</MenuItem>
+                  <MenuItem value="Add Line">Add Line</MenuItem>
+                  <MenuItem value="Complete">Complete</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Remarks"
+                  value={plan.remarks || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+              </Grid>
             </Grid>
           </Box>
         ))}
@@ -416,7 +448,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
 
       <DialogContent dividers sx={{ overflow: 'auto' }}>
         <Box sx={{ pt: 1 }}>
-          {/* Client Selector */}
+          {/* Client Information */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
               Client Information
@@ -435,71 +467,21 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
                   size="small"
                 />
               )}
-              disabled={isEditMode} // Cannot change client after creation
+              disabled={isEditMode}
               fullWidth
+              sx={{ mb: 2 }}
+            />
+            <Autocomplete
+              freeSolo
+              options={clients.map(c => c.client_name).filter(Boolean)}
+              value={formData.parent_client || ''}
+              onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+              onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+              renderInput={(params) => (
+                <TextField {...params} label="Parent Client" size="small" fullWidth />
+              )}
             />
           </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* Core Fields */}
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-            General Information
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 3, width: '100%', flexGrow: 1 }}>
-            <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
-              <Autocomplete
-                freeSolo
-                options={clients.map(c => c.client_name).filter(Boolean)}
-                value={formData.parent_client || ''}
-                onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-                onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-                renderInput={(params) => (
-                  <TextField {...params} label="Parent Client" size="small" fullWidth />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} sx={{ width: '100%', flexGrow: 1 }}>
-              <TextField
-                label="Policy Status"
-                select
-                value={formData.status || 'Active'}
-                onChange={handleChange('status')}
-                fullWidth
-                size="small"
-              >
-                <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Quoting">Quoting</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6} sx={{ width: '100%', flexGrow: 1 }}>
-              <TextField
-                label="Outstanding Item"
-                value={formData.outstanding_item || ''}
-                onChange={handleChange('outstanding_item')}
-                fullWidth
-                size="small"
-                select
-                InputLabelProps={{ shrink: true }}
-              >
-                <MenuItem value="">None</MenuItem>
-                <MenuItem value="Premium Due">Premium Due</MenuItem>
-                <MenuItem value="In Audit">In Audit</MenuItem>
-                <MenuItem value="Cancel Due">Cancel Due</MenuItem>
-                <MenuItem value="Add Line">Add Line</MenuItem>
-                <MenuItem value="Complete">Complete</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
-              <TextField
-                label="Remarks"
-                value={formData.remarks || ''}
-                onChange={handleChange('remarks')}
-                fullWidth
-                size="small"
-              />
-            </Grid>
-          </Grid>
 
           <Divider sx={{ my: 2 }} />
 
@@ -539,135 +521,170 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [] }) =>
               <Typography>No coverages added yet. Use the dropdown above to add coverage types.</Typography>
             </Paper>
           ) : (
-            activeCoverages.map((prefix) => {
-              const product = insuranceProducts.find(p => p.prefix === prefix);
-              if (!product) return null;
-              const isMultiPlan = product.multiPlan;
+            <Box>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tabs
+                  value={selectedTab}
+                  onChange={(e, newValue) => setSelectedTab(newValue)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{ minHeight: 36 }}
+                >
+                  {activeCoverages.map((prefix) => {
+                    const product = insuranceProducts.find(p => p.prefix === prefix);
+                    if (!product) return null;
+                    const isMultiPlan = product.multiPlan;
+                    const planCount = isMultiPlan && plans[prefix] ? plans[prefix].length : 0;
+                    return (
+                      <Tab
+                        key={prefix}
+                        sx={{ minWidth: 0, minHeight: 36, px: 1.5, py: 0.5, fontSize: '0.8rem' }}
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <span>{product.tabLabel}</span>
+                            {isMultiPlan && planCount > 1 && (
+                              <Chip
+                                label={planCount}
+                                size="small"
+                                color="primary"
+                                sx={{ height: 16, fontSize: '0.6rem', minWidth: 18 }}
+                              />
+                            )}
+                          </Box>
+                        }
+                      />
+                    );
+                  })}
+                </Tabs>
+              </Box>
 
-              return (
-                <Accordion key={product.prefix} defaultExpanded={true}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ fontWeight: 500 }}>{product.name}</Typography>
-                        {isMultiPlan && plans[prefix] && plans[prefix].length > 1 && (
-                          <Chip
-                            label={`${plans[prefix].length} Plans`}
-                            size="small"
-                            color="primary"
-                            sx={{ height: 20, fontSize: '0.7rem' }}
-                          />
-                        )}
-                        {/* Show flag indicator if any plan/coverage is flagged */}
-                        {isMultiPlan ? (
-                          plans[prefix] && plans[prefix].some(p => p.flag) && (
-                            <FlagIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                          )
-                        ) : (
-                          formData[`${prefix}_flag`] && (
-                            <FlagIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                          )
-                        )}
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveCoverage(prefix);
-                        }}
-                        sx={{ color: 'error.main' }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+              {activeCoverages.map((prefix, idx) => {
+                if (idx !== selectedTab) return null;
+                const product = insuranceProducts.find(p => p.prefix === prefix);
+                if (!product) return null;
+                const isMultiPlan = product.multiPlan;
+
+                return (
+                  <Box key={prefix}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                      <Tooltip title={`Remove ${product.name}`}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveCoverage(prefix)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
                     {isMultiPlan ? (
                       renderMultiPlanRows(prefix)
                     ) : (
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Carrier"
-                            value={formData[`${product.prefix}_carrier`] || ''}
-                            onChange={handleChange(`${product.prefix}_carrier`)}
-                            fullWidth
-                            size="small"
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={3}>
-                          <TextField
-                            label="Occ Limit"
-                            type="number"
-                            value={formData[`${product.prefix}_occ_limit`] || ''}
-                            onChange={handleChange(`${product.prefix}_occ_limit`)}
-                            fullWidth
-                            size="small"
-                            InputProps={{
-                              startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                              endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                              inputProps: { min: 0, step: 0.01 }
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={3}>
-                          <TextField
-                            label="Agg Limit"
-                            type="number"
-                            value={formData[`${product.prefix}_agg_limit`] || ''}
-                            onChange={handleChange(`${product.prefix}_agg_limit`)}
-                            fullWidth
-                            size="small"
-                            InputProps={{
-                              startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                              endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                              inputProps: { min: 0, step: 0.01 }
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Premium ($)"
-                            type="number"
-                            value={formData[`${product.prefix}_premium`] || ''}
-                            onChange={handleChange(`${product.prefix}_premium`)}
-                            fullWidth
-                            size="small"
-                            InputProps={{
-                              inputProps: { min: 0, step: 0.01 }
-                            }}
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Renewal Date"
-                            type="date"
-                            value={formData[`${product.prefix}_renewal_date`] ? formData[`${product.prefix}_renewal_date`].split('T')[0] : ''}
-                            onChange={handleChange(`${product.prefix}_renewal_date`)}
-                            fullWidth
-                            size="small"
-                            InputLabelProps={{ shrink: true }}
-                            helperText={isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
-                            slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
-                          />
-                        </Grid>
-                        <Grid item xs={12}>
-                          <Tooltip title={formData[`${prefix}_flag`] ? 'Remove flag' : 'Flag this coverage'}>
-                            <IconButton
+                      <Box sx={{ p: 1.5, backgroundColor: '#fafafa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 1 }}>
+                          {product.name} Plan 1
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Carrier"
+                              value={formData[`${product.prefix}_carrier`] || ''}
+                              onChange={handleChange(`${product.prefix}_carrier`)}
+                              fullWidth
                               size="small"
-                              onClick={() => setFormData({ ...formData, [`${prefix}_flag`]: !formData[`${prefix}_flag`] })}
-                              sx={{ color: formData[`${prefix}_flag`] ? '#d32f2f' : '#999' }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <TextField
+                              label="Occ Limit"
+                              type="number"
+                              value={formData[`${product.prefix}_occ_limit`] || ''}
+                              onChange={handleChange(`${product.prefix}_occ_limit`)}
+                              fullWidth
+                              size="small"
+                              InputProps={{
+                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                                inputProps: { min: 0, step: 0.01 }
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <TextField
+                              label="Agg Limit"
+                              type="number"
+                              value={formData[`${product.prefix}_agg_limit`] || ''}
+                              onChange={handleChange(`${product.prefix}_agg_limit`)}
+                              fullWidth
+                              size="small"
+                              InputProps={{
+                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                                inputProps: { min: 0, step: 0.01 }
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Premium ($)"
+                              type="number"
+                              value={formData[`${product.prefix}_premium`] || ''}
+                              onChange={handleChange(`${product.prefix}_premium`)}
+                              fullWidth
+                              size="small"
+                              InputProps={{
+                                inputProps: { min: 0, step: 0.01 }
+                              }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Renewal Date"
+                              type="date"
+                              value={formData[`${product.prefix}_renewal_date`] ? formData[`${product.prefix}_renewal_date`].split('T')[0] : ''}
+                              onChange={handleChange(`${product.prefix}_renewal_date`)}
+                              fullWidth
+                              size="small"
+                              InputLabelProps={{ shrink: true }}
+                              helperText={isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
+                              slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Outstanding Item"
+                              select
+                              value={formData[`${prefix}_outstanding_item`] || ''}
+                              onChange={handleChange(`${prefix}_outstanding_item`)}
+                              size="small"
+                              sx={{ minWidth: 180 }}
                             >
-                              {formData[`${prefix}_flag`] ? <FlagIcon /> : <FlagOutlinedIcon />}
-                            </IconButton>
-                          </Tooltip>
+                              <MenuItem value="">None</MenuItem>
+                              <MenuItem value="Premium Due">Premium Due</MenuItem>
+                              <MenuItem value="In Audit">In Audit</MenuItem>
+                              <MenuItem value="Cancel Due">Cancel Due</MenuItem>
+                              <MenuItem value="Add Line">Add Line</MenuItem>
+                              <MenuItem value="Complete">Complete</MenuItem>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <TextField
+                              label="Remarks"
+                              value={formData[`${prefix}_remarks`] || ''}
+                              onChange={handleChange(`${prefix}_remarks`)}
+                              fullWidth
+                              size="small"
+                              multiline
+                              minRows={2}
+                            />
+                          </Grid>
                         </Grid>
-                      </Grid>
+                      </Box>
                     )}
-                  </AccordionDetails>
-                </Accordion>
-              );
-            })
+                  </Box>
+                );
+              })}
+            </Box>
           )}
         </Box>
       </DialogContent>

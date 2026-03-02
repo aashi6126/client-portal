@@ -79,10 +79,12 @@ function NewApp() {
   // Modal states for Benefits
   const [benefitsModalOpen, setBenefitsModalOpen] = useState(false);
   const [currentBenefit, setCurrentBenefit] = useState(null);
+  const [benefitInitialTab, setBenefitInitialTab] = useState(null);
 
   // Modal states for Commercial
   const [commercialModalOpen, setCommercialModalOpen] = useState(false);
   const [currentCommercial, setCurrentCommercial] = useState(null);
+  const [commercialInitialTab, setCommercialInitialTab] = useState(null);
 
   // Delete confirmation dialog
   const [deleteDialog, setDeleteDialog] = useState({
@@ -181,8 +183,9 @@ function NewApp() {
       .catch(error => console.error('Error fetching benefits:', error));
   };
 
-  const openBenefitsModal = (benefit = null) => {
+  const openBenefitsModal = (benefit = null, coveragePrefix = null) => {
     setCurrentBenefit(benefit);
+    setBenefitInitialTab(coveragePrefix);
     setBenefitsModalOpen(true);
   };
 
@@ -237,8 +240,9 @@ function NewApp() {
       .catch(error => console.error('Error fetching commercial:', error));
   };
 
-  const openCommercialModal = (commercialRecord = null) => {
+  const openCommercialModal = (commercialRecord = null, coveragePrefix = null) => {
     setCurrentCommercial(commercialRecord);
+    setCommercialInitialTab(coveragePrefix);
     setCommercialModalOpen(true);
   };
 
@@ -771,6 +775,7 @@ function NewApp() {
         benefit={currentBenefit}
         onSave={saveBenefit}
         clients={currentBenefit ? clients : clients.filter(c => !benefits.some(b => b.tax_id === c.tax_id))}
+        initialCoverageTab={benefitInitialTab}
       />
 
       <CommercialModal
@@ -779,6 +784,7 @@ function NewApp() {
         commercial={currentCommercial}
         onSave={saveCommercial}
         clients={currentCommercial ? clients : clients.filter(c => !commercial.some(cm => cm.tax_id === c.tax_id))}
+        initialCoverageTab={commercialInitialTab}
       />
 
       {/* Delete Confirmation Dialog */}

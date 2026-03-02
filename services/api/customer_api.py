@@ -245,7 +245,7 @@ class EmployeeBenefit(db.Model):
     voluntary_life_renewal_date = db.Column(db.Date)
     voluntary_life_carrier = db.Column(db.String(200))
 
-    # Flag columns for single-plan types
+    # Flag columns for single-plan types (deprecated, kept for backward compat)
     ltd_flag = db.Column(db.Boolean, default=False)
     std_flag = db.Column(db.Boolean, default=False)
     k401_flag = db.Column(db.Boolean, default=False)
@@ -253,6 +253,24 @@ class EmployeeBenefit(db.Model):
     accident_flag = db.Column(db.Boolean, default=False)
     hospital_flag = db.Column(db.Boolean, default=False)
     voluntary_life_flag = db.Column(db.Boolean, default=False)
+
+    # Remarks columns for single-plan types
+    ltd_remarks = db.Column(db.Text)
+    std_remarks = db.Column(db.Text)
+    k401_remarks = db.Column(db.Text)
+    critical_illness_remarks = db.Column(db.Text)
+    accident_remarks = db.Column(db.Text)
+    hospital_remarks = db.Column(db.Text)
+    voluntary_life_remarks = db.Column(db.Text)
+
+    # Outstanding item columns for single-plan types
+    ltd_outstanding_item = db.Column(db.String(50))
+    std_outstanding_item = db.Column(db.String(50))
+    k401_outstanding_item = db.Column(db.String(50))
+    critical_illness_outstanding_item = db.Column(db.String(50))
+    accident_outstanding_item = db.Column(db.String(50))
+    hospital_outstanding_item = db.Column(db.String(50))
+    voluntary_life_outstanding_item = db.Column(db.String(50))
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -268,9 +286,6 @@ class EmployeeBenefit(db.Model):
             'client_name': self.client.client_name if self.client else None,
             'client_status': self.client.status if self.client else None,
             'parent_client': self.parent_client,
-            'status': self.status,
-            'outstanding_item': self.outstanding_item,
-            'remarks': self.remarks,
             'form_fire_code': self.form_fire_code,
             'enrollment_poc': self.enrollment_poc,
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
@@ -291,25 +306,32 @@ class EmployeeBenefit(db.Model):
             'life_adnd_carrier': self.life_adnd_carrier,
             'ltd_renewal_date': self.ltd_renewal_date.isoformat() if self.ltd_renewal_date else None,
             'ltd_carrier': self.ltd_carrier,
-            'ltd_flag': bool(self.ltd_flag),
+            'ltd_remarks': self.ltd_remarks,
+            'ltd_outstanding_item': self.ltd_outstanding_item,
             'std_renewal_date': self.std_renewal_date.isoformat() if self.std_renewal_date else None,
             'std_carrier': self.std_carrier,
-            'std_flag': bool(self.std_flag),
+            'std_remarks': self.std_remarks,
+            'std_outstanding_item': self.std_outstanding_item,
             'k401_renewal_date': self.k401_renewal_date.isoformat() if self.k401_renewal_date else None,
             'k401_carrier': self.k401_carrier,
-            'k401_flag': bool(self.k401_flag),
+            'k401_remarks': self.k401_remarks,
+            'k401_outstanding_item': self.k401_outstanding_item,
             'critical_illness_renewal_date': self.critical_illness_renewal_date.isoformat() if self.critical_illness_renewal_date else None,
             'critical_illness_carrier': self.critical_illness_carrier,
-            'critical_illness_flag': bool(self.critical_illness_flag),
+            'critical_illness_remarks': self.critical_illness_remarks,
+            'critical_illness_outstanding_item': self.critical_illness_outstanding_item,
             'accident_renewal_date': self.accident_renewal_date.isoformat() if self.accident_renewal_date else None,
             'accident_carrier': self.accident_carrier,
-            'accident_flag': bool(self.accident_flag),
+            'accident_remarks': self.accident_remarks,
+            'accident_outstanding_item': self.accident_outstanding_item,
             'hospital_renewal_date': self.hospital_renewal_date.isoformat() if self.hospital_renewal_date else None,
             'hospital_carrier': self.hospital_carrier,
-            'hospital_flag': bool(self.hospital_flag),
+            'hospital_remarks': self.hospital_remarks,
+            'hospital_outstanding_item': self.hospital_outstanding_item,
             'voluntary_life_renewal_date': self.voluntary_life_renewal_date.isoformat() if self.voluntary_life_renewal_date else None,
             'voluntary_life_carrier': self.voluntary_life_carrier,
-            'voluntary_life_flag': bool(self.voluntary_life_flag),
+            'voluntary_life_remarks': self.voluntary_life_remarks,
+            'voluntary_life_outstanding_item': self.voluntary_life_outstanding_item,
             'plans': self._get_plans_dict()
         }
 
@@ -338,6 +360,8 @@ class BenefitPlan(db.Model):
     renewal_date = db.Column(db.Date)
     flag = db.Column(db.Boolean, default=False)
     waiting_period = db.Column(db.String(100))
+    remarks = db.Column(db.Text)
+    outstanding_item = db.Column(db.String(50))
 
     # Relationship
     employee_benefit = db.relationship('EmployeeBenefit', back_populates='plans')
@@ -349,8 +373,9 @@ class BenefitPlan(db.Model):
             'plan_number': self.plan_number,
             'carrier': self.carrier,
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
-            'flag': bool(self.flag),
-            'waiting_period': self.waiting_period
+            'waiting_period': self.waiting_period,
+            'remarks': self.remarks,
+            'outstanding_item': self.outstanding_item
         }
 
 
@@ -489,7 +514,7 @@ class CommercialInsurance(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Flag columns for single-plan types
+    # Flag columns for single-plan types (deprecated, kept for backward compat)
     general_liability_flag = db.Column(db.Boolean, default=False)
     property_flag = db.Column(db.Boolean, default=False)
     bop_flag = db.Column(db.Boolean, default=False)
@@ -503,6 +528,36 @@ class CommercialInsurance(db.Model):
     directors_officers_flag = db.Column(db.Boolean, default=False)
     fiduciary_flag = db.Column(db.Boolean, default=False)
     inland_marine_flag = db.Column(db.Boolean, default=False)
+
+    # Remarks columns for single-plan types
+    general_liability_remarks = db.Column(db.Text)
+    property_remarks = db.Column(db.Text)
+    bop_remarks = db.Column(db.Text)
+    workers_comp_remarks = db.Column(db.Text)
+    auto_remarks = db.Column(db.Text)
+    epli_remarks = db.Column(db.Text)
+    nydbl_remarks = db.Column(db.Text)
+    surety_remarks = db.Column(db.Text)
+    product_liability_remarks = db.Column(db.Text)
+    flood_remarks = db.Column(db.Text)
+    directors_officers_remarks = db.Column(db.Text)
+    fiduciary_remarks = db.Column(db.Text)
+    inland_marine_remarks = db.Column(db.Text)
+
+    # Outstanding item columns for single-plan types
+    general_liability_outstanding_item = db.Column(db.String(50))
+    property_outstanding_item = db.Column(db.String(50))
+    bop_outstanding_item = db.Column(db.String(50))
+    workers_comp_outstanding_item = db.Column(db.String(50))
+    auto_outstanding_item = db.Column(db.String(50))
+    epli_outstanding_item = db.Column(db.String(50))
+    nydbl_outstanding_item = db.Column(db.String(50))
+    surety_outstanding_item = db.Column(db.String(50))
+    product_liability_outstanding_item = db.Column(db.String(50))
+    flood_outstanding_item = db.Column(db.String(50))
+    directors_officers_outstanding_item = db.Column(db.String(50))
+    fiduciary_outstanding_item = db.Column(db.String(50))
+    inland_marine_outstanding_item = db.Column(db.String(50))
 
     # Relationships
     client = db.relationship('Client', back_populates='commercial_insurance')
@@ -518,27 +573,27 @@ class CommercialInsurance(db.Model):
             'client_name': self.client.client_name if self.client else None,
             'client_status': self.client.status if self.client else None,
             'parent_client': self.parent_client,
-            'remarks': self.remarks,
-            'status': self.status,
-            'outstanding_item': self.outstanding_item,
             'general_liability_carrier': self.general_liability_carrier,
             'general_liability_occ_limit': self.general_liability_occ_limit,
             'general_liability_agg_limit': self.general_liability_agg_limit,
             'general_liability_premium': format_premium(self.general_liability_premium),
             'general_liability_renewal_date': self.general_liability_renewal_date.isoformat() if self.general_liability_renewal_date else None,
-            'general_liability_flag': bool(self.general_liability_flag),
+            'general_liability_remarks': self.general_liability_remarks,
+            'general_liability_outstanding_item': self.general_liability_outstanding_item,
             'property_carrier': self.property_carrier,
             'property_occ_limit': self.property_occ_limit,
             'property_agg_limit': self.property_agg_limit,
             'property_premium': format_premium(self.property_premium),
             'property_renewal_date': self.property_renewal_date.isoformat() if self.property_renewal_date else None,
-            'property_flag': bool(self.property_flag),
+            'property_remarks': self.property_remarks,
+            'property_outstanding_item': self.property_outstanding_item,
             'bop_carrier': self.bop_carrier,
             'bop_occ_limit': self.bop_occ_limit,
             'bop_agg_limit': self.bop_agg_limit,
             'bop_premium': format_premium(self.bop_premium),
             'bop_renewal_date': self.bop_renewal_date.isoformat() if self.bop_renewal_date else None,
-            'bop_flag': bool(self.bop_flag),
+            'bop_remarks': self.bop_remarks,
+            'bop_outstanding_item': self.bop_outstanding_item,
             'umbrella_carrier': self.umbrella_carrier,
             'umbrella_occ_limit': self.umbrella_occ_limit,
             'umbrella_agg_limit': self.umbrella_agg_limit,
@@ -549,7 +604,8 @@ class CommercialInsurance(db.Model):
             'workers_comp_agg_limit': self.workers_comp_agg_limit,
             'workers_comp_premium': format_premium(self.workers_comp_premium),
             'workers_comp_renewal_date': self.workers_comp_renewal_date.isoformat() if self.workers_comp_renewal_date else None,
-            'workers_comp_flag': bool(self.workers_comp_flag),
+            'workers_comp_remarks': self.workers_comp_remarks,
+            'workers_comp_outstanding_item': self.workers_comp_outstanding_item,
             'professional_eo_carrier': self.professional_eo_carrier,
             'professional_eo_occ_limit': self.professional_eo_occ_limit,
             'professional_eo_agg_limit': self.professional_eo_agg_limit,
@@ -565,37 +621,43 @@ class CommercialInsurance(db.Model):
             'auto_agg_limit': self.auto_agg_limit,
             'auto_premium': format_premium(self.auto_premium),
             'auto_renewal_date': self.auto_renewal_date.isoformat() if self.auto_renewal_date else None,
-            'auto_flag': bool(self.auto_flag),
+            'auto_remarks': self.auto_remarks,
+            'auto_outstanding_item': self.auto_outstanding_item,
             'epli_carrier': self.epli_carrier,
             'epli_occ_limit': self.epli_occ_limit,
             'epli_agg_limit': self.epli_agg_limit,
             'epli_premium': format_premium(self.epli_premium),
             'epli_renewal_date': self.epli_renewal_date.isoformat() if self.epli_renewal_date else None,
-            'epli_flag': bool(self.epli_flag),
+            'epli_remarks': self.epli_remarks,
+            'epli_outstanding_item': self.epli_outstanding_item,
             'nydbl_carrier': self.nydbl_carrier,
             'nydbl_occ_limit': self.nydbl_occ_limit,
             'nydbl_agg_limit': self.nydbl_agg_limit,
             'nydbl_premium': format_premium(self.nydbl_premium),
             'nydbl_renewal_date': self.nydbl_renewal_date.isoformat() if self.nydbl_renewal_date else None,
-            'nydbl_flag': bool(self.nydbl_flag),
+            'nydbl_remarks': self.nydbl_remarks,
+            'nydbl_outstanding_item': self.nydbl_outstanding_item,
             'surety_carrier': self.surety_carrier,
             'surety_occ_limit': self.surety_occ_limit,
             'surety_agg_limit': self.surety_agg_limit,
             'surety_premium': format_premium(self.surety_premium),
             'surety_renewal_date': self.surety_renewal_date.isoformat() if self.surety_renewal_date else None,
-            'surety_flag': bool(self.surety_flag),
+            'surety_remarks': self.surety_remarks,
+            'surety_outstanding_item': self.surety_outstanding_item,
             'product_liability_carrier': self.product_liability_carrier,
             'product_liability_occ_limit': self.product_liability_occ_limit,
             'product_liability_agg_limit': self.product_liability_agg_limit,
             'product_liability_premium': format_premium(self.product_liability_premium),
             'product_liability_renewal_date': self.product_liability_renewal_date.isoformat() if self.product_liability_renewal_date else None,
-            'product_liability_flag': bool(self.product_liability_flag),
+            'product_liability_remarks': self.product_liability_remarks,
+            'product_liability_outstanding_item': self.product_liability_outstanding_item,
             'flood_carrier': self.flood_carrier,
             'flood_occ_limit': self.flood_occ_limit,
             'flood_agg_limit': self.flood_agg_limit,
             'flood_premium': format_premium(self.flood_premium),
             'flood_renewal_date': self.flood_renewal_date.isoformat() if self.flood_renewal_date else None,
-            'flood_flag': bool(self.flood_flag),
+            'flood_remarks': self.flood_remarks,
+            'flood_outstanding_item': self.flood_outstanding_item,
             'crime_carrier': self.crime_carrier,
             'crime_occ_limit': self.crime_occ_limit,
             'crime_agg_limit': self.crime_agg_limit,
@@ -606,19 +668,22 @@ class CommercialInsurance(db.Model):
             'directors_officers_agg_limit': self.directors_officers_agg_limit,
             'directors_officers_premium': format_premium(self.directors_officers_premium),
             'directors_officers_renewal_date': self.directors_officers_renewal_date.isoformat() if self.directors_officers_renewal_date else None,
-            'directors_officers_flag': bool(self.directors_officers_flag),
+            'directors_officers_remarks': self.directors_officers_remarks,
+            'directors_officers_outstanding_item': self.directors_officers_outstanding_item,
             'fiduciary_carrier': self.fiduciary_carrier,
             'fiduciary_occ_limit': self.fiduciary_occ_limit,
             'fiduciary_agg_limit': self.fiduciary_agg_limit,
             'fiduciary_premium': format_premium(self.fiduciary_premium),
             'fiduciary_renewal_date': self.fiduciary_renewal_date.isoformat() if self.fiduciary_renewal_date else None,
-            'fiduciary_flag': bool(self.fiduciary_flag),
+            'fiduciary_remarks': self.fiduciary_remarks,
+            'fiduciary_outstanding_item': self.fiduciary_outstanding_item,
             'inland_marine_carrier': self.inland_marine_carrier,
             'inland_marine_occ_limit': self.inland_marine_occ_limit,
             'inland_marine_agg_limit': self.inland_marine_agg_limit,
             'inland_marine_premium': format_premium(self.inland_marine_premium),
             'inland_marine_renewal_date': self.inland_marine_renewal_date.isoformat() if self.inland_marine_renewal_date else None,
-            'inland_marine_flag': bool(self.inland_marine_flag),
+            'inland_marine_remarks': self.inland_marine_remarks,
+            'inland_marine_outstanding_item': self.inland_marine_outstanding_item,
             'plans': self._get_commercial_plans_dict()
         }
         return result
@@ -649,6 +714,8 @@ class CommercialPlan(db.Model):
     premium = db.Column(db.Numeric(12, 2))
     renewal_date = db.Column(db.Date)
     flag = db.Column(db.Boolean, default=False)
+    remarks = db.Column(db.Text)
+    outstanding_item = db.Column(db.String(50))
 
     # Relationship
     commercial_insurance = db.relationship('CommercialInsurance', back_populates='commercial_plans')
@@ -663,7 +730,8 @@ class CommercialPlan(db.Model):
             'agg_limit': self.coverage_agg_limit,
             'premium': float(self.premium) if self.premium else None,
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
-            'flag': bool(self.flag)
+            'remarks': self.remarks,
+            'outstanding_item': self.outstanding_item
         }
 
 
@@ -721,8 +789,9 @@ def save_benefit_plans(session, benefit, plans_data):
                     plan_number=idx,
                     carrier=carrier,
                     renewal_date=parse_date(renewal),
-                    flag=bool(plan_info.get('flag', False)),
-                    waiting_period=plan_info.get('waiting_period') or None
+                    waiting_period=plan_info.get('waiting_period') or None,
+                    remarks=plan_info.get('remarks') or None,
+                    outstanding_item=plan_info.get('outstanding_item') or None
                 )
                 session.add(plan)
 
@@ -760,7 +829,8 @@ def save_commercial_plans(session, commercial, plans_data):
                     coverage_agg_limit=agg_limit_val,
                     premium=parse_premium(premium_val),
                     renewal_date=parse_date(renewal),
-                    flag=bool(plan_info.get('flag', False))
+                    remarks=plan_info.get('remarks') or None,
+                    outstanding_item=plan_info.get('outstanding_item') or None
                 )
                 session.add(plan)
 
@@ -996,9 +1066,6 @@ def create_benefit():
         benefit = EmployeeBenefit(
             tax_id=data.get('tax_id'),
             parent_client=data.get('parent_client'),
-            status=data.get('status'),
-            outstanding_item=data.get('outstanding_item'),
-            remarks=data.get('remarks'),
             form_fire_code=data.get('form_fire_code'),
             enrollment_poc=data.get('enrollment_poc'),
             renewal_date=parse_date(data.get('renewal_date')),
@@ -1019,26 +1086,32 @@ def create_benefit():
             life_adnd_carrier=data.get('life_adnd_carrier'),
             ltd_renewal_date=parse_date(data.get('ltd_renewal_date')),
             ltd_carrier=data.get('ltd_carrier'),
+            ltd_remarks=data.get('ltd_remarks'),
+            ltd_outstanding_item=data.get('ltd_outstanding_item'),
             std_renewal_date=parse_date(data.get('std_renewal_date')),
             std_carrier=data.get('std_carrier'),
+            std_remarks=data.get('std_remarks'),
+            std_outstanding_item=data.get('std_outstanding_item'),
             k401_renewal_date=parse_date(data.get('k401_renewal_date')),
             k401_carrier=data.get('k401_carrier'),
+            k401_remarks=data.get('k401_remarks'),
+            k401_outstanding_item=data.get('k401_outstanding_item'),
             critical_illness_renewal_date=parse_date(data.get('critical_illness_renewal_date')),
             critical_illness_carrier=data.get('critical_illness_carrier'),
+            critical_illness_remarks=data.get('critical_illness_remarks'),
+            critical_illness_outstanding_item=data.get('critical_illness_outstanding_item'),
             accident_renewal_date=parse_date(data.get('accident_renewal_date')),
             accident_carrier=data.get('accident_carrier'),
+            accident_remarks=data.get('accident_remarks'),
+            accident_outstanding_item=data.get('accident_outstanding_item'),
             hospital_renewal_date=parse_date(data.get('hospital_renewal_date')),
             hospital_carrier=data.get('hospital_carrier'),
+            hospital_remarks=data.get('hospital_remarks'),
+            hospital_outstanding_item=data.get('hospital_outstanding_item'),
             voluntary_life_renewal_date=parse_date(data.get('voluntary_life_renewal_date')),
             voluntary_life_carrier=data.get('voluntary_life_carrier'),
-            # Single-plan flags
-            ltd_flag=bool(data.get('ltd_flag', False)),
-            std_flag=bool(data.get('std_flag', False)),
-            k401_flag=bool(data.get('k401_flag', False)),
-            critical_illness_flag=bool(data.get('critical_illness_flag', False)),
-            accident_flag=bool(data.get('accident_flag', False)),
-            hospital_flag=bool(data.get('hospital_flag', False)),
-            voluntary_life_flag=bool(data.get('voluntary_life_flag', False))
+            voluntary_life_remarks=data.get('voluntary_life_remarks'),
+            voluntary_life_outstanding_item=data.get('voluntary_life_outstanding_item')
         )
 
         session.add(benefit)
@@ -1079,9 +1152,6 @@ def update_benefit(benefit_id):
         # Update all fields
         benefit.tax_id = data.get('tax_id', benefit.tax_id)
         benefit.parent_client = data.get('parent_client', benefit.parent_client)
-        benefit.status = data.get('status', benefit.status)
-        benefit.outstanding_item = data.get('outstanding_item', benefit.outstanding_item)
-        benefit.remarks = data.get('remarks', benefit.remarks)
         benefit.form_fire_code = data.get('form_fire_code', benefit.form_fire_code)
         benefit.enrollment_poc = data.get('enrollment_poc', benefit.enrollment_poc)
         benefit.renewal_date = parse_date(data.get('renewal_date')) if 'renewal_date' in data else benefit.renewal_date
@@ -1137,10 +1207,12 @@ def update_benefit(benefit_id):
         if 'voluntary_life_carrier' in data:
             benefit.voluntary_life_carrier = data.get('voluntary_life_carrier')
 
-        # Update single-plan flag columns
+        # Update single-plan remarks and outstanding_item columns
         for prefix in ['ltd', 'std', 'k401', 'critical_illness', 'accident', 'hospital', 'voluntary_life']:
-            if f'{prefix}_flag' in data:
-                setattr(benefit, f'{prefix}_flag', bool(data.get(f'{prefix}_flag', False)))
+            if f'{prefix}_remarks' in data:
+                setattr(benefit, f'{prefix}_remarks', data.get(f'{prefix}_remarks'))
+            if f'{prefix}_outstanding_item' in data:
+                setattr(benefit, f'{prefix}_outstanding_item', data.get(f'{prefix}_outstanding_item'))
 
         # Save multi-plan child records if provided
         if 'plans' in data:
@@ -1195,9 +1267,6 @@ def clone_benefit(benefit_id):
 
         new_benefit = EmployeeBenefit(
             tax_id=original.tax_id,
-            status=original.status,
-            outstanding_item=original.outstanding_item,
-            remarks=original.remarks,
             form_fire_code=original.form_fire_code,
             enrollment_poc=original.enrollment_poc,
             renewal_date=original.renewal_date,
@@ -1218,18 +1287,32 @@ def clone_benefit(benefit_id):
             life_adnd_carrier=original.life_adnd_carrier,
             ltd_renewal_date=original.ltd_renewal_date,
             ltd_carrier=original.ltd_carrier,
+            ltd_remarks=original.ltd_remarks,
+            ltd_outstanding_item=original.ltd_outstanding_item,
             std_renewal_date=original.std_renewal_date,
             std_carrier=original.std_carrier,
+            std_remarks=original.std_remarks,
+            std_outstanding_item=original.std_outstanding_item,
             k401_renewal_date=original.k401_renewal_date,
             k401_carrier=original.k401_carrier,
+            k401_remarks=original.k401_remarks,
+            k401_outstanding_item=original.k401_outstanding_item,
             critical_illness_renewal_date=original.critical_illness_renewal_date,
             critical_illness_carrier=original.critical_illness_carrier,
+            critical_illness_remarks=original.critical_illness_remarks,
+            critical_illness_outstanding_item=original.critical_illness_outstanding_item,
             accident_renewal_date=original.accident_renewal_date,
             accident_carrier=original.accident_carrier,
+            accident_remarks=original.accident_remarks,
+            accident_outstanding_item=original.accident_outstanding_item,
             hospital_renewal_date=original.hospital_renewal_date,
             hospital_carrier=original.hospital_carrier,
+            hospital_remarks=original.hospital_remarks,
+            hospital_outstanding_item=original.hospital_outstanding_item,
             voluntary_life_renewal_date=original.voluntary_life_renewal_date,
-            voluntary_life_carrier=original.voluntary_life_carrier
+            voluntary_life_carrier=original.voluntary_life_carrier,
+            voluntary_life_remarks=original.voluntary_life_remarks,
+            voluntary_life_outstanding_item=original.voluntary_life_outstanding_item
         )
 
         session.add(new_benefit)
@@ -1243,7 +1326,8 @@ def clone_benefit(benefit_id):
                 plan_number=plan.plan_number,
                 carrier=plan.carrier,
                 renewal_date=plan.renewal_date,
-                flag=plan.flag
+                remarks=plan.remarks,
+                outstanding_item=plan.outstanding_item
             )
             session.add(new_plan)
 
@@ -1319,19 +1403,17 @@ def create_commercial():
         commercial = CommercialInsurance(
             tax_id=data.get('tax_id'),
             parent_client=data.get('parent_client'),
-            remarks=data.get('remarks'),
-            status=data.get('status'),
-            outstanding_item=data.get('outstanding_item'),
         )
 
-        # Set single-plan product fields (carrier, occ_limit, agg_limit, premium, renewal_date, flag)
+        # Set single-plan product fields (carrier, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item)
         for product in single_plan_products:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             setattr(commercial, f'{product}_agg_limit', data.get(f'{product}_agg_limit') or None)
             setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
             setattr(commercial, f'{product}_renewal_date', parse_date(data.get(f'{product}_renewal_date')))
-            setattr(commercial, f'{product}_flag', bool(data.get(f'{product}_flag', False)))
+            setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
+            setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
 
         # Multi-plan type flat fields (backward compat - will be overwritten by save_commercial_plans)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
@@ -1377,9 +1459,6 @@ def update_commercial(commercial_id):
         # Update core fields
         commercial.tax_id = data.get('tax_id', commercial.tax_id)
         commercial.parent_client = data.get('parent_client', commercial.parent_client)
-        commercial.remarks = data.get('remarks', commercial.remarks)
-        commercial.status = data.get('status', commercial.status)
-        commercial.outstanding_item = data.get('outstanding_item', commercial.outstanding_item)
 
         # Update single-plan insurance products
         single_plan_products = [
@@ -1398,8 +1477,10 @@ def update_commercial(commercial_id):
                 setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
             if f'{product}_renewal_date' in data:
                 setattr(commercial, f'{product}_renewal_date', parse_date(data.get(f'{product}_renewal_date')))
-            if f'{product}_flag' in data:
-                setattr(commercial, f'{product}_flag', bool(data.get(f'{product}_flag', False)))
+            if f'{product}_remarks' in data:
+                setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
+            if f'{product}_outstanding_item' in data:
+                setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
 
         # Update multi-plan type flat fields (backward compat)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
@@ -1464,9 +1545,6 @@ def clone_commercial(commercial_id):
 
         new_commercial = CommercialInsurance(
             tax_id=original.tax_id,
-            remarks=original.remarks,
-            status=original.status,
-            outstanding_item=original.outstanding_item,
             # Copy all product fields
             general_liability_carrier=original.general_liability_carrier,
             general_liability_occ_limit=original.general_liability_occ_limit,
@@ -1555,11 +1633,12 @@ def clone_commercial(commercial_id):
             inland_marine_renewal_date=original.inland_marine_renewal_date
         )
 
-        # Copy flag columns for single-plan types
+        # Copy remarks and outstanding_item columns for single-plan types
         for product in ['general_liability', 'property', 'bop', 'workers_comp', 'auto',
                        'epli', 'nydbl', 'surety', 'product_liability', 'flood',
                        'directors_officers', 'fiduciary', 'inland_marine']:
-            setattr(new_commercial, f'{product}_flag', getattr(original, f'{product}_flag', False))
+            setattr(new_commercial, f'{product}_remarks', getattr(original, f'{product}_remarks', None))
+            setattr(new_commercial, f'{product}_outstanding_item', getattr(original, f'{product}_outstanding_item', None))
 
         session.add(new_commercial)
         session.flush()
@@ -1575,7 +1654,8 @@ def clone_commercial(commercial_id):
                 coverage_agg_limit=plan.coverage_agg_limit,
                 premium=plan.premium,
                 renewal_date=plan.renewal_date,
-                flag=plan.flag
+                remarks=plan.remarks,
+                outstanding_item=plan.outstanding_item
             )
             session.add(new_plan)
 
@@ -1840,16 +1920,16 @@ def export_to_excel():
         # Then single-plan types (7 types x 2 cols = 14 cols)
         # Then 1095 (2 cols)
 
-        benefit_headers = ['Tax ID', 'Client Name ', 'Parent Client', 'Status', 'Outstanding Item', 'Remarks',
+        benefit_headers = ['Tax ID', 'Client Name ', 'Parent Client',
                            'Form Fire Code', 'Enrollment POC', 'Other Broker', 'Funding',
                            '# of Emp at renewal', 'Enrolled EEs', 'Waiting Period', 'Deductible Accumulation',
                            'Previous Carrier', 'Cobra Administrator']
         # Track col position (1-based) — after fixed cols
         col_pos = len(benefit_headers) + 1  # Next col to use
 
-        benefit_sections = [(1, 6, ''), (7, 16, 'MEDICAL GLOBAL')]
+        benefit_sections = [(1, 3, ''), (4, 13, 'MEDICAL GLOBAL')]
 
-        # Multi-plan type dynamic columns
+        # Multi-plan type dynamic columns (carrier, renewal, waiting_period, remarks, outstanding_item per plan)
         multi_plan_col_map = {}  # plan_type -> start_col (for data writing)
         for plan_type, label in multi_plan_defs:
             n = max_plans[plan_type]
@@ -1858,14 +1938,15 @@ def export_to_excel():
                 suffix = f' {i}' if n > 1 else ''
                 benefit_headers.append(f'{label} Carrier{suffix}')
                 benefit_headers.append(f'{label} Renewal Date{suffix}')
-                benefit_headers.append(f'{label} Flag{suffix}')
                 benefit_headers.append(f'{label} Waiting Period{suffix}')
+                benefit_headers.append(f'{label} Remarks{suffix}')
+                benefit_headers.append(f'{label} Outstanding Item{suffix}')
             multi_plan_col_map[plan_type] = start
-            end = col_pos + n * 4 - 1
+            end = col_pos + n * 5 - 1
             benefit_sections.append((start, end, f'{label} PLANS'))
-            col_pos += n * 4
+            col_pos += n * 5
 
-        # Single-plan types
+        # Single-plan types (renewal, carrier, remarks, outstanding_item per type)
         single_plan_types = [
             ('ltd', 'LTD'), ('std', 'STD'), ('k401', '401K'),
             ('critical_illness', 'Critical Illness'), ('accident', 'Accident'),
@@ -1875,9 +1956,10 @@ def export_to_excel():
         for prefix, label in single_plan_types:
             benefit_headers.append(f'{label} Renewal Date')
             benefit_headers.append(f'{label} Carrier')
-            benefit_headers.append(f'{label} Flag')
-            benefit_sections.append((col_pos, col_pos + 2, f'{label.upper()} PLANS'))
-            col_pos += 3
+            benefit_headers.append(f'{label} Remarks')
+            benefit_headers.append(f'{label} Outstanding Item')
+            benefit_sections.append((col_pos, col_pos + 3, f'{label.upper()} PLANS'))
+            col_pos += 4
 
         # 1095
         benefit_headers.extend(['Employer Contribution %', 'Employee Contribution %'])
@@ -1904,9 +1986,6 @@ def export_to_excel():
             ws_benefits.cell(row=row_idx, column=c, value=benefit.tax_id); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=client_name); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.parent_client); c += 1
-            ws_benefits.cell(row=row_idx, column=c, value=benefit.status); c += 1
-            ws_benefits.cell(row=row_idx, column=c, value=benefit.outstanding_item); c += 1
-            ws_benefits.cell(row=row_idx, column=c, value=benefit.remarks); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.form_fire_code); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.enrollment_poc); c += 1
             ws_benefits.cell(row=row_idx, column=c, value='None'); c += 1  # Other Broker
@@ -1918,7 +1997,7 @@ def export_to_excel():
             ws_benefits.cell(row=row_idx, column=c, value=benefit.previous_carrier); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.cobra_carrier); c += 1
 
-            # Multi-plan types: write dynamic columns (carrier, renewal, flag per plan)
+            # Multi-plan types: write dynamic columns (carrier, renewal, waiting_period, remarks, outstanding_item per plan)
             plans_by_type = {}
             for plan in benefit.plans:
                 plans_by_type.setdefault(plan.plan_type, []).append(plan)
@@ -1927,19 +2006,21 @@ def export_to_excel():
                 start = multi_plan_col_map[plan_type]
                 for i in range(max_plans[plan_type]):
                     if i < len(type_plans):
-                        ws_benefits.cell(row=row_idx, column=start + i * 4, value=type_plans[i].carrier)
-                        ws_benefits.cell(row=row_idx, column=start + i * 4 + 1, value=type_plans[i].renewal_date)
-                        ws_benefits.cell(row=row_idx, column=start + i * 4 + 2, value=bool(type_plans[i].flag))
-                        ws_benefits.cell(row=row_idx, column=start + i * 4 + 3, value=type_plans[i].waiting_period)
+                        ws_benefits.cell(row=row_idx, column=start + i * 5, value=type_plans[i].carrier)
+                        ws_benefits.cell(row=row_idx, column=start + i * 5 + 1, value=type_plans[i].renewal_date)
+                        ws_benefits.cell(row=row_idx, column=start + i * 5 + 2, value=type_plans[i].waiting_period)
+                        ws_benefits.cell(row=row_idx, column=start + i * 5 + 3, value=type_plans[i].remarks)
+                        ws_benefits.cell(row=row_idx, column=start + i * 5 + 4, value=type_plans[i].outstanding_item)
                     # else leave blank
 
-            # Single-plan types (renewal, carrier, flag)
+            # Single-plan types (renewal, carrier, remarks, outstanding_item)
             sc = single_plan_col_start
             for prefix, label in single_plan_types:
                 ws_benefits.cell(row=row_idx, column=sc, value=getattr(benefit, f'{prefix}_renewal_date'))
                 ws_benefits.cell(row=row_idx, column=sc + 1, value=getattr(benefit, f'{prefix}_carrier'))
-                ws_benefits.cell(row=row_idx, column=sc + 2, value=bool(getattr(benefit, f'{prefix}_flag', False)))
-                sc += 3
+                ws_benefits.cell(row=row_idx, column=sc + 2, value=getattr(benefit, f'{prefix}_remarks', None))
+                ws_benefits.cell(row=row_idx, column=sc + 3, value=getattr(benefit, f'{prefix}_outstanding_item', None))
+                sc += 4
 
             # 1095
             ws_benefits.cell(row=row_idx, column=sc, value=benefit.employee_contribution)
@@ -1985,29 +2066,29 @@ def export_to_excel():
             comm_max_plans[plan_type] = max_count
 
         # Build headers dynamically
-        commercial_headers = ['Tax ID', 'Client Name ', 'Parent Client', ' Remarks ', ' Status ', 'Outstanding Item']
-        commercial_sections = [(1, 6, '')]
-        col_pos = 7
+        commercial_headers = ['Tax ID', 'Client Name ', 'Parent Client']
+        commercial_sections = [(1, 3, '')]
+        col_pos = 4
 
-        # Single-plan type columns (6 cols each: carrier, occ_limit, agg_limit, premium, renewal, flag)
+        # Single-plan type columns (7 cols each: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
         comm_single_col_start = col_pos
         for prefix, label in commercial_single_plan_defs:
-            commercial_headers.extend(['Carrier', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Flag'])
-            commercial_sections.append((col_pos, col_pos + 5, label))
-            col_pos += 6
+            commercial_headers.extend(['Carrier', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item'])
+            commercial_sections.append((col_pos, col_pos + 6, label))
+            col_pos += 7
 
-        # Multi-plan type columns (6 cols per plan: carrier, occ_limit, agg_limit, premium, renewal, flag)
+        # Multi-plan type columns (7 cols per plan: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
         comm_multi_col_map = {}
         for plan_type, label in commercial_multi_plan_defs:
             n = comm_max_plans[plan_type]
             start = col_pos
             for i in range(1, n + 1):
                 suffix = f' {i}' if n > 1 else ''
-                commercial_headers.extend([f'Carrier{suffix}', f'Occ Limit{suffix}', f'Agg Limit{suffix}', f'Premium{suffix}', f'Renewal Date{suffix}', f'Flag{suffix}'])
+                commercial_headers.extend([f'Carrier{suffix}', f'Occ Limit{suffix}', f'Agg Limit{suffix}', f'Premium{suffix}', f'Renewal Date{suffix}', f'Remarks{suffix}', f'Outstanding Item{suffix}'])
             comm_multi_col_map[plan_type] = start
-            end = col_pos + n * 6 - 1
+            end = col_pos + n * 7 - 1
             commercial_sections.append((start, end, label))
-            col_pos += n * 6
+            col_pos += n * 7
 
         # Write section headers (Row 1)
         for start_col, end_col, title in commercial_sections:
@@ -2029,11 +2110,8 @@ def export_to_excel():
             ws_commercial.cell(row=row_idx, column=1, value=comm.tax_id)
             ws_commercial.cell(row=row_idx, column=2, value=client_name)
             ws_commercial.cell(row=row_idx, column=3, value=comm.parent_client)
-            ws_commercial.cell(row=row_idx, column=4, value=comm.remarks)
-            ws_commercial.cell(row=row_idx, column=5, value=comm.status)
-            ws_commercial.cell(row=row_idx, column=6, value=comm.outstanding_item)
 
-            # Single-plan types (6 cols each: carrier, occ_limit, agg_limit, premium, renewal, flag)
+            # Single-plan types (7 cols each: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
             sc = comm_single_col_start
             for prefix, label in commercial_single_plan_defs:
                 ws_commercial.cell(row=row_idx, column=sc, value=getattr(comm, f'{prefix}_carrier', None) or 'None')
@@ -2042,10 +2120,11 @@ def export_to_excel():
                 premium = getattr(comm, f'{prefix}_premium', None)
                 ws_commercial.cell(row=row_idx, column=sc + 3, value=float(premium) if premium else 0)
                 ws_commercial.cell(row=row_idx, column=sc + 4, value=getattr(comm, f'{prefix}_renewal_date', None) or 'N/A')
-                ws_commercial.cell(row=row_idx, column=sc + 5, value=bool(getattr(comm, f'{prefix}_flag', False)))
-                sc += 6
+                ws_commercial.cell(row=row_idx, column=sc + 5, value=getattr(comm, f'{prefix}_remarks', None))
+                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_outstanding_item', None))
+                sc += 7
 
-            # Multi-plan types (6 cols per plan: carrier, occ_limit, agg_limit, premium, renewal, flag)
+            # Multi-plan types (7 cols per plan: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
             plans_by_type = {}
             for plan in comm.commercial_plans:
                 plans_by_type.setdefault(plan.plan_type, []).append(plan)
@@ -2054,12 +2133,13 @@ def export_to_excel():
                 start = comm_multi_col_map[plan_type]
                 for i in range(comm_max_plans[plan_type]):
                     if i < len(type_plans):
-                        ws_commercial.cell(row=row_idx, column=start + i * 6, value=type_plans[i].carrier)
-                        ws_commercial.cell(row=row_idx, column=start + i * 6 + 1, value=type_plans[i].coverage_occ_limit)
-                        ws_commercial.cell(row=row_idx, column=start + i * 6 + 2, value=type_plans[i].coverage_agg_limit)
-                        ws_commercial.cell(row=row_idx, column=start + i * 6 + 3, value=float(type_plans[i].premium) if type_plans[i].premium else 0)
-                        ws_commercial.cell(row=row_idx, column=start + i * 6 + 4, value=type_plans[i].renewal_date)
-                        ws_commercial.cell(row=row_idx, column=start + i * 6 + 5, value=bool(type_plans[i].flag))
+                        ws_commercial.cell(row=row_idx, column=start + i * 7, value=type_plans[i].carrier)
+                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 1, value=type_plans[i].coverage_occ_limit)
+                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 2, value=type_plans[i].coverage_agg_limit)
+                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 3, value=float(type_plans[i].premium) if type_plans[i].premium else 0)
+                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 4, value=type_plans[i].renewal_date)
+                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 5, value=type_plans[i].remarks)
+                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 6, value=type_plans[i].outstanding_item)
 
         # Save to BytesIO
         output = io.BytesIO()
@@ -2182,20 +2262,21 @@ def import_from_excel():
                 'life_adnd': 'Life & AD&D'
             }
 
-            # Find column indices for each multi-plan type (carrier/renewal/flag/waiting_period quads)
-            multi_plan_cols = {}  # plan_type -> [(carrier_col, renewal_col, flag_col, wp_col), ...]
+            # Find column indices for each multi-plan type (carrier/renewal/waiting_period/remarks/outstanding_item groups)
+            multi_plan_cols = {}  # plan_type -> [(carrier_col, renewal_col, wp_col, remarks_col, outstanding_item_col), ...]
             for plan_type, label in multi_plan_header_map.items():
                 cols = []
                 for i, h in enumerate(headers):
                     if h and label.upper() in h.upper() and 'CARRIER' in h.upper():
                         renewal_col = i + 1 if i + 1 < len(headers) and 'RENEWAL' in headers[i + 1].upper() else None
-                        flag_col = i + 2 if i + 2 < len(headers) and 'FLAG' in headers[i + 2].upper() else None
-                        wp_col = i + 3 if i + 3 < len(headers) and 'WAITING' in headers[i + 3].upper() else None
-                        cols.append((i, renewal_col, flag_col, wp_col))
+                        wp_col = i + 2 if i + 2 < len(headers) and 'WAITING' in headers[i + 2].upper() else None
+                        remarks_col = i + 3 if i + 3 < len(headers) and 'REMARKS' in headers[i + 3].upper() else None
+                        oi_col = i + 4 if i + 4 < len(headers) and 'OUTSTANDING' in headers[i + 4].upper() else None
+                        cols.append((i, renewal_col, wp_col, remarks_col, oi_col))
                 multi_plan_cols[plan_type] = cols
 
             # Find single-plan type columns by header
-            single_plan_col_map = {}  # prefix -> (renewal_col, carrier_col, flag_col)
+            single_plan_col_map = {}  # prefix -> (renewal_col, carrier_col, remarks_col, outstanding_item_col)
             single_plan_labels = {
                 'ltd': 'LTD', 'std': 'STD', 'k401': '401K',
                 'critical_illness': 'Critical Illness', 'accident': 'Accident',
@@ -2207,8 +2288,9 @@ def import_from_excel():
                         is_multi = any(label.upper() == ml.upper() for ml in multi_plan_header_map.values())
                         if not is_multi:
                             carrier_col = i + 1 if i + 1 < len(headers) and 'CARRIER' in headers[i + 1].upper() else None
-                            flag_col = i + 2 if i + 2 < len(headers) and 'FLAG' in headers[i + 2].upper() else None
-                            single_plan_col_map[prefix] = (i, carrier_col, flag_col)
+                            remarks_col = i + 2 if i + 2 < len(headers) and 'REMARKS' in headers[i + 2].upper() else None
+                            oi_col = i + 3 if i + 3 < len(headers) and 'OUTSTANDING' in headers[i + 3].upper() else None
+                            single_plan_col_map[prefix] = (i, carrier_col, remarks_col, oi_col)
                             break
 
             # Find fixed column indices
@@ -2265,30 +2347,28 @@ def import_from_excel():
                     benefit_data = {
                         'tax_id': tax_id,
                         'parent_client': safe_val(2),
-                        'status': safe_val(3),
-                        'outstanding_item': safe_val(4),
-                        'remarks': safe_val(5),
-                        'form_fire_code': safe_val(6),
-                        'enrollment_poc': safe_val(7),
-                        'funding': safe_val(9),
-                        'num_employees_at_renewal': safe_int(safe_val(10)),
-                        'enrolled_ees': safe_int(safe_val(11)),
-                        'waiting_period': safe_val(12),
-                        'deductible_accumulation': safe_val(13),
-                        'previous_carrier': safe_val(14),
-                        'cobra_carrier': safe_val(15),
+                        'form_fire_code': safe_val(3),
+                        'enrollment_poc': safe_val(4),
+                        'funding': safe_val(6),
+                        'num_employees_at_renewal': safe_int(safe_val(7)),
+                        'enrolled_ees': safe_int(safe_val(8)),
+                        'waiting_period': safe_val(9),
+                        'deductible_accumulation': safe_val(10),
+                        'previous_carrier': safe_val(11),
+                        'cobra_carrier': safe_val(12),
                         'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution and len(row) > col_employee_contribution and row[col_employee_contribution] else None
                     }
 
                     # Single-plan types
-                    for prefix, (renewal_col, carrier_col, flag_col) in single_plan_col_map.items():
+                    for prefix, (renewal_col, carrier_col, remarks_col, oi_col) in single_plan_col_map.items():
                         if renewal_col is not None:
                             benefit_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(renewal_col))
                         if carrier_col is not None:
                             benefit_data[f'{prefix}_carrier'] = safe_val(carrier_col)
-                        if flag_col is not None:
-                            flag_val = safe_val(flag_col)
-                            benefit_data[f'{prefix}_flag'] = bool(flag_val) if flag_val else False
+                        if remarks_col is not None:
+                            benefit_data[f'{prefix}_remarks'] = safe_val(remarks_col)
+                        if oi_col is not None:
+                            benefit_data[f'{prefix}_outstanding_item'] = safe_val(oi_col)
 
                     if existing:
                         for key, val in benefit_data.items():
@@ -2305,11 +2385,12 @@ def import_from_excel():
                     # Multi-plan types: create BenefitPlan child records
                     session.query(BenefitPlan).filter_by(employee_benefit_id=benefit_obj.id).delete()
                     for plan_type, cols_list in multi_plan_cols.items():
-                        for plan_num, (carrier_col, renewal_col, flag_col, wp_col) in enumerate(cols_list, 1):
+                        for plan_num, (carrier_col, renewal_col, wp_col, remarks_col, oi_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
-                            flag_val = bool(safe_val(flag_col)) if flag_col is not None and safe_val(flag_col) else False
                             wp_val = safe_val(wp_col) if wp_col is not None else None
+                            remarks_val = safe_val(remarks_col) if remarks_col is not None else None
+                            oi_val = safe_val(oi_col) if oi_col is not None else None
                             if carrier or renewal:
                                 plan = BenefitPlan(
                                     employee_benefit_id=benefit_obj.id,
@@ -2317,8 +2398,9 @@ def import_from_excel():
                                     plan_number=plan_num,
                                     carrier=carrier,
                                     renewal_date=renewal,
-                                    flag=flag_val,
-                                    waiting_period=wp_val
+                                    waiting_period=wp_val,
+                                    remarks=remarks_val,
+                                    outstanding_item=oi_val
                                 )
                                 session.add(plan)
                                 # Also set flat fields from first plan
@@ -2348,7 +2430,7 @@ def import_from_excel():
             for cell in ws_commercial[1]:
                 section_headers.append(str(cell.value).strip() if cell.value else '')
 
-            # Single-plan types: 6 cols each (Carrier, Occ Limit, Agg Limit, Premium, Renewal Date, Flag)
+            # Single-plan types: 7 cols each (Carrier, Occ Limit, Agg Limit, Premium, Renewal Date, Remarks, Outstanding Item)
             commercial_single_import_defs = [
                 ('general_liability', 'Commercial General Liability'),
                 ('property', 'Commercial Property'),
@@ -2365,7 +2447,7 @@ def import_from_excel():
                 ('inland_marine', 'Inland Marine')
             ]
 
-            # Multi-plan types: dynamic cols (Carrier, Occ Limit, Agg Limit, Premium, Renewal Date, Flag per plan)
+            # Multi-plan types: dynamic cols (Carrier, Occ Limit, Agg Limit, Premium, Renewal Date, Remarks, Outstanding Item per plan)
             commercial_multi_import_defs = [
                 ('umbrella', 'Umbrella Liability'),
                 ('professional_eo', 'Professional or E&O'),
@@ -2386,7 +2468,7 @@ def import_from_excel():
                     comm_single_col_map[prefix] = section_col_map[label]
 
             # Build column maps for multi-plan types — detect how many plans per type
-            comm_multi_col_map = {}  # plan_type -> [(carrier_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, flag_col), ...]
+            comm_multi_col_map = {}  # plan_type -> [(carrier_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col), ...]
             for plan_type, label in commercial_multi_import_defs:
                 if label in section_col_map:
                     start = section_col_map[label]
@@ -2400,9 +2482,10 @@ def import_from_excel():
                             agg_limit_col = i + 2 if i + 2 < len(comm_headers) and 'AGG' in comm_headers[i + 2].upper() else None
                             premium_col = i + 3 if i + 3 < len(comm_headers) and 'PREMIUM' in comm_headers[i + 3].upper() else None
                             renewal_col = i + 4 if i + 4 < len(comm_headers) and 'RENEWAL' in comm_headers[i + 4].upper() else None
-                            flag_col = i + 5 if i + 5 < len(comm_headers) and 'FLAG' in comm_headers[i + 5].upper() else None
-                            plans.append((i, occ_limit_col, agg_limit_col, premium_col, renewal_col, flag_col))
-                            i += 6
+                            remarks_col = i + 5 if i + 5 < len(comm_headers) and 'REMARKS' in comm_headers[i + 5].upper() else None
+                            oi_col = i + 6 if i + 6 < len(comm_headers) and 'OUTSTANDING' in comm_headers[i + 6].upper() else None
+                            plans.append((i, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col))
+                            i += 7
                         else:
                             break
                     comm_multi_col_map[plan_type] = plans
@@ -2446,13 +2529,10 @@ def import_from_excel():
 
                     commercial_data = {
                         'tax_id': tax_id,
-                        'parent_client': row[2] if len(row) > 2 else None,
-                        'remarks': row[3] if len(row) > 3 else None,
-                        'status': row[4] if len(row) > 4 else None,
-                        'outstanding_item': row[5] if len(row) > 5 else None
+                        'parent_client': row[2] if len(row) > 2 else None
                     }
 
-                    # Single-plan types (6 cols each: carrier, occ_limit, agg_limit, premium, renewal, flag)
+                    # Single-plan types (7 cols each: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
                     for prefix, label in commercial_single_import_defs:
                         if prefix in comm_single_col_map:
                             sc = comm_single_col_map[prefix]
@@ -2470,8 +2550,8 @@ def import_from_excel():
                             commercial_data[f'{prefix}_agg_limit'] = agg_limit_val
                             commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 3))
                             commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 4))
-                            flag_val = safe_val(sc + 5)
-                            commercial_data[f'{prefix}_flag'] = bool(flag_val) if flag_val else False
+                            commercial_data[f'{prefix}_remarks'] = safe_val(sc + 5)
+                            commercial_data[f'{prefix}_outstanding_item'] = safe_val(sc + 6)
 
                     if existing:
                         for key, val in commercial_data.items():
@@ -2488,13 +2568,14 @@ def import_from_excel():
                     # Multi-plan types: create CommercialPlan child records
                     session.query(CommercialPlan).filter_by(commercial_insurance_id=comm_obj.id).delete()
                     for plan_type, cols_list in comm_multi_col_map.items():
-                        for plan_num, (carrier_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, flag_col) in enumerate(cols_list, 1):
+                        for plan_num, (carrier_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             occ_limit_val = safe_val(occ_limit_col) if occ_limit_col is not None else None
                             agg_limit_val = safe_val(agg_limit_col) if agg_limit_col is not None else None
                             premium = safe_decimal(safe_val(premium_col)) if premium_col is not None else None
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
-                            flag_val = bool(safe_val(flag_col)) if flag_col is not None and safe_val(flag_col) else False
+                            remarks_val = safe_val(remarks_col) if remarks_col is not None else None
+                            oi_val = safe_val(oi_col) if oi_col is not None else None
                             if carrier or occ_limit_val or agg_limit_val or premium or renewal:
                                 plan = CommercialPlan(
                                     commercial_insurance_id=comm_obj.id,
@@ -2505,7 +2586,8 @@ def import_from_excel():
                                     coverage_agg_limit=agg_limit_val if agg_limit_val and agg_limit_val != 'N/A' else None,
                                     premium=premium,
                                     renewal_date=renewal,
-                                    flag=flag_val
+                                    remarks=remarks_val,
+                                    outstanding_item=oi_val
                                 )
                                 session.add(plan)
                                 # Set flat fields from first plan for backward compat

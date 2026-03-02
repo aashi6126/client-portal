@@ -1,7 +1,6 @@
 import React from 'react';
 import DataTable from './DataTable';
 import { Chip, Box, Tooltip } from '@mui/material';
-import FlagIcon from '@mui/icons-material/Flag';
 
 // Multi-plan types (support multiple plans via plans nested object)
 const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
@@ -71,13 +70,15 @@ const getActiveProducts = (row) => {
       typePlans.forEach((plan, idx) => {
         if (plan.carrier || plan.renewal_date || plan.occ_limit || plan.agg_limit || plan.premium) {
           products.push({
+            prefix: pt,
             shortName: typePlans.length > 1 ? `${label} ${idx + 1}` : label,
             carrier: plan.carrier,
             renewalDate: plan.renewal_date,
             premium: plan.premium,
             occ_limit: plan.occ_limit,
             agg_limit: plan.agg_limit,
-            flag: plan.flag
+            remarks: plan.remarks,
+            outstandingItem: plan.outstanding_item
           });
         }
       });
@@ -87,13 +88,15 @@ const getActiveProducts = (row) => {
     MULTI_PLAN_TYPES.forEach(pt => {
       if (row[`${pt}_carrier`]) {
         products.push({
+          prefix: pt,
           shortName: MULTI_PLAN_LABELS[pt],
           carrier: row[`${pt}_carrier`],
           renewalDate: row[`${pt}_renewal_date`],
           premium: row[`${pt}_premium`],
           occ_limit: row[`${pt}_occ_limit`],
           agg_limit: row[`${pt}_agg_limit`],
-          flag: false
+          remarks: null,
+          outstandingItem: null
         });
       }
     });
@@ -103,34 +106,27 @@ const getActiveProducts = (row) => {
   Object.entries(SINGLE_PLAN_PRODUCTS).forEach(([key, name]) => {
     if (row[`${key}_carrier`]) {
       products.push({
+        prefix: key,
         shortName: name,
         carrier: row[`${key}_carrier`],
         renewalDate: row[`${key}_renewal_date`],
         premium: row[`${key}_premium`],
         occ_limit: row[`${key}_occ_limit`],
         agg_limit: row[`${key}_agg_limit`],
-        flag: row[`${key}_flag`]
+        remarks: row[`${key}_remarks`],
+        outstandingItem: row[`${key}_outstanding_item`]
       });
     }
   });
 
-  // Flagged coverages first
-  return products.sort((a, b) => (b.flag ? 1 : 0) - (a.flag ? 1 : 0));
-};
+  // Sort: products with remarks first
+  products.sort((a, b) => {
+    const aHas = a.remarks ? 1 : 0;
+    const bHas = b.remarks ? 1 : 0;
+    return bHas - aHas;
+  });
 
-// Helper function to check if any coverage is flagged
-const hasAnyFlag = (row) => {
-  if (row.plans) {
-    for (const pt of MULTI_PLAN_TYPES) {
-      for (const plan of (row.plans[pt] || [])) {
-        if (plan.flag) return true;
-      }
-    }
-  }
-  for (const key of Object.keys(SINGLE_PLAN_PRODUCTS)) {
-    if (row[`${key}_flag`]) return true;
-  }
-  return false;
+  return products;
 };
 
 // Helper function to get next renewal date
@@ -190,7 +186,7 @@ const getTotalPremium = (row) => {
 };
 
 // Column definitions for Commercial Insurance table
-export const commercialColumns = [
+const getCommercialColumns = (onEdit) => [
   {
     id: 'tax_id',
     label: 'Tax ID',
@@ -228,48 +224,6 @@ export const commercialColumns = [
     minWidth: 140
   },
   {
-    id: 'status',
-    label: 'Policy Status',
-    sortable: true,
-    minWidth: 70,
-    render: (value) => {
-      if (!value) return <span style={{ color: '#999' }}>—</span>;
-      const colorMap = { 'Active': 'success', 'Quoting': 'warning' };
-      const color = colorMap[value] || 'default';
-      return (
-        <Chip
-          label={value}
-          size="small"
-          color={color}
-        />
-      );
-    }
-  },
-  {
-    id: 'outstanding_item',
-    label: 'Follow Up',
-    sortable: true,
-    minWidth: 110,
-    render: (value) => {
-      if (!value) return <span style={{ color: '#999' }}>—</span>;
-      const colorMap = {
-        'Premium Due': 'warning',
-        'In Audit': 'info',
-        'Cancel Due': 'error',
-        'Add Line': 'secondary',
-        'Complete': 'success'
-      };
-      return (
-        <Chip
-          label={value}
-          size="small"
-          color={colorMap[value] || 'default'}
-          variant="outlined"
-        />
-      );
-    }
-  },
-  {
     id: 'active_products',
     label: 'Coverage',
     sortable: false,
@@ -304,6 +258,7 @@ export const commercialColumns = [
 
       const renderChip = (product, idx) => {
         const renewing = isUpForRenewal(product.renewalDate);
+        const hasRemarks = Boolean(product.remarks);
         return (
           <Tooltip
             key={idx}
@@ -316,7 +271,8 @@ export const commercialColumns = [
                 <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
-                {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
+                {hasRemarks && <div>Remarks: {product.remarks}</div>}
+                {product.outstandingItem && <div>Outstanding: {product.outstandingItem}</div>}
               </Box>
             }
           >
@@ -324,15 +280,14 @@ export const commercialColumns = [
               label={product.shortName}
               size="small"
               variant={renewing ? 'filled' : 'outlined'}
-              icon={product.flag ? <FlagIcon sx={{ fontSize: '0.75rem !important', color: '#d32f2f !important' }} /> : undefined}
+              onClick={(e) => {
+                e.stopPropagation();
+                if (onEdit) onEdit(row, product.prefix);
+              }}
               sx={{
                 fontSize: '0.7rem',
                 height: '20px',
                 cursor: 'pointer',
-                ...(product.flag && !renewing && {
-                  borderColor: '#d32f2f',
-                  color: '#d32f2f'
-                }),
                 ...(renewing && {
                   backgroundColor: '#fff3cd',
                   color: '#856404',
@@ -361,7 +316,8 @@ export const commercialColumns = [
                       <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
-                      {product.flag && <div style={{ color: '#ff6b6b' }}>Flagged</div>}
+                      {product.remarks && <div>Remarks: {product.remarks}</div>}
+                      {product.outstandingItem && <div>Outstanding: {product.outstandingItem}</div>}
                     </Box>
                   ))}
                 </Box>
@@ -401,10 +357,8 @@ export const commercialColumns = [
     label: 'Next Renewal',
     sortable: true,
     sortValue: (row) => {
-      const flagged = hasAnyFlag(row) ? 0 : 1;
       const d = getNextRenewal(row);
-      const time = d ? d.getTime() : Number.MAX_SAFE_INTEGER;
-      return flagged * 1e15 + time;
+      return d ? d.getTime() : Number.MAX_SAFE_INTEGER;
     },
     minWidth: 130,
     render: (value, row) => {
@@ -451,12 +405,6 @@ export const commercialColumns = [
         </Box>
       );
     }
-  },
-  {
-    id: 'remarks',
-    label: 'Remarks',
-    sortable: true,
-    minWidth: 200
   }
 ];
 
@@ -466,7 +414,7 @@ export const commercialColumns = [
 const CommercialTable = ({ commercial, onEdit, onDelete, onClone }) => {
   return (
     <DataTable
-      columns={commercialColumns}
+      columns={getCommercialColumns(onEdit)}
       data={commercial}
       onEdit={onEdit}
       onDelete={onDelete}

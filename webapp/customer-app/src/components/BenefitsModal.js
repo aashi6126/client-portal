@@ -10,23 +10,19 @@ import {
   Box,
   Autocomplete,
   Typography,
-  Accordion,
-  AccordionSummary,
-  AccordionDetails,
   Divider,
   Chip,
   Paper,
   MenuItem,
   IconButton,
-  Tooltip
+  Tooltip,
+  Tabs,
+  Tab
 } from '@mui/material';
-import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-import FlagIcon from '@mui/icons-material/Flag';
-import FlagOutlinedIcon from '@mui/icons-material/FlagOutlined';
+import DeleteIcon from '@mui/icons-material/Delete';
 
 // Multi-plan types: support multiple carrier/renewal per type
 const MULTI_PLAN_TYPES = ['medical', 'dental', 'vision', 'life_adnd'];
@@ -50,13 +46,10 @@ const isPastDate = (dateStr) => {
 /**
  * BenefitsModal - Form for creating/editing employee benefits records
  */
-const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
+const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCoverageTab = null }) => {
   const getInitialFormData = () => ({
     tax_id: '',
     parent_client: '',
-    status: '',
-    outstanding_item: '',
-    remarks: '',
     form_fire_code: '',
     enrollment_poc: '',
     funding: '',
@@ -69,18 +62,18 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
     employee_contribution: '',
     contribution_type: '%',
     // Single-plan types (flat fields)
-    ltd_renewal_date: '', ltd_carrier: '', ltd_flag: false,
-    std_renewal_date: '', std_carrier: '', std_flag: false,
-    k401_renewal_date: '', k401_carrier: '', k401_flag: false,
-    critical_illness_renewal_date: '', critical_illness_carrier: '', critical_illness_flag: false,
-    accident_renewal_date: '', accident_carrier: '', accident_flag: false,
-    hospital_renewal_date: '', hospital_carrier: '', hospital_flag: false,
-    voluntary_life_renewal_date: '', voluntary_life_carrier: '', voluntary_life_flag: false
+    ltd_renewal_date: '', ltd_carrier: '', ltd_remarks: '', ltd_outstanding_item: '',
+    std_renewal_date: '', std_carrier: '', std_remarks: '', std_outstanding_item: '',
+    k401_renewal_date: '', k401_carrier: '', k401_remarks: '', k401_outstanding_item: '',
+    critical_illness_renewal_date: '', critical_illness_carrier: '', critical_illness_remarks: '', critical_illness_outstanding_item: '',
+    accident_renewal_date: '', accident_carrier: '', accident_remarks: '', accident_outstanding_item: '',
+    hospital_renewal_date: '', hospital_carrier: '', hospital_remarks: '', hospital_outstanding_item: '',
+    voluntary_life_renewal_date: '', voluntary_life_carrier: '', voluntary_life_remarks: '', voluntary_life_outstanding_item: ''
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
 
-  // Multi-plan state: { medical: [{carrier, renewal_date, flag, waiting_period}, ...], dental: [...], ... }
+  // Multi-plan state: { medical: [{carrier, renewal_date, waiting_period, remarks, outstanding_item}, ...], dental: [...], ... }
   const [plans, setPlans] = useState({
     medical: [],
     dental: [],
@@ -90,20 +83,21 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
 
   const [errors, setErrors] = useState({});
   const [activeCoverages, setActiveCoverages] = useState([]);
+  const [selectedTab, setSelectedTab] = useState(0);
 
   // Benefit product types configuration
   const benefitProducts = [
-    { name: 'Medical', prefix: 'medical', multiPlan: true },
-    { name: 'Dental', prefix: 'dental', multiPlan: true },
-    { name: 'Vision', prefix: 'vision', multiPlan: true },
-    { name: 'Life & AD&D', prefix: 'life_adnd', multiPlan: true },
-    { name: 'LTD (Long-Term Disability)', prefix: 'ltd' },
-    { name: 'STD (Short-Term Disability)', prefix: 'std' },
-    { name: '401K', prefix: 'k401' },
-    { name: 'Critical Illness', prefix: 'critical_illness' },
-    { name: 'Accident', prefix: 'accident' },
-    { name: 'Hospital', prefix: 'hospital' },
-    { name: 'Voluntary Life', prefix: 'voluntary_life' }
+    { name: 'Medical', tabLabel: 'Med', prefix: 'medical', multiPlan: true },
+    { name: 'Dental', tabLabel: 'Dental', prefix: 'dental', multiPlan: true },
+    { name: 'Vision', tabLabel: 'Vision', prefix: 'vision', multiPlan: true },
+    { name: 'Life & AD&D', tabLabel: 'Life', prefix: 'life_adnd', multiPlan: true },
+    { name: 'LTD (Long-Term Disability)', tabLabel: 'LTD', prefix: 'ltd' },
+    { name: 'STD (Short-Term Disability)', tabLabel: 'STD', prefix: 'std' },
+    { name: '401K', tabLabel: '401K', prefix: 'k401' },
+    { name: 'Critical Illness', tabLabel: 'CI', prefix: 'critical_illness' },
+    { name: 'Accident', tabLabel: 'Accident', prefix: 'accident' },
+    { name: 'Hospital', tabLabel: 'Hospital', prefix: 'hospital' },
+    { name: 'Voluntary Life', tabLabel: 'Vol Life', prefix: 'voluntary_life' }
   ];
 
   // Initialize form data when modal opens or benefit changes
@@ -141,8 +135,9 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
             newPlans[planType] = typePlans.map(p => ({
               carrier: p.carrier || '',
               renewal_date: p.renewal_date || '',
-              flag: p.flag || false,
-              waiting_period: p.waiting_period || ''
+              waiting_period: p.waiting_period || '',
+              remarks: p.remarks || '',
+              outstanding_item: p.outstanding_item || ''
             }));
           }
         }
@@ -151,16 +146,16 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
       // Fallback: if no plans in API response, populate from flat fields
       if (!benefit.plans || Object.values(benefit.plans).every(arr => arr.length === 0)) {
         if (benefit.current_carrier || benefit.renewal_date) {
-          newPlans.medical = [{ carrier: benefit.current_carrier || '', renewal_date: benefit.renewal_date || '', flag: false, waiting_period: '' }];
+          newPlans.medical = [{ carrier: benefit.current_carrier || '', renewal_date: benefit.renewal_date || '', waiting_period: '', remarks: '', outstanding_item: '' }];
         }
         if (benefit.dental_carrier || benefit.dental_renewal_date) {
-          newPlans.dental = [{ carrier: benefit.dental_carrier || '', renewal_date: benefit.dental_renewal_date || '', flag: false, waiting_period: '' }];
+          newPlans.dental = [{ carrier: benefit.dental_carrier || '', renewal_date: benefit.dental_renewal_date || '', waiting_period: '', remarks: '', outstanding_item: '' }];
         }
         if (benefit.vision_carrier || benefit.vision_renewal_date) {
-          newPlans.vision = [{ carrier: benefit.vision_carrier || '', renewal_date: benefit.vision_renewal_date || '', flag: false, waiting_period: '' }];
+          newPlans.vision = [{ carrier: benefit.vision_carrier || '', renewal_date: benefit.vision_renewal_date || '', waiting_period: '', remarks: '', outstanding_item: '' }];
         }
         if (benefit.life_adnd_carrier || benefit.life_adnd_renewal_date) {
-          newPlans.life_adnd = [{ carrier: benefit.life_adnd_carrier || '', renewal_date: benefit.life_adnd_renewal_date || '', flag: false, waiting_period: '' }];
+          newPlans.life_adnd = [{ carrier: benefit.life_adnd_carrier || '', renewal_date: benefit.life_adnd_renewal_date || '', waiting_period: '', remarks: '', outstanding_item: '' }];
         }
       }
 
@@ -180,15 +175,23 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
         }
       });
       setActiveCoverages(active);
+      // If an initial coverage tab was requested, jump to it
+      if (initialCoverageTab) {
+        const tabIdx = active.indexOf(initialCoverageTab);
+        setSelectedTab(tabIdx >= 0 ? tabIdx : 0);
+      } else {
+        setSelectedTab(0);
+      }
     } else {
       // Reset for new benefit
       setFormData(getInitialFormData());
       setPlans({ medical: [], dental: [], vision: [], life_adnd: [] });
       setActiveCoverages([]);
+      setSelectedTab(0);
     }
     setErrors({});
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [benefit, open]);
+  }, [benefit, open, initialCoverageTab]);
 
   // Handle input changes
   const handleChange = (field) => (event) => {
@@ -215,7 +218,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
   const addPlan = (planType) => {
     setPlans(prev => ({
       ...prev,
-      [planType]: [...prev[planType], { carrier: '', renewal_date: '', flag: false, waiting_period: '' }]
+      [planType]: [...prev[planType], { carrier: '', renewal_date: '', waiting_period: '', remarks: '', outstanding_item: '' }]
     }));
   };
 
@@ -284,17 +287,22 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
   // Add a new coverage type
   const handleAddCoverage = (prefix) => {
     if (prefix && !activeCoverages.includes(prefix)) {
-      setActiveCoverages([...activeCoverages, prefix]);
+      const newActive = [...activeCoverages, prefix];
+      setActiveCoverages(newActive);
       // For multi-plan types, add one empty plan
       if (MULTI_PLAN_TYPES.includes(prefix)) {
         addPlan(prefix);
       }
+      // Switch to the newly added tab
+      setSelectedTab(newActive.length - 1);
     }
   };
 
   // Remove a coverage type and clear its data
   const handleRemoveCoverage = (prefix) => {
-    setActiveCoverages(activeCoverages.filter(p => p !== prefix));
+    const idx = activeCoverages.indexOf(prefix);
+    const newActive = activeCoverages.filter(p => p !== prefix);
+    setActiveCoverages(newActive);
     if (MULTI_PLAN_TYPES.includes(prefix)) {
       setPlans(prev => ({ ...prev, [prefix]: [] }));
       // Clear medical-specific global fields if medical
@@ -312,8 +320,15 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
         ...formData,
         [`${prefix}_carrier`]: '',
         [`${prefix}_renewal_date`]: '',
-        [`${prefix}_flag`]: false
+        [`${prefix}_remarks`]: '',
+        [`${prefix}_outstanding_item`]: ''
       });
+    }
+    // Adjust selected tab
+    if (selectedTab >= newActive.length) {
+      setSelectedTab(Math.max(0, newActive.length - 1));
+    } else if (idx < selectedTab) {
+      setSelectedTab(selectedTab - 1);
     }
   };
 
@@ -330,22 +345,11 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
               <Typography variant="body2" sx={{ fontWeight: 500, color: '#666' }}>
                 {label} Plan {idx + 1}
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Tooltip title={plan.flag ? 'Remove flag' : 'Flag this plan'}>
-                  <IconButton
-                    size="small"
-                    onClick={() => updatePlan(planType, idx, 'flag', !plan.flag)}
-                    sx={{ color: plan.flag ? '#d32f2f' : '#999' }}
-                  >
-                    {plan.flag ? <FlagIcon fontSize="small" /> : <FlagOutlinedIcon fontSize="small" />}
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={`Remove ${label} Plan ${idx + 1}`}>
-                  <IconButton size="small" color="error" onClick={() => removePlan(planType, idx)}>
-                    <DeleteOutlineIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-              </Box>
+              <Tooltip title={`Remove ${label} Plan ${idx + 1}`}>
+                <IconButton size="small" color="error" onClick={() => removePlan(planType, idx)}>
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </Tooltip>
             </Box>
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
@@ -370,14 +374,14 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
                   slotProps={{ formHelperText: isPastDate(plan.renewal_date?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
                 />
               </Grid>
-              <Grid item xs={12}>
+              <Grid item xs={12} sm={6}>
                 <TextField
                   label="Waiting Period"
                   select
                   value={plan.waiting_period || ''}
                   onChange={(e) => updatePlan(planType, idx, 'waiting_period', e.target.value)}
-                  fullWidth
                   size="small"
+                  sx={{ minWidth: 280 }}
                   InputLabelProps={{ shrink: !!plan.waiting_period }}
                   slotProps={{ select: { renderValue: (v) => v || '' } }}
                 >
@@ -386,6 +390,31 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
                   <MenuItem value="1st of Month after 30 Days">1st of Month after 30 Days</MenuItem>
                   <MenuItem value="1st of Month after 60 Days">1st of Month after 60 Days</MenuItem>
                   <MenuItem value="90 Days">90 Days</MenuItem>
+                </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Remarks"
+                  value={plan.remarks || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Outstanding Item"
+                  select
+                  value={plan.outstanding_item || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
+                  size="small"
+                  sx={{ minWidth: 180 }}
+                >
+                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="Premium Due">Premium Due</MenuItem>
+                  <MenuItem value="In Audit">In Audit</MenuItem>
+                  <MenuItem value="Cancel Due">Cancel Due</MenuItem>
+                  <MenuItem value="Complete">Complete</MenuItem>
                 </TextField>
               </Grid>
             </Grid>
@@ -419,7 +448,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
 
       <DialogContent dividers sx={{ overflow: 'auto' }}>
         <Box sx={{ pt: 1 }}>
-          {/* Client Selector */}
+          {/* Client Information */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
               Client Information
@@ -440,69 +469,19 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
               )}
               disabled={isEditMode}
               fullWidth
+              sx={{ mb: 2 }}
+            />
+            <Autocomplete
+              freeSolo
+              options={clients.map(c => c.client_name).filter(Boolean)}
+              value={formData.parent_client || ''}
+              onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+              onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+              renderInput={(params) => (
+                <TextField {...params} label="Parent Client" size="small" fullWidth />
+              )}
             />
           </Box>
-
-          <Divider sx={{ my: 2 }} />
-
-          {/* General Information */}
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-            General Information
-          </Typography>
-          <Grid container spacing={2} sx={{ mb: 3, width: '100%', flexGrow: 1 }}>
-            <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
-              <Autocomplete
-                freeSolo
-                options={clients.map(c => c.client_name).filter(Boolean)}
-                value={formData.parent_client || ''}
-                onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-                onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-                renderInput={(params) => (
-                  <TextField {...params} label="Parent Client" size="small" fullWidth />
-                )}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} sx={{ width: '100%', flexGrow: 1 }}>
-              <TextField
-                label="Group Status"
-                value={formData.status || ''}
-                onChange={handleChange('status')}
-                fullWidth
-                size="small"
-                select
-                InputLabelProps={{ shrink: true }}
-              >
-                <MenuItem value="">None</MenuItem>
-                <MenuItem value="Active">Active</MenuItem>
-                <MenuItem value="Quoting">Quoting</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sm={6} sx={{ width: '100%', flexGrow: 1 }}>
-              <TextField
-                label="Outstanding Item"
-                value={formData.outstanding_item || ''}
-                onChange={handleChange('outstanding_item')}
-                fullWidth
-                size="small"
-                select
-              >
-                <MenuItem value="">None</MenuItem>
-                <MenuItem value="Premium Due">Premium Due</MenuItem>
-                <MenuItem value="In Audit">In Audit</MenuItem>
-                <MenuItem value="Cancel Due">Cancel Due</MenuItem>
-                <MenuItem value="Complete">Complete</MenuItem>
-              </TextField>
-            </Grid>
-            <Grid item xs={12} sx={{ width: '100%', flexGrow: 1 }}>
-              <TextField
-                label="Remarks"
-                value={formData.remarks || ''}
-                onChange={handleChange('remarks')}
-                fullWidth
-                size="small"
-              />
-            </Grid>
-          </Grid>
 
           {/* Medical Global Fields */}
           {activeCoverages.includes('medical') && (
@@ -612,8 +591,8 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
                   value={formData.contribution_type || '%'}
                   onChange={handleChange('contribution_type')}
                   size="small"
-                  fullWidth
                   select
+                  sx={{ minWidth: 160 }}
                 >
                   <MenuItem value="%">Percentage (%)</MenuItem>
                   <MenuItem value="$">Dollar ($)</MenuItem>
@@ -675,92 +654,126 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [] }) => {
               <Typography>No coverages added yet. Use the dropdown above to add coverage types.</Typography>
             </Paper>
           ) : (
-            activeCoverages.map((prefix) => {
-              const product = benefitProducts.find(p => p.prefix === prefix);
-              if (!product) return null;
-              const isMultiPlan = product.multiPlan;
+            <Box>
+              <Box sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}>
+                <Tabs
+                  value={selectedTab}
+                  onChange={(e, newValue) => setSelectedTab(newValue)}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  sx={{ minHeight: 36 }}
+                >
+                  {activeCoverages.map((prefix) => {
+                    const product = benefitProducts.find(p => p.prefix === prefix);
+                    if (!product) return null;
+                    const isMultiPlan = product.multiPlan;
+                    const planCount = isMultiPlan && plans[prefix] ? plans[prefix].length : 0;
+                    return (
+                      <Tab
+                        key={prefix}
+                        sx={{ minWidth: 0, minHeight: 36, px: 1.5, py: 0.5, fontSize: '0.8rem' }}
+                        label={
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                            <span>{product.tabLabel}</span>
+                            {isMultiPlan && planCount > 1 && (
+                              <Chip
+                                label={planCount}
+                                size="small"
+                                color="primary"
+                                sx={{ height: 16, fontSize: '0.6rem', minWidth: 18 }}
+                              />
+                            )}
+                          </Box>
+                        }
+                      />
+                    );
+                  })}
+                </Tabs>
+              </Box>
 
-              return (
-                <Accordion key={product.prefix} defaultExpanded={true}>
-                  <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1 }}>
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography sx={{ fontWeight: 500 }}>{product.name}</Typography>
-                        {isMultiPlan && plans[prefix] && plans[prefix].length > 1 && (
-                          <Chip
-                            label={`${plans[prefix].length} Plans`}
-                            size="small"
-                            color="primary"
-                            sx={{ height: 20, fontSize: '0.7rem' }}
-                          />
-                        )}
-                        {/* Show flag indicator if any plan/coverage is flagged */}
-                        {isMultiPlan ? (
-                          plans[prefix] && plans[prefix].some(p => p.flag) && (
-                            <FlagIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                          )
-                        ) : (
-                          formData[`${prefix}_flag`] && (
-                            <FlagIcon fontSize="small" sx={{ color: '#d32f2f' }} />
-                          )
-                        )}
-                      </Box>
-                      <IconButton
-                        size="small"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveCoverage(prefix);
-                        }}
-                        sx={{ color: 'error.main' }}
-                      >
-                        <DeleteIcon fontSize="small" />
-                      </IconButton>
+              {activeCoverages.map((prefix, idx) => {
+                if (idx !== selectedTab) return null;
+                const product = benefitProducts.find(p => p.prefix === prefix);
+                if (!product) return null;
+                const isMultiPlan = product.multiPlan;
+
+                return (
+                  <Box key={prefix}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                      <Tooltip title={`Remove ${product.name}`}>
+                        <IconButton
+                          size="small"
+                          onClick={() => handleRemoveCoverage(prefix)}
+                          sx={{ color: 'error.main' }}
+                        >
+                          <DeleteIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
                     </Box>
-                  </AccordionSummary>
-                  <AccordionDetails>
                     {isMultiPlan ? (
                       renderMultiPlanRows(prefix)
                     ) : (
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Carrier"
-                            value={formData[`${product.prefix}_carrier`] || ''}
-                            onChange={handleChange(`${product.prefix}_carrier`)}
-                            fullWidth
-                            size="small"
-                          />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <TextField
-                            label="Renewal Date"
-                            type="date"
-                            value={formData[`${product.prefix}_renewal_date`] ? formData[`${product.prefix}_renewal_date`].split('T')[0] : ''}
-                            onChange={handleChange(`${product.prefix}_renewal_date`)}
-                            fullWidth
-                            size="small"
-                            InputLabelProps={{ shrink: true }}
-                            helperText={isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
-                            slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
-                          />
-                        </Grid>
-                        <Grid item xs={12}>
-                          <Tooltip title={formData[`${prefix}_flag`] ? 'Remove flag' : 'Flag this coverage'}>
-                            <IconButton
+                      <Box sx={{ p: 1.5, backgroundColor: '#fafafa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
+                        <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 1 }}>
+                          {product.name} Plan 1
+                        </Typography>
+                        <Grid container spacing={2}>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Carrier"
+                              value={formData[`${product.prefix}_carrier`] || ''}
+                              onChange={handleChange(`${product.prefix}_carrier`)}
+                              fullWidth
                               size="small"
-                              onClick={() => setFormData({ ...formData, [`${prefix}_flag`]: !formData[`${prefix}_flag`] })}
-                              sx={{ color: formData[`${prefix}_flag`] ? '#d32f2f' : '#999' }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Renewal Date"
+                              type="date"
+                              value={formData[`${product.prefix}_renewal_date`] ? formData[`${product.prefix}_renewal_date`].split('T')[0] : ''}
+                              onChange={handleChange(`${product.prefix}_renewal_date`)}
+                              fullWidth
+                              size="small"
+                              InputLabelProps={{ shrink: true }}
+                              helperText={isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
+                              slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Outstanding Item"
+                              select
+                              value={formData[`${prefix}_outstanding_item`] || ''}
+                              onChange={handleChange(`${prefix}_outstanding_item`)}
+                              size="small"
+                              sx={{ minWidth: 180 }}
                             >
-                              {formData[`${prefix}_flag`] ? <FlagIcon /> : <FlagOutlinedIcon />}
-                            </IconButton>
-                          </Tooltip>
+                              <MenuItem value="">None</MenuItem>
+                              <MenuItem value="Premium Due">Premium Due</MenuItem>
+                              <MenuItem value="In Audit">In Audit</MenuItem>
+                              <MenuItem value="Cancel Due">Cancel Due</MenuItem>
+                              <MenuItem value="Complete">Complete</MenuItem>
+                            </TextField>
+                          </Grid>
+                          <Grid item xs={12}>
+                            <TextField
+                              label="Remarks"
+                              value={formData[`${prefix}_remarks`] || ''}
+                              onChange={handleChange(`${prefix}_remarks`)}
+                              fullWidth
+                              size="small"
+                              multiline
+                              minRows={2}
+                            />
+                          </Grid>
                         </Grid>
-                      </Grid>
+                      </Box>
                     )}
-                  </AccordionDetails>
-                </Accordion>
-              );
-            })
+                  </Box>
+                );
+              })}
+            </Box>
           )}
         </Box>
       </DialogContent>
