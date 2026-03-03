@@ -2906,78 +2906,78 @@ def serve_react(path):
 # DATABASE INITIALIZATION
 # ===========================================================================
 
+# Create tables and run migrations (runs on import so migrations apply regardless of entry point)
+with app.app_context():
+    db.create_all()
+
+    # Auto-migrate: add missing columns to existing tables
+    import sqlite3 as _sqlite3
+    if db_uri.startswith('sqlite'):
+        try:
+            _db_path = db_uri.split('sqlite:///')[1].split('?')[0] if 'sqlite:///' in db_uri else None
+            if _db_path:
+                _conn = _sqlite3.connect(_db_path)
+                _cursor = _conn.cursor()
+
+                # Migrations per table: (table_name, column_name, column_type)
+                _limit_products = [
+                    'general_liability', 'property', 'bop', 'umbrella', 'workers_comp',
+                    'professional_eo', 'cyber', 'auto', 'epli', 'nydbl', 'surety',
+                    'product_liability', 'flood', 'crime', 'directors_officers',
+                    'fiduciary', 'inland_marine'
+                ]
+                _single_benefit_types = [
+                    'ltd', 'std', 'k401', 'critical_illness',
+                    'accident', 'hospital', 'voluntary_life',
+                ]
+                _table_migrations = [
+                    ('employee_benefits', 'enrolled_ees', 'INTEGER'),
+                    ('employee_benefits', 'parent_client', 'VARCHAR(200)'),
+                    ('commercial_insurance', 'parent_client', 'VARCHAR(200)'),
+                    ('clients', 'gross_revenue', 'DECIMAL(15,2)'),
+                    ('clients', 'total_ees', 'INTEGER'),
+                ]
+                for _bt in _single_benefit_types:
+                    _table_migrations.append(('employee_benefits', f'{_bt}_flag', 'BOOLEAN DEFAULT 0'))
+                    _table_migrations.append(('employee_benefits', f'{_bt}_remarks', 'TEXT'))
+                    _table_migrations.append(('employee_benefits', f'{_bt}_outstanding_item', 'VARCHAR(50)'))
+                # Split limit -> occ_limit + agg_limit for all commercial products
+                for _prod in _limit_products:
+                    _table_migrations.append(('commercial_insurance', f'{_prod}_occ_limit', 'VARCHAR(100)'))
+                    _table_migrations.append(('commercial_insurance', f'{_prod}_agg_limit', 'VARCHAR(100)'))
+                _table_migrations.append(('commercial_plans', 'coverage_occ_limit', 'VARCHAR(100)'))
+                _table_migrations.append(('commercial_plans', 'coverage_agg_limit', 'VARCHAR(100)'))
+
+                # Group by table
+                _tables = {}
+                for tbl, col, ctype in _table_migrations:
+                    _tables.setdefault(tbl, []).append((col, ctype))
+
+                for tbl, cols in _tables.items():
+                    _cursor.execute(f"PRAGMA table_info({tbl})")
+                    _existing_cols = {row[1] for row in _cursor.fetchall()}
+                    for col_name, col_type in cols:
+                        if col_name not in _existing_cols:
+                            _cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_type}")
+                            logging.info(f"Migration: added column '{col_name}' to {tbl}")
+
+                # Rename outstanding_item values
+                _renames = [
+                    ('Pending Premium', 'Premium Due'),
+                    ('Pending Cancellation', 'Cancel Due'),
+                ]
+                for _old_val, _new_val in _renames:
+                    for _tbl in ('employee_benefits', 'commercial_insurance'):
+                        _cursor.execute(f"UPDATE {_tbl} SET outstanding_item = ? WHERE outstanding_item = ?", (_new_val, _old_val))
+                        if _cursor.rowcount > 0:
+                            logging.info(f"Migration: renamed '{_old_val}' to '{_new_val}' in {_tbl} ({_cursor.rowcount} rows)")
+
+                _conn.commit()
+                _conn.close()
+        except Exception as e:
+            logging.warning(f"Auto-migration check failed: {e}")
+
 if __name__ == '__main__':
-    # Create tables and run migrations
-    with app.app_context():
-        db.create_all()
-
-        # Auto-migrate: add missing columns to existing tables
-        import sqlite3 as _sqlite3
-        if db_uri.startswith('sqlite'):
-            try:
-                _db_path = db_uri.split('sqlite:///')[1].split('?')[0] if 'sqlite:///' in db_uri else None
-                if _db_path:
-                    _conn = _sqlite3.connect(_db_path)
-                    _cursor = _conn.cursor()
-
-                    # Migrations per table: (table_name, column_name, column_type)
-                    _limit_products = [
-                        'general_liability', 'property', 'bop', 'umbrella', 'workers_comp',
-                        'professional_eo', 'cyber', 'auto', 'epli', 'nydbl', 'surety',
-                        'product_liability', 'flood', 'crime', 'directors_officers',
-                        'fiduciary', 'inland_marine'
-                    ]
-                    _single_benefit_types = [
-                        'ltd', 'std', 'k401', 'critical_illness',
-                        'accident', 'hospital', 'voluntary_life',
-                    ]
-                    _table_migrations = [
-                        ('employee_benefits', 'enrolled_ees', 'INTEGER'),
-                        ('employee_benefits', 'parent_client', 'VARCHAR(200)'),
-                        ('commercial_insurance', 'parent_client', 'VARCHAR(200)'),
-                        ('clients', 'gross_revenue', 'DECIMAL(15,2)'),
-                        ('clients', 'total_ees', 'INTEGER'),
-                    ]
-                    for _bt in _single_benefit_types:
-                        _table_migrations.append(('employee_benefits', f'{_bt}_flag', 'BOOLEAN DEFAULT 0'))
-                        _table_migrations.append(('employee_benefits', f'{_bt}_remarks', 'TEXT'))
-                        _table_migrations.append(('employee_benefits', f'{_bt}_outstanding_item', 'VARCHAR(50)'))
-                    # Split limit -> occ_limit + agg_limit for all commercial products
-                    for _prod in _limit_products:
-                        _table_migrations.append(('commercial_insurance', f'{_prod}_occ_limit', 'VARCHAR(100)'))
-                        _table_migrations.append(('commercial_insurance', f'{_prod}_agg_limit', 'VARCHAR(100)'))
-                    _table_migrations.append(('commercial_plans', 'coverage_occ_limit', 'VARCHAR(100)'))
-                    _table_migrations.append(('commercial_plans', 'coverage_agg_limit', 'VARCHAR(100)'))
-
-                    # Group by table
-                    _tables = {}
-                    for tbl, col, ctype in _table_migrations:
-                        _tables.setdefault(tbl, []).append((col, ctype))
-
-                    for tbl, cols in _tables.items():
-                        _cursor.execute(f"PRAGMA table_info({tbl})")
-                        _existing_cols = {row[1] for row in _cursor.fetchall()}
-                        for col_name, col_type in cols:
-                            if col_name not in _existing_cols:
-                                _cursor.execute(f"ALTER TABLE {tbl} ADD COLUMN {col_name} {col_type}")
-                                logging.info(f"Migration: added column '{col_name}' to {tbl}")
-
-                    # Rename outstanding_item values
-                    _renames = [
-                        ('Pending Premium', 'Premium Due'),
-                        ('Pending Cancellation', 'Cancel Due'),
-                    ]
-                    for _old_val, _new_val in _renames:
-                        for _tbl in ('employee_benefits', 'commercial_insurance'):
-                            _cursor.execute(f"UPDATE {_tbl} SET outstanding_item = ? WHERE outstanding_item = ?", (_new_val, _old_val))
-                            if _cursor.rowcount > 0:
-                                logging.info(f"Migration: renamed '{_old_val}' to '{_new_val}' in {_tbl} ({_cursor.rowcount} rows)")
-
-                    _conn.commit()
-                    _conn.close()
-            except Exception as e:
-                logging.warning(f"Auto-migration check failed: {e}")
-
     # Run app (host/port configurable via env vars)
     host = os.environ.get('API_HOST', '127.0.0.1')
     port = int(os.environ.get('API_PORT', '5000'))

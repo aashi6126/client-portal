@@ -394,15 +394,6 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  label="Remarks"
-                  value={plan.remarks || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
                   label="Outstanding Item"
                   select
                   value={plan.outstanding_item || ''}
@@ -416,6 +407,15 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                   <MenuItem value="Cancel Due">Cancel Due</MenuItem>
                   <MenuItem value="Complete">Complete</MenuItem>
                 </TextField>
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Remarks"
+                  value={plan.remarks || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
+                  fullWidth
+                  size="small"
+                />
               </Grid>
             </Grid>
           </Box>
@@ -756,15 +756,13 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                               <MenuItem value="Complete">Complete</MenuItem>
                             </TextField>
                           </Grid>
-                          <Grid item xs={12}>
+                          <Grid item xs={12} sm={6}>
                             <TextField
                               label="Remarks"
                               value={formData[`${prefix}_remarks`] || ''}
                               onChange={handleChange(`${prefix}_remarks`)}
                               fullWidth
                               size="small"
-                              multiline
-                              minRows={2}
                             />
                           </Grid>
                         </Grid>
