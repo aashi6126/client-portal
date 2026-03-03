@@ -217,9 +217,12 @@ const getBenefitsColumns = (onEdit) => [
         } catch { return false; }
       };
 
+      const hasOutstanding = (item) => item && item !== 'None' && item !== 'Complete';
+
       const renderChip = (plan, idx) => {
         const renewing = isUpForRenewal(plan.renewalDate);
         const hasRemarks = Boolean(plan.remarks);
+        const showRedDot = hasOutstanding(plan.outstandingItem);
         return (
           <Tooltip
             key={idx}
@@ -235,7 +238,7 @@ const getBenefitsColumns = (onEdit) => [
             }
           >
             <Chip
-              label={plan.shortName}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{showRedDot && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#d32f2f', display: 'inline-block', flexShrink: 0 }} />}{plan.shortName}</span>}
               size="small"
               variant={renewing ? 'filled' : 'outlined'}
               onClick={(e) => {

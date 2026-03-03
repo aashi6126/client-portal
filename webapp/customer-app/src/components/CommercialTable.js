@@ -256,9 +256,12 @@ const getCommercialColumns = (onEdit) => [
         } catch { return false; }
       };
 
+      const hasOutstanding = (item) => item && item !== 'None' && item !== 'Complete';
+
       const renderChip = (product, idx) => {
         const renewing = isUpForRenewal(product.renewalDate);
         const hasRemarks = Boolean(product.remarks);
+        const showRedDot = hasOutstanding(product.outstandingItem);
         return (
           <Tooltip
             key={idx}
@@ -277,7 +280,7 @@ const getCommercialColumns = (onEdit) => [
             }
           >
             <Chip
-              label={product.shortName}
+              label={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>{showRedDot && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#d32f2f', display: 'inline-block', flexShrink: 0 }} />}{product.shortName}</span>}
               size="small"
               variant={renewing ? 'filled' : 'outlined'}
               onClick={(e) => {
