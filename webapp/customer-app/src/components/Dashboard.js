@@ -3,7 +3,6 @@ import {
   Box,
   Typography,
   Paper,
-  Grid,
   Card,
   CardContent,
   Table,
@@ -69,6 +68,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
   const [error, setError] = useState(null);
   const [renewalTab, setRenewalTab] = useState(0);
   const [outstandingTab, setOutstandingTab] = useState(0);
+  const [crossSellTab, setCrossSellTab] = useState(0);
 
   // Fetch all dashboard data
   useEffect(() => {
@@ -739,264 +739,204 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
         )}
       </Paper>
 
-      {/* Section 6: Cross-Sell & Within-Product Opportunities (side by side) */}
-      <Grid container spacing={3}>
-        {/* Cross-Sell Opportunities */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-              Cross-Sell Opportunities
-            </Typography>
+      {/* Section 6: Cross-Sell & Within-Product Opportunities (tabbed) */}
+      <Paper sx={{ p: 3 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
+          Opportunities
+        </Typography>
+        <Tabs
+          value={crossSellTab}
+          onChange={(_, newValue) => setCrossSellTab(newValue)}
+          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+        >
+          <Tab label={`Benefits Only (${crossSell.benefits_only.length})`} />
+          <Tab label={`Commercial Only (${crossSell.commercial_only.length})`} />
+          <Tab label={`Benefits Gaps (${withinProductOpportunities.benefitGaps.length})`} />
+          <Tab label={`Commercial Gaps (${withinProductOpportunities.commercialGaps.length})`} />
+        </Tabs>
 
-            {/* Benefits Only */}
-            <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 1, border: '1px solid #ffcc80', mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Benefits Only ({crossSell.benefits_only.length})
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-                Clients with Employee Benefits but no Commercial Insurance
-              </Typography>
-              {crossSell.benefits_only.length > 0 ? (
-                <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
+        {/* Benefits Only tab — clients with benefits but no commercial */}
+        {crossSellTab === 0 && (
+          crossSell.benefits_only.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Tax ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: 140 }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {crossSell.benefits_only.map((client, idx) => (
-                    <Box
+                    <TableRow
                       key={idx}
-                      sx={{
-                        p: 1.5,
-                        mb: 1,
-                        backgroundColor: 'white',
-                        borderRadius: 1,
-                        border: '1px solid #ffcc80',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
+                      sx={{ backgroundColor: '#fff3e0', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+                      onClick={() => onOpenCommercialModal && onOpenCommercialModal(client)}
                     >
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {client.client_name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {client.email || client.tax_id}
-                        </Typography>
-                      </Box>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{ borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}
-                        onClick={() => onOpenCommercialModal && onOpenCommercialModal(client)}
-                      >
-                        Add Commercial
-                      </Button>
-                    </Box>
+                      <TableCell><strong>{client.client_name}</strong></TableCell>
+                      <TableCell>{client.tax_id}</TableCell>
+                      <TableCell>{client.email || '—'}</TableCell>
+                      <TableCell>
+                        <Button size="small" variant="outlined" sx={{ fontSize: '0.75rem', borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}>
+                          Add Commercial
+                        </Button>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No opportunities
-                </Typography>
-              )}
-            </Box>
-
-            {/* Commercial Only */}
-            <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Commercial Only ({crossSell.commercial_only.length})
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-                Clients with Commercial Insurance but no Employee Benefits
-              </Typography>
-              {crossSell.commercial_only.length > 0 ? (
-                <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
-                  {crossSell.commercial_only.map((client, idx) => (
-                    <Box
-                      key={idx}
-                      sx={{
-                        p: 1.5,
-                        mb: 1,
-                        backgroundColor: 'white',
-                        borderRadius: 1,
-                        border: '1px solid #90caf9',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
-                    >
-                      <Box>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {client.client_name}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary">
-                          {client.email || client.tax_id}
-                        </Typography>
-                      </Box>
-                      <Button
-                        size="small"
-                        variant="outlined"
-                        sx={{ borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}
-                        onClick={() => onOpenBenefitsModal && onOpenBenefitsModal(client)}
-                      >
-                        Add Benefits
-                      </Button>
-                    </Box>
-                  ))}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  No opportunities
-                </Typography>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-
-        {/* Within-Product Sell Opportunities */}
-        <Grid item xs={12}>
-          <Paper sx={{ p: 3, height: '100%' }}>
-            <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-              Within-Product Sell Opportunities
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No cross-sell opportunities — all benefits clients also have commercial
             </Typography>
+          )
+        )}
 
-            {/* Benefits Gaps */}
-            <Box sx={{ p: 2, backgroundColor: '#fff3e0', borderRadius: 1, border: '1px solid #ffcc80', mb: 2 }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Employee Benefits Gaps ({withinProductOpportunities.benefitGaps.length})
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-                Clients with some benefit plans — missing others
-              </Typography>
-              {withinProductOpportunities.benefitGaps.length > 0 ? (
-                <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
+        {/* Commercial Only tab — clients with commercial but no benefits */}
+        {crossSellTab === 1 && (
+          crossSell.commercial_only.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Tax ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: 140 }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {crossSell.commercial_only.map((client, idx) => (
+                    <TableRow
+                      key={idx}
+                      sx={{ backgroundColor: '#e3f2fd', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+                      onClick={() => onOpenBenefitsModal && onOpenBenefitsModal(client)}
+                    >
+                      <TableCell><strong>{client.client_name}</strong></TableCell>
+                      <TableCell>{client.tax_id}</TableCell>
+                      <TableCell>{client.email || '—'}</TableCell>
+                      <TableCell>
+                        <Button size="small" variant="outlined" sx={{ fontSize: '0.75rem', borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}>
+                          Add Benefits
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No cross-sell opportunities — all commercial clients also have benefits
+            </Typography>
+          )
+        )}
+
+        {/* Benefits Gaps tab — clients with some benefit plans missing others */}
+        {crossSellTab === 2 && (
+          withinProductOpportunities.benefitGaps.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Coverage</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Missing Plans</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {withinProductOpportunities.benefitGaps.map((client, idx) => {
                     const benefitRecord = benefits.find(b => b.tax_id === client.tax_id);
                     return (
-                    <Box
-                      key={idx}
-                      sx={{
-                        p: 1.5,
-                        mb: 1,
-                        backgroundColor: 'white',
-                        borderRadius: 1,
-                        border: '1px solid #ffcc80'
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {client.client_name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip
-                            label={`${client.active} / 11 active`}
-                            size="small"
-                            color="primary"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem' }}
-                          />
-                          {benefitRecord && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<EditIcon />}
-                              sx={{ fontSize: '0.7rem', py: 0.25, borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}
-                              onClick={() => onOpenBenefitsModal && onOpenBenefitsModal(benefitRecord)}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                        </Box>
-                      </Box>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {client.missing.map((plan, pIdx) => (
-                          <Chip
-                            key={pIdx}
-                            label={plan}
-                            size="small"
-                            sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#fff3e0', color: '#e65100' }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
+                      <TableRow
+                        key={idx}
+                        sx={{ backgroundColor: '#fff3e0', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+                        onClick={() => benefitRecord && onOpenBenefitsModal && onOpenBenefitsModal(benefitRecord)}
+                      >
+                        <TableCell><strong>{client.client_name}</strong></TableCell>
+                        <TableCell>
+                          <Chip label={`${client.active} / 11`} size="small" color="primary" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {client.missing.map((plan, pIdx) => (
+                              <Chip key={pIdx} label={plan} size="small" sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#fff3e0', color: '#e65100' }} />
+                            ))}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  All benefits clients have full coverage
-                </Typography>
-              )}
-            </Box>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              All benefits clients have full coverage
+            </Typography>
+          )
+        )}
 
-            {/* Commercial Gaps */}
-            <Box sx={{ p: 2, backgroundColor: '#e3f2fd', borderRadius: 1, border: '1px solid #90caf9' }}>
-              <Typography variant="subtitle1" gutterBottom sx={{ fontWeight: 'bold' }}>
-                Commercial Insurance Gaps ({withinProductOpportunities.commercialGaps.length})
-              </Typography>
-              <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-                Clients with some commercial products — missing others
-              </Typography>
-              {withinProductOpportunities.commercialGaps.length > 0 ? (
-                <Box sx={{ maxHeight: 250, overflowY: 'auto' }}>
+        {/* Commercial Gaps tab — clients with some commercial products missing others */}
+        {crossSellTab === 3 && (
+          withinProductOpportunities.commercialGaps.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Coverage</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Missing Products</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
                   {withinProductOpportunities.commercialGaps.map((client, idx) => {
                     const commercialRecord = commercial.find(c => c.tax_id === client.tax_id);
                     return (
-                    <Box
-                      key={idx}
-                      sx={{
-                        p: 1.5,
-                        mb: 1,
-                        backgroundColor: 'white',
-                        borderRadius: 1,
-                        border: '1px solid #90caf9'
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                        <Typography variant="body2" sx={{ fontWeight: 'bold' }}>
-                          {client.client_name}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                          <Chip
-                            label={`${client.active} / 17 active`}
-                            size="small"
-                            color="info"
-                            variant="outlined"
-                            sx={{ fontSize: '0.7rem' }}
-                          />
-                          {commercialRecord && (
-                            <Button
-                              size="small"
-                              variant="outlined"
-                              startIcon={<EditIcon />}
-                              sx={{ fontSize: '0.7rem', py: 0.25, borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}
-                              onClick={() => onOpenCommercialModal && onOpenCommercialModal(commercialRecord)}
-                            >
-                              Edit
-                            </Button>
-                          )}
-                        </Box>
-                      </Box>
-                      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                        {client.missing.map((product, pIdx) => (
-                          <Chip
-                            key={pIdx}
-                            label={product}
-                            size="small"
-                            sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#e3f2fd', color: '#1565c0' }}
-                          />
-                        ))}
-                      </Box>
-                    </Box>
+                      <TableRow
+                        key={idx}
+                        sx={{ backgroundColor: '#e3f2fd', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+                        onClick={() => commercialRecord && onOpenCommercialModal && onOpenCommercialModal(commercialRecord)}
+                      >
+                        <TableCell><strong>{client.client_name}</strong></TableCell>
+                        <TableCell>
+                          <Chip label={`${client.active} / 17`} size="small" color="info" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                        </TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                            {client.missing.map((product, pIdx) => (
+                              <Chip key={pIdx} label={product} size="small" sx={{ fontSize: '0.7rem', height: '22px', backgroundColor: '#e3f2fd', color: '#1565c0' }} />
+                            ))}
+                          </Box>
+                        </TableCell>
+                        <TableCell>
+                          <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
+                            Edit
+                          </Button>
+                        </TableCell>
+                      </TableRow>
                     );
                   })}
-                </Box>
-              ) : (
-                <Typography variant="body2" color="text.secondary">
-                  All commercial clients have full coverage
-                </Typography>
-              )}
-            </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              All commercial clients have full coverage
+            </Typography>
+          )
+        )}
+      </Paper>
     </Box>
   );
 };
