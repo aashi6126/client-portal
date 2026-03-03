@@ -68,6 +68,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [renewalTab, setRenewalTab] = useState(0);
+  const [outstandingTab, setOutstandingTab] = useState(0);
 
   // Fetch all dashboard data
   useEffect(() => {
@@ -164,6 +165,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
       if (!grouped[key]) {
         grouped[key] = {
           client_name: renewal.client_name,
+          tax_id: renewal.tax_id,
           type: renewal.type,
           policies: [],
           earliest_date: renewal.renewal_date
@@ -314,6 +316,107 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
 
     return { benefitGaps, commercialGaps };
   }, [benefits, commercial]);
+
+  // Policies grouped by outstanding item status (Cancel Due, Premium Due, In Audit)
+  const outstandingPolicies = useMemo(() => {
+    const BENEFIT_MULTI_PLAN_TYPES = ['medical', 'dental', 'vision', 'life_adnd'];
+    const BENEFIT_MULTI_LABELS = { medical: 'Medical', dental: 'Dental', vision: 'Vision', life_adnd: 'Life & AD&D' };
+    const BENEFIT_SINGLE_TYPES = [
+      { prefix: 'ltd', name: 'LTD' }, { prefix: 'std', name: 'STD' },
+      { prefix: 'k401', name: '401K' }, { prefix: 'critical_illness', name: 'Critical Illness' },
+      { prefix: 'accident', name: 'Accident' }, { prefix: 'hospital', name: 'Hospital' },
+      { prefix: 'voluntary_life', name: 'Vol Life' }
+    ];
+    const COMMERCIAL_MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
+    const COMMERCIAL_MULTI_LABELS = { umbrella: 'Umbrella', professional_eo: 'E&O', cyber: 'Cyber', crime: 'Crime' };
+    const COMMERCIAL_SINGLE_TYPES = [
+      { prefix: 'general_liability', name: 'GL' }, { prefix: 'property', name: 'Property' },
+      { prefix: 'bop', name: 'BOP' }, { prefix: 'workers_comp', name: 'WC' },
+      { prefix: 'auto', name: 'Auto' }, { prefix: 'epli', name: 'EPLI' },
+      { prefix: 'nydbl', name: 'NYDBL' }, { prefix: 'surety', name: 'Surety' },
+      { prefix: 'product_liability', name: 'Product' }, { prefix: 'flood', name: 'Flood' },
+      { prefix: 'directors_officers', name: 'D&O' }, { prefix: 'fiduciary', name: 'Fiduciary' },
+      { prefix: 'inland_marine', name: 'Marine' }
+    ];
+
+    const result = { 'Cancel Due': [], 'Premium Due': [], 'In Audit': [] };
+
+    // Extract from benefits
+    benefits.forEach(b => {
+      // Multi-plan types
+      BENEFIT_MULTI_PLAN_TYPES.forEach(pt => {
+        const typePlans = (b.plans && b.plans[pt]) || [];
+        typePlans.forEach((plan, idx) => {
+          if (plan.outstanding_item && result[plan.outstanding_item]) {
+            result[plan.outstanding_item].push({
+              client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
+              prefix: pt,
+              policy: typePlans.length > 1 ? `${BENEFIT_MULTI_LABELS[pt]} ${idx + 1}` : BENEFIT_MULTI_LABELS[pt],
+              carrier: plan.carrier, renewal_date: plan.renewal_date
+            });
+          }
+        });
+      });
+      // Single-plan types
+      BENEFIT_SINGLE_TYPES.forEach(({ prefix, name }) => {
+        const item = b[`${prefix}_outstanding_item`];
+        if (item && result[item]) {
+          result[item].push({
+            client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
+            prefix,
+            policy: name, carrier: b[`${prefix}_carrier`], renewal_date: b[`${prefix}_renewal_date`]
+          });
+        }
+      });
+    });
+
+    // Extract from commercial
+    commercial.forEach(c => {
+      // Multi-plan types
+      COMMERCIAL_MULTI_PLAN_TYPES.forEach(pt => {
+        const typePlans = (c.plans && c.plans[pt]) || [];
+        typePlans.forEach((plan, idx) => {
+          if (plan.outstanding_item && result[plan.outstanding_item]) {
+            result[plan.outstanding_item].push({
+              client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
+              prefix: pt,
+              policy: typePlans.length > 1 ? `${COMMERCIAL_MULTI_LABELS[pt]} ${idx + 1}` : COMMERCIAL_MULTI_LABELS[pt],
+              carrier: plan.carrier, renewal_date: plan.renewal_date
+            });
+          }
+        });
+      });
+      // Single-plan types
+      COMMERCIAL_SINGLE_TYPES.forEach(({ prefix, name }) => {
+        const item = c[`${prefix}_outstanding_item`];
+        if (item && result[item]) {
+          result[item].push({
+            client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
+            prefix,
+            policy: name, carrier: c[`${prefix}_carrier`], renewal_date: c[`${prefix}_renewal_date`]
+          });
+        }
+      });
+    });
+
+    return result;
+  }, [benefits, commercial]);
+
+  // Prospect (quoting) clients
+  const prospectClients = useMemo(() => {
+    return clients.filter(c => c.status === 'Prospect');
+  }, [clients]);
+
+  // Open edit modal for a policy item (used by action items and renewals)
+  const handleEditItem = (taxId, source, prefix) => {
+    if (source === 'Benefits') {
+      const record = benefits.find(b => b.tax_id === taxId);
+      if (record && onOpenBenefitsModal) onOpenBenefitsModal(record, prefix || null);
+    } else {
+      const record = commercial.find(c => c.tax_id === taxId);
+      if (record && onOpenCommercialModal) onOpenCommercialModal(record, prefix || null);
+    }
+  };
 
   if (loading) {
     return (
@@ -466,6 +569,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                   <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Policies Renewing</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Earliest Date</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -473,8 +577,10 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                   <TableRow
                     key={idx}
                     sx={{
-                      backgroundColor: isUrgent(client.earliest_date) ? '#fff3cd' : 'transparent'
+                      backgroundColor: isUrgent(client.earliest_date) ? '#fff3cd' : 'transparent',
+                      cursor: 'pointer', '&:hover': { backgroundColor: isUrgent(client.earliest_date) ? '#ffecb3' : '#f5f5f5' }
                     }}
+                    onClick={() => handleEditItem(client.tax_id, client.type === 'benefits' ? 'Benefits' : 'Commercial')}
                   >
                     <TableCell>
                       <strong>{client.client_name}</strong>
@@ -506,6 +612,11 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                         <Chip label="Urgent" size="small" color="warning" sx={{ ml: 1 }} />
                       )}
                     </TableCell>
+                    <TableCell>
+                      <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
+                        Edit
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -518,7 +629,117 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
         )}
       </Paper>
 
-      {/* Section 4: Cross-Sell & Within-Product Opportunities (side by side) */}
+      {/* Section 4: Outstanding Items & Prospect Clients (tabbed) */}
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
+          Action Items
+        </Typography>
+        <Tabs
+          value={outstandingTab}
+          onChange={(_, newValue) => setOutstandingTab(newValue)}
+          sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
+        >
+          {[
+            { label: 'Cancel Due', data: outstandingPolicies['Cancel Due'] },
+            { label: 'Premium Due', data: outstandingPolicies['Premium Due'] },
+            { label: 'In Audit', data: outstandingPolicies['In Audit'] },
+            { label: 'Prospects', data: prospectClients }
+          ].map(({ label, data }, idx) => (
+            <Tab key={label} label={`${label} (${data.length})`} />
+          ))}
+        </Tabs>
+
+        {/* Cancel Due / Premium Due / In Audit tabs */}
+        {outstandingTab < 3 && (() => {
+          const tabDefs = [
+            { key: 'Cancel Due', bgColor: '#ffebee', borderColor: '#ef9a9a' },
+            { key: 'Premium Due', bgColor: '#fff3e0', borderColor: '#ffcc80' },
+            { key: 'In Audit', bgColor: '#e3f2fd', borderColor: '#90caf9' }
+          ];
+          const { key, bgColor, borderColor } = tabDefs[outstandingTab];
+          const items = outstandingPolicies[key];
+          return items.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Policy</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Carrier</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Renewal Date</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {items.map((item, idx) => (
+                    <TableRow
+                      key={idx}
+                      sx={{ backgroundColor: bgColor, cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+                      onClick={() => handleEditItem(item.tax_id, item.source, item.prefix)}
+                    >
+                      <TableCell><strong>{item.client_name}</strong></TableCell>
+                      <TableCell>{item.policy}</TableCell>
+                      <TableCell>
+                        <Chip label={item.source} size="small" color={item.source === 'Benefits' ? 'warning' : 'info'} sx={{ fontSize: '0.75rem' }} />
+                      </TableCell>
+                      <TableCell>{item.carrier || '—'}</TableCell>
+                      <TableCell>{item.renewal_date ? formatDate(item.renewal_date) : '—'}</TableCell>
+                      <TableCell>
+                        <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
+                          Edit
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No {key.toLowerCase()} items
+            </Typography>
+          );
+        })()}
+
+        {/* Prospects tab */}
+        {outstandingTab === 3 && (
+          prospectClients.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small">
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Client Name</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Tax ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Phone</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {prospectClients.map((client, idx) => (
+                    <TableRow
+                      key={idx}
+                      sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
+                      onClick={() => onNavigateToTab && onNavigateToTab(1)}
+                    >
+                      <TableCell><strong>{client.client_name}</strong></TableCell>
+                      <TableCell>{client.tax_id}</TableCell>
+                      <TableCell>{client.email || '—'}</TableCell>
+                      <TableCell>{client.phone || '—'}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No prospect clients
+            </Typography>
+          )
+        )}
+      </Paper>
+
+      {/* Section 6: Cross-Sell & Within-Product Opportunities (side by side) */}
       <Grid container spacing={3}>
         {/* Cross-Sell Opportunities */}
         <Grid item xs={12}>
