@@ -2927,6 +2927,10 @@ if __name__ == '__main__':
                         'product_liability', 'flood', 'crime', 'directors_officers',
                         'fiduciary', 'inland_marine'
                     ]
+                    _single_benefit_types = [
+                        'ltd', 'std', 'k401', 'critical_illness',
+                        'accident', 'hospital', 'voluntary_life',
+                    ]
                     _table_migrations = [
                         ('employee_benefits', 'enrolled_ees', 'INTEGER'),
                         ('employee_benefits', 'parent_client', 'VARCHAR(200)'),
@@ -2934,6 +2938,10 @@ if __name__ == '__main__':
                         ('clients', 'gross_revenue', 'DECIMAL(15,2)'),
                         ('clients', 'total_ees', 'INTEGER'),
                     ]
+                    for _bt in _single_benefit_types:
+                        _table_migrations.append(('employee_benefits', f'{_bt}_flag', 'BOOLEAN DEFAULT 0'))
+                        _table_migrations.append(('employee_benefits', f'{_bt}_remarks', 'TEXT'))
+                        _table_migrations.append(('employee_benefits', f'{_bt}_outstanding_item', 'VARCHAR(50)'))
                     # Split limit -> occ_limit + agg_limit for all commercial products
                     for _prod in _limit_products:
                         _table_migrations.append(('commercial_insurance', f'{_prod}_occ_limit', 'VARCHAR(100)'))

@@ -85,6 +85,33 @@ CREATE TABLE IF NOT EXISTS employee_benefits (
     voluntary_life_renewal_date DATE,
     voluntary_life_carrier VARCHAR(200),
 
+    -- Flag columns for single-plan types
+    ltd_flag BOOLEAN DEFAULT 0,
+    std_flag BOOLEAN DEFAULT 0,
+    k401_flag BOOLEAN DEFAULT 0,
+    critical_illness_flag BOOLEAN DEFAULT 0,
+    accident_flag BOOLEAN DEFAULT 0,
+    hospital_flag BOOLEAN DEFAULT 0,
+    voluntary_life_flag BOOLEAN DEFAULT 0,
+
+    -- Remarks columns for single-plan types
+    ltd_remarks TEXT,
+    std_remarks TEXT,
+    k401_remarks TEXT,
+    critical_illness_remarks TEXT,
+    accident_remarks TEXT,
+    hospital_remarks TEXT,
+    voluntary_life_remarks TEXT,
+
+    -- Outstanding item columns for single-plan types
+    ltd_outstanding_item VARCHAR(50),
+    std_outstanding_item VARCHAR(50),
+    k401_outstanding_item VARCHAR(50),
+    critical_illness_outstanding_item VARCHAR(50),
+    accident_outstanding_item VARCHAR(50),
+    hospital_outstanding_item VARCHAR(50),
+    voluntary_life_outstanding_item VARCHAR(50),
+
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
 

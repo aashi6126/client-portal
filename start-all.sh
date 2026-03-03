@@ -6,6 +6,18 @@
 echo "🚀 Starting Client Portal Services..."
 echo ""
 
+# Kill any existing instances
+echo "🔄 Stopping any existing services..."
+pkill -f "customer_api.py" 2>/dev/null
+pkill -f "backup_scheduler.py" 2>/dev/null
+pkill -f "react-scripts start" 2>/dev/null
+# Kill anything on ports 3000 and 5000
+lsof -ti:3000 | xargs kill -9 2>/dev/null
+lsof -ti:5000 | xargs kill -9 2>/dev/null
+sleep 2
+echo "   Done."
+echo ""
+
 # Check if webapp directory exists
 if [ ! -d "webapp/customer-app" ]; then
     echo "❌ Error: webapp/customer-app directory not found"
