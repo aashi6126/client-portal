@@ -28,6 +28,15 @@ const SINGLE_PLAN_PRODUCTS = {
   inland_marine: 'Marine'
 };
 
+// Color mapping for outstanding item values
+const OUTSTANDING_ITEM_COLORS = {
+  'Premium Due': '#ed6c02',
+  'In Audit': '#0288d1',
+  'Cancel Due': '#d32f2f',
+  'Add Line': '#7b1fa2',
+  'Complete': '#2e7d32',
+};
+
 // Parse date string as local time (avoids UTC timezone shift)
 const parseDate = (d) => {
   if (!d) return null;
@@ -275,7 +284,7 @@ const getCommercialColumns = (onEdit) => [
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
                 {hasRemarks && <div>Remarks: {product.remarks}</div>}
-                {product.outstandingItem && <div>Outstanding: {product.outstandingItem}</div>}
+                {product.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[product.outstandingItem] || 'inherit', fontWeight: 600 }}>{product.outstandingItem}</span></div>}
               </Box>
             }
           >
@@ -320,7 +329,7 @@ const getCommercialColumns = (onEdit) => [
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
                       {product.remarks && <div>Remarks: {product.remarks}</div>}
-                      {product.outstandingItem && <div>Outstanding: {product.outstandingItem}</div>}
+                      {product.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[product.outstandingItem] || 'inherit', fontWeight: 600 }}>{product.outstandingItem}</span></div>}
                     </Box>
                   ))}
                 </Box>

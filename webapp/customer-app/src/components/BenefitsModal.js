@@ -34,6 +34,14 @@ const MULTI_PLAN_LABELS = {
   life_adnd: 'Life & AD&D'
 };
 
+// Color mapping for outstanding item values
+const OUTSTANDING_ITEM_COLORS = {
+  'Premium Due': '#ed6c02',
+  'In Audit': '#0288d1',
+  'Cancel Due': '#d32f2f',
+  'Complete': '#2e7d32',
+};
+
 // Check if a date string is in the past
 const isPastDate = (dateStr) => {
   if (!dateStr) return false;
@@ -399,13 +407,19 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                   value={plan.outstanding_item || ''}
                   onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
                   size="small"
-                  sx={{ minWidth: 180 }}
+                  sx={{
+                    minWidth: 180,
+                    '& .MuiSelect-select': {
+                      color: OUTSTANDING_ITEM_COLORS[plan.outstanding_item] || 'inherit',
+                      fontWeight: plan.outstanding_item ? 600 : 400
+                    }
+                  }}
                 >
                   <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Premium Due">Premium Due</MenuItem>
-                  <MenuItem value="In Audit">In Audit</MenuItem>
-                  <MenuItem value="Cancel Due">Cancel Due</MenuItem>
-                  <MenuItem value="Complete">Complete</MenuItem>
+                  <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
+                  <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
+                  <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
+                  <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
                 </TextField>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -747,13 +761,19 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                               value={formData[`${prefix}_outstanding_item`] || ''}
                               onChange={handleChange(`${prefix}_outstanding_item`)}
                               size="small"
-                              sx={{ minWidth: 180 }}
+                              sx={{
+                                minWidth: 180,
+                                '& .MuiSelect-select': {
+                                  color: OUTSTANDING_ITEM_COLORS[formData[`${prefix}_outstanding_item`]] || 'inherit',
+                                  fontWeight: formData[`${prefix}_outstanding_item`] ? 600 : 400
+                                }
+                              }}
                             >
                               <MenuItem value="">None</MenuItem>
-                              <MenuItem value="Premium Due">Premium Due</MenuItem>
-                              <MenuItem value="In Audit">In Audit</MenuItem>
-                              <MenuItem value="Cancel Due">Cancel Due</MenuItem>
-                              <MenuItem value="Complete">Complete</MenuItem>
+                              <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
+                              <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
+                              <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
+                              <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
                             </TextField>
                           </Grid>
                           <Grid item xs={12} sm={6}>

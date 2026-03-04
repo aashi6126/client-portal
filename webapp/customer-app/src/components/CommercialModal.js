@@ -35,6 +35,15 @@ const MULTI_PLAN_LABELS = {
   crime: 'Crime or Fidelity Bond'
 };
 
+// Color mapping for outstanding item values
+const OUTSTANDING_ITEM_COLORS = {
+  'Premium Due': '#ed6c02',
+  'In Audit': '#0288d1',
+  'Cancel Due': '#d32f2f',
+  'Add Line': '#7b1fa2',
+  'Complete': '#2e7d32',
+};
+
 // Check if a date string is in the past
 const isPastDate = (dateStr) => {
   if (!dateStr) return false;
@@ -398,14 +407,20 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   value={plan.outstanding_item || ''}
                   onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
                   size="small"
-                  sx={{ minWidth: 180 }}
+                  sx={{
+                    minWidth: 180,
+                    '& .MuiSelect-select': {
+                      color: OUTSTANDING_ITEM_COLORS[plan.outstanding_item] || 'inherit',
+                      fontWeight: plan.outstanding_item ? 600 : 400
+                    }
+                  }}
                 >
                   <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Premium Due">Premium Due</MenuItem>
-                  <MenuItem value="In Audit">In Audit</MenuItem>
-                  <MenuItem value="Cancel Due">Cancel Due</MenuItem>
-                  <MenuItem value="Add Line">Add Line</MenuItem>
-                  <MenuItem value="Complete">Complete</MenuItem>
+                  <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
+                  <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
+                  <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
+                  <MenuItem value="Add Line" sx={{ color: OUTSTANDING_ITEM_COLORS['Add Line'], fontWeight: 600 }}>Add Line</MenuItem>
+                  <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
                 </TextField>
               </Grid>
               <Grid item xs={12}>
@@ -657,14 +672,20 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               value={formData[`${prefix}_outstanding_item`] || ''}
                               onChange={handleChange(`${prefix}_outstanding_item`)}
                               size="small"
-                              sx={{ minWidth: 180 }}
+                              sx={{
+                                minWidth: 180,
+                                '& .MuiSelect-select': {
+                                  color: OUTSTANDING_ITEM_COLORS[formData[`${prefix}_outstanding_item`]] || 'inherit',
+                                  fontWeight: formData[`${prefix}_outstanding_item`] ? 600 : 400
+                                }
+                              }}
                             >
                               <MenuItem value="">None</MenuItem>
-                              <MenuItem value="Premium Due">Premium Due</MenuItem>
-                              <MenuItem value="In Audit">In Audit</MenuItem>
-                              <MenuItem value="Cancel Due">Cancel Due</MenuItem>
-                              <MenuItem value="Add Line">Add Line</MenuItem>
-                              <MenuItem value="Complete">Complete</MenuItem>
+                              <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
+                              <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
+                              <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
+                              <MenuItem value="Add Line" sx={{ color: OUTSTANDING_ITEM_COLORS['Add Line'], fontWeight: 600 }}>Add Line</MenuItem>
+                              <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
                             </TextField>
                           </Grid>
                           <Grid item xs={12}>

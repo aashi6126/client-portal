@@ -22,6 +22,14 @@ const SINGLE_PLAN_TYPES = [
   { prefix: 'voluntary_life', shortName: 'Vol Life' }
 ];
 
+// Color mapping for outstanding item values
+const OUTSTANDING_ITEM_COLORS = {
+  'Premium Due': '#ed6c02',
+  'In Audit': '#0288d1',
+  'Cancel Due': '#d32f2f',
+  'Complete': '#2e7d32',
+};
+
 // Parse date string as local time (avoids UTC timezone shift)
 const parseDate = (d) => {
   if (!d) return null;
@@ -233,7 +241,7 @@ const getBenefitsColumns = (onEdit) => [
                 <div>Carrier: {plan.carrier || 'N/A'}</div>
                 <div>Renewal: {formatDate(plan.renewalDate)}</div>
                 {hasRemarks && <div>Remarks: {plan.remarks}</div>}
-                {plan.outstandingItem && <div>Outstanding: {plan.outstandingItem}</div>}
+                {plan.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[plan.outstandingItem] || 'inherit', fontWeight: 600 }}>{plan.outstandingItem}</span></div>}
               </Box>
             }
           >
@@ -275,7 +283,7 @@ const getBenefitsColumns = (onEdit) => [
                       <div>Carrier: {plan.carrier || 'N/A'}</div>
                       <div>Renewal: {formatDate(plan.renewalDate)}</div>
                       {plan.remarks && <div>Remarks: {plan.remarks}</div>}
-                      {plan.outstandingItem && <div>Outstanding: {plan.outstandingItem}</div>}
+                      {plan.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[plan.outstandingItem] || 'inherit', fontWeight: 600 }}>{plan.outstandingItem}</span></div>}
                     </Box>
                   ))}
                 </Box>
