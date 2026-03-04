@@ -113,6 +113,8 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
 
     if (!formData.tax_id || formData.tax_id.trim() === '') {
       newErrors.tax_id = 'Tax ID is required';
+    } else if (!/^\d{2}-\d{7}$/.test(formData.tax_id)) {
+      newErrors.tax_id = 'Tax ID must be in ##-####### format';
     }
 
     if (!formData.client_name || formData.client_name.trim() === '') {
@@ -170,12 +172,19 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
               <TextField
                 label="Tax ID *"
                 value={formData.tax_id}
-                onChange={handleChange('tax_id')}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, '').slice(0, 9);
+                  const val = digits.length > 2 ? digits.slice(0, 2) + '-' + digits.slice(2) : digits;
+                  setFormData({ ...formData, tax_id: val });
+                  if (errors.tax_id) setErrors({ ...errors, tax_id: null });
+                }}
                 fullWidth
                 size="small"
+                placeholder="##-#######"
                 error={Boolean(errors.tax_id)}
                 helperText={errors.tax_id}
                 disabled={isEditMode} // Tax ID should not be changed after creation
+                inputProps={{ maxLength: 10 }}
               />
             </Grid>
 

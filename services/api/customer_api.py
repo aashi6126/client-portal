@@ -1,5 +1,6 @@
 import os
 import io
+import re
 import base64
 import logging
 import ipaddress
@@ -885,6 +886,16 @@ def create_client():
         if not data:
             return jsonify({'error': 'No data provided'}), 400
 
+        # Validate tax_id format (##-#######)
+        tax_id = data.get('tax_id', '')
+        if tax_id and not re.match(r'^\d{2}-\d{7}$', tax_id):
+            return jsonify({'error': 'Tax ID must be in ##-####### format'}), 400
+
+        # Validate zip_code (5 digits)
+        zip_code = data.get('zip_code', '')
+        if zip_code and not re.match(r'^\d{5}$', str(zip_code)):
+            return jsonify({'error': 'Zip code must be exactly 5 digits'}), 400
+
         client = Client(
             tax_id=data.get('tax_id'),
             client_name=data.get('client_name'),
@@ -926,6 +937,16 @@ def update_client(client_id):
             return jsonify({'error': 'Client not found'}), 404
 
         data = request.get_json()
+
+        # Validate tax_id format (##-#######)
+        tax_id = data.get('tax_id', client.tax_id)
+        if tax_id and not re.match(r'^\d{2}-\d{7}$', tax_id):
+            return jsonify({'error': 'Tax ID must be in ##-####### format'}), 400
+
+        # Validate zip_code (5 digits)
+        zip_code = data.get('zip_code', client.zip_code)
+        if zip_code and not re.match(r'^\d{5}$', str(zip_code)):
+            return jsonify({'error': 'Zip code must be exactly 5 digits'}), 400
 
         client.tax_id = data.get('tax_id', client.tax_id)
         client.client_name = data.get('client_name', client.client_name)
@@ -1887,7 +1908,8 @@ def export_to_excel():
             ws_clients.cell(row=row_idx, column=10, value=client.address_line_2)
             ws_clients.cell(row=row_idx, column=11, value=client.city)
             ws_clients.cell(row=row_idx, column=12, value=client.state)
-            ws_clients.cell(row=row_idx, column=13, value=client.zip_code)
+            zip_cell = ws_clients.cell(row=row_idx, column=13, value=client.zip_code)
+            zip_cell.number_format = '@'
 
         # ========== EMPLOYEE BENEFITS SHEET ==========
         ws_benefits = wb.create_sheet("Employee Benefits")
@@ -2218,7 +2240,7 @@ def import_from_excel():
                         existing.address_line_2 = row[9] if len(row) > 9 else existing.address_line_2
                         existing.city = row[10] if len(row) > 10 else existing.city
                         existing.state = row[11] if len(row) > 11 else existing.state
-                        existing.zip_code = str(row[12]) if len(row) > 12 and row[12] else existing.zip_code
+                        existing.zip_code = str(int(row[12])).zfill(5) if len(row) > 12 and row[12] else existing.zip_code
                         stats['clients_updated'] += 1
                     else:
                         # Create new client
@@ -2235,7 +2257,7 @@ def import_from_excel():
                             address_line_2=row[9] if len(row) > 9 else None,
                             city=row[10] if len(row) > 10 else None,
                             state=row[11] if len(row) > 11 else None,
-                            zip_code=str(row[12]) if len(row) > 12 and row[12] else None
+                            zip_code=str(int(row[12])).zfill(5) if len(row) > 12 and row[12] else None
                         )
                         session.add(client)
                         stats['clients_created'] += 1
