@@ -41,12 +41,15 @@ import BenefitsTable from './components/BenefitsTable';
 import BenefitsModal from './components/BenefitsModal';
 import CommercialTable from './components/CommercialTable';
 import CommercialModal from './components/CommercialModal';
+import PersonalTable from './components/PersonalTable';
+import PersonalModal from './components/PersonalModal';
 import PocManagement from './components/PocManagement';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
 const API_BENEFITS = '/api/benefits';
 const API_COMMERCIAL = '/api/commercial';
+const API_PERSONAL = '/api/personal';
 const API_FEEDBACK = '/api/feedback';
 
 function NewApp() {
@@ -57,6 +60,7 @@ function NewApp() {
   const [clients, setClients] = useState([]);
   const [benefits, setBenefits] = useState([]);
   const [commercial, setCommercial] = useState([]);
+  const [personal, setPersonal] = useState([]);
 
   // Backend health state
   const [apiStatus, setApiStatus] = useState('checking'); // 'up', 'down', 'checking'
@@ -86,6 +90,11 @@ function NewApp() {
   const [currentCommercial, setCurrentCommercial] = useState(null);
   const [commercialInitialTab, setCommercialInitialTab] = useState(null);
 
+  // Modal states for Personal
+  const [personalModalOpen, setPersonalModalOpen] = useState(false);
+  const [currentPersonal, setCurrentPersonal] = useState(null);
+  const [personalInitialTab, setPersonalInitialTab] = useState(null);
+
   // Delete confirmation dialog
   const [deleteDialog, setDeleteDialog] = useState({
     open: false,
@@ -97,6 +106,7 @@ function NewApp() {
   const [clientSearch, setClientSearch] = useState('');
   const [benefitsSearch, setBenefitsSearch] = useState('');
   const [commercialSearch, setCommercialSearch] = useState('');
+  const [personalSearch, setPersonalSearch] = useState('');
 
   // Import/Export states
   const [importing, setImporting] = useState(false);
@@ -120,6 +130,7 @@ function NewApp() {
     fetchClients();
     fetchBenefits();
     fetchCommercial();
+    fetchPersonal();
     fetchFeedback();
   };
 
@@ -281,6 +292,55 @@ function NewApp() {
       .catch(error => console.error('Error cloning commercial:', error));
   };
 
+  // ========== PERSONAL OPERATIONS ==========
+
+  const fetchPersonal = () => {
+    axios.get(API_PERSONAL)
+      .then(response => {
+        setPersonal(response.data.personal || []);
+      })
+      .catch(error => console.error('Error fetching personal:', error));
+  };
+
+  const openPersonalModal = (personalRecord = null, coveragePrefix = null) => {
+    setCurrentPersonal(personalRecord);
+    setPersonalInitialTab(coveragePrefix);
+    setPersonalModalOpen(true);
+  };
+
+  const savePersonal = (personalData) => {
+    if (personalData.id) {
+      axios.put(`${API_PERSONAL}/${personalData.id}`, personalData)
+        .then(() => {
+          setPersonalModalOpen(false);
+          fetchPersonal();
+          setDataVersion(v => v + 1);
+        })
+        .catch(error => console.error('Error updating personal:', error));
+    } else {
+      axios.post(API_PERSONAL, personalData)
+        .then(() => {
+          setPersonalModalOpen(false);
+          fetchPersonal();
+          setDataVersion(v => v + 1);
+        })
+        .catch(error => console.error('Error creating personal:', error));
+    }
+  };
+
+  const deletePersonal = (personalRecord) => {
+    setDeleteDialog({ open: true, type: 'personal', item: personalRecord });
+  };
+
+  const clonePersonal = (personalRecord) => {
+    axios.post(`${API_PERSONAL}/${personalRecord.id}/clone`)
+      .then(() => {
+        fetchPersonal();
+        setDataVersion(v => v + 1);
+      })
+      .catch(error => console.error('Error cloning personal:', error));
+  };
+
   // ========== DELETE CONFIRMATION ==========
 
   const confirmDelete = () => {
@@ -293,6 +353,7 @@ function NewApp() {
           // Also refresh benefits and commercial as they may cascade delete
           fetchBenefits();
           fetchCommercial();
+          fetchPersonal();
           setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error deleting client:', error));
@@ -310,6 +371,13 @@ function NewApp() {
           setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error deleting commercial:', error));
+    } else if (type === 'personal') {
+      axios.delete(`${API_PERSONAL}/${item.id}`)
+        .then(() => {
+          fetchPersonal();
+          setDataVersion(v => v + 1);
+        })
+        .catch(error => console.error('Error deleting personal:', error));
     } else if (type === 'feedback') {
       axios.delete(`${API_FEEDBACK}/${item.id}`)
         .then(() => {
@@ -356,6 +424,15 @@ function NewApp() {
     return commercial.filter(comm =>
       Object.values(comm).some(val =>
         val && val.toString().toLowerCase().includes(commercialSearch.toLowerCase())
+      )
+    );
+  };
+
+  const filterPersonal = () => {
+    if (!personalSearch) return personal;
+    return personal.filter(pers =>
+      Object.values(pers).some(val =>
+        val && val.toString().toLowerCase().includes(personalSearch.toLowerCase())
       )
     );
   };
@@ -413,7 +490,8 @@ function NewApp() {
       let message = 'Import completed!\n\n';
       message += `Clients: ${stats.clients_created} created, ${stats.clients_updated} updated\n`;
       message += `Benefits: ${stats.benefits_created} created, ${stats.benefits_updated} updated\n`;
-      message += `Commercial: ${stats.commercial_created} created, ${stats.commercial_updated} updated`;
+      message += `Commercial: ${stats.commercial_created} created, ${stats.commercial_updated} updated\n`;
+      message += `Personal: ${stats.personal_created} created, ${stats.personal_updated} updated`;
 
       if (stats.errors && stats.errors.length > 0) {
         message += `\n\n${stats.errors.length} row(s) had errors.`;
@@ -545,6 +623,7 @@ function NewApp() {
             <Tab label="Clients" />
             <Tab label="Employee Benefits" />
             <Tab label="Commercial Insurance" />
+            <Tab label="Personal Insurance" />
             <Tab label="PoC Management" />
             <Tab label="Feedback" />
           </Tabs>
@@ -555,6 +634,7 @@ function NewApp() {
           <Dashboard
             onOpenBenefitsModal={openBenefitsModal}
             onOpenCommercialModal={openCommercialModal}
+            onOpenPersonalModal={openPersonalModal}
             onNavigateToTab={setActiveTab}
             dataVersion={dataVersion}
           />
@@ -662,13 +742,47 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 4: PoC Management */}
+        {/* Tab 4: Personal Insurance */}
         {activeTab === 4 && (
+          <Box mt={2}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  Personal Insurance ({filterPersonal().length} of {personal.length})
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => openPersonalModal()}
+                >
+                  Add New Personal
+                </Button>
+              </Stack>
+              <TextField
+                label="Search personal..."
+                value={personalSearch}
+                onChange={(e) => setPersonalSearch(e.target.value)}
+                variant="outlined"
+                size="small"
+                fullWidth
+              />
+            </Paper>
+            <PersonalTable
+              personal={filterPersonal()}
+              onEdit={openPersonalModal}
+              onDelete={deletePersonal}
+            />
+          </Box>
+        )}
+
+        {/* Tab 5: PoC Management */}
+        {activeTab === 5 && (
           <PocManagement dataVersion={dataVersion} />
         )}
 
-        {/* Tab 5: Feedback */}
-        {activeTab === 5 && (
+        {/* Tab 6: Feedback */}
+        {activeTab === 6 && (
           <Box mt={2}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
@@ -787,6 +901,15 @@ function NewApp() {
         initialCoverageTab={commercialInitialTab}
       />
 
+      <PersonalModal
+        open={personalModalOpen}
+        onClose={() => setPersonalModalOpen(false)}
+        personal={currentPersonal}
+        onSave={savePersonal}
+        clients={currentPersonal ? clients : clients.filter(c => !personal.some(p => p.tax_id === c.tax_id))}
+        initialCoverageTab={personalInitialTab}
+      />
+
       {/* Delete Confirmation Dialog */}
       <Dialog
         open={deleteDialog.open}
@@ -799,7 +922,7 @@ function NewApp() {
             {deleteDialog.type === 'client' && (
               <Box sx={{ mt: 2, p: 1, backgroundColor: '#fff3cd', borderRadius: 1 }}>
                 <Typography variant="body2" color="warning.dark">
-                  <strong>Warning:</strong> Deleting this client will also delete all associated Employee Benefits and Commercial Insurance records.
+                  <strong>Warning:</strong> Deleting this client will also delete all associated Employee Benefits, Commercial Insurance, and Personal Insurance records.
                 </Typography>
               </Box>
             )}

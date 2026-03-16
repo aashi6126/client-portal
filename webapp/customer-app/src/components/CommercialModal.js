@@ -62,24 +62,24 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     tax_id: '',
     parent_client: '',
     // Single-plan types (flat fields)
-    general_liability_carrier: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '',
-    property_carrier: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
-    bop_carrier: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '',
-    workers_comp_carrier: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_remarks: '', workers_comp_outstanding_item: '',
-    auto_carrier: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_remarks: '', auto_outstanding_item: '',
-    epli_carrier: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_remarks: '', epli_outstanding_item: '',
-    nydbl_carrier: '', nydbl_occ_limit: '', nydbl_agg_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_remarks: '', nydbl_outstanding_item: '',
-    surety_carrier: '', surety_occ_limit: '', surety_agg_limit: '', surety_premium: '', surety_renewal_date: '', surety_remarks: '', surety_outstanding_item: '',
-    product_liability_carrier: '', product_liability_occ_limit: '', product_liability_agg_limit: '', product_liability_premium: '', product_liability_renewal_date: '', product_liability_remarks: '', product_liability_outstanding_item: '',
-    flood_carrier: '', flood_occ_limit: '', flood_agg_limit: '', flood_premium: '', flood_renewal_date: '', flood_remarks: '', flood_outstanding_item: '',
-    directors_officers_carrier: '', directors_officers_occ_limit: '', directors_officers_agg_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_remarks: '', directors_officers_outstanding_item: '',
-    fiduciary_carrier: '', fiduciary_occ_limit: '', fiduciary_agg_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_remarks: '', fiduciary_outstanding_item: '',
-    inland_marine_carrier: '', inland_marine_occ_limit: '', inland_marine_agg_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_remarks: '', inland_marine_outstanding_item: '',
+    general_liability_carrier: '', general_liability_agency: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '',
+    property_carrier: '', property_agency: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
+    bop_carrier: '', bop_agency: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '',
+    workers_comp_carrier: '', workers_comp_agency: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_remarks: '', workers_comp_outstanding_item: '',
+    auto_carrier: '', auto_agency: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_remarks: '', auto_outstanding_item: '',
+    epli_carrier: '', epli_agency: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_remarks: '', epli_outstanding_item: '',
+    nydbl_carrier: '', nydbl_agency: '', nydbl_occ_limit: '', nydbl_agg_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_remarks: '', nydbl_outstanding_item: '',
+    surety_carrier: '', surety_agency: '', surety_occ_limit: '', surety_agg_limit: '', surety_premium: '', surety_renewal_date: '', surety_remarks: '', surety_outstanding_item: '',
+    product_liability_carrier: '', product_liability_agency: '', product_liability_occ_limit: '', product_liability_agg_limit: '', product_liability_premium: '', product_liability_renewal_date: '', product_liability_remarks: '', product_liability_outstanding_item: '',
+    flood_carrier: '', flood_agency: '', flood_occ_limit: '', flood_agg_limit: '', flood_premium: '', flood_renewal_date: '', flood_remarks: '', flood_outstanding_item: '',
+    directors_officers_carrier: '', directors_officers_agency: '', directors_officers_occ_limit: '', directors_officers_agg_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_remarks: '', directors_officers_outstanding_item: '',
+    fiduciary_carrier: '', fiduciary_agency: '', fiduciary_occ_limit: '', fiduciary_agg_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_remarks: '', fiduciary_outstanding_item: '',
+    inland_marine_carrier: '', inland_marine_agency: '', inland_marine_occ_limit: '', inland_marine_agg_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_remarks: '', inland_marine_outstanding_item: '',
     // Multi-plan flat fields (backward compat, set by save_commercial_plans)
-    umbrella_carrier: '', umbrella_occ_limit: '', umbrella_agg_limit: '', umbrella_premium: '', umbrella_renewal_date: '',
-    professional_eo_carrier: '', professional_eo_occ_limit: '', professional_eo_agg_limit: '', professional_eo_premium: '', professional_eo_renewal_date: '',
-    cyber_carrier: '', cyber_occ_limit: '', cyber_agg_limit: '', cyber_premium: '', cyber_renewal_date: '',
-    crime_carrier: '', crime_occ_limit: '', crime_agg_limit: '', crime_premium: '', crime_renewal_date: ''
+    umbrella_carrier: '', umbrella_agency: '', umbrella_occ_limit: '', umbrella_agg_limit: '', umbrella_premium: '', umbrella_renewal_date: '',
+    professional_eo_carrier: '', professional_eo_agency: '', professional_eo_occ_limit: '', professional_eo_agg_limit: '', professional_eo_premium: '', professional_eo_renewal_date: '',
+    cyber_carrier: '', cyber_agency: '', cyber_occ_limit: '', cyber_agg_limit: '', cyber_premium: '', cyber_renewal_date: '',
+    crime_carrier: '', crime_agency: '', crime_occ_limit: '', crime_agg_limit: '', crime_premium: '', crime_renewal_date: ''
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
@@ -129,6 +129,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
           if (typePlans.length > 0) {
             newPlans[planType] = typePlans.map(p => ({
               carrier: p.carrier || '',
+              agency: p.agency || '',
               occ_limit: p.occ_limit || '',
               agg_limit: p.agg_limit || '',
               premium: p.premium || '',
@@ -147,6 +148,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               commercial[`${planType}_occ_limit`] || commercial[`${planType}_agg_limit`] || commercial[`${planType}_premium`]) {
             newPlans[planType] = [{
               carrier: commercial[`${planType}_carrier`] || '',
+              agency: commercial[`${planType}_agency`] || '',
               occ_limit: commercial[`${planType}_occ_limit`] || '',
               agg_limit: commercial[`${planType}_agg_limit`] || '',
               premium: commercial[`${planType}_premium`] || '',
@@ -217,7 +219,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
   const addPlan = (planType) => {
     setPlans(prev => ({
       ...prev,
-      [planType]: [...prev[planType], { carrier: '', occ_limit: '', agg_limit: '', premium: '', renewal_date: '', remarks: '', outstanding_item: '' }]
+      [planType]: [...prev[planType], { carrier: '', agency: '', occ_limit: '', agg_limit: '', premium: '', renewal_date: '', remarks: '', outstanding_item: '' }]
     }));
   };
 
@@ -299,6 +301,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
       setFormData({
         ...formData,
         [`${prefix}_carrier`]: '',
+        [`${prefix}_agency`]: '',
         [`${prefix}_occ_limit`]: '',
         [`${prefix}_agg_limit`]: '',
         [`${prefix}_premium`]: '',
@@ -340,6 +343,15 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   label="Carrier"
                   value={plan.carrier || ''}
                   onChange={(e) => updatePlan(planType, idx, 'carrier', e.target.value)}
+                  fullWidth
+                  size="small"
+                />
+              </Grid>
+              <Grid item xs={12} sm={6}>
+                <TextField
+                  label="Agency"
+                  value={plan.agency || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'agency', e.target.value)}
                   fullWidth
                   size="small"
                 />
@@ -605,6 +617,15 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               label="Carrier"
                               value={formData[`${product.prefix}_carrier`] || ''}
                               onChange={handleChange(`${product.prefix}_carrier`)}
+                              fullWidth
+                              size="small"
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={6}>
+                            <TextField
+                              label="Agency"
+                              value={formData[`${product.prefix}_agency`] || ''}
+                              onChange={handleChange(`${product.prefix}_agency`)}
                               fullWidth
                               size="small"
                             />

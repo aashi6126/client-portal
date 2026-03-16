@@ -38,6 +38,7 @@ import axios from 'axios';
 const API_CLIENTS = '/api/clients';
 const API_BENEFITS = '/api/benefits';
 const API_COMMERCIAL = '/api/commercial';
+const API_PERSONAL = '/api/personal';
 const API_DASHBOARD_RENEWALS = '/api/dashboard/renewals';
 const API_DASHBOARD_CROSS_SELL = '/api/dashboard/cross-sell';
 
@@ -58,10 +59,11 @@ const parseDate = (d) => {
  * 3. Next Month Focus
  * 4. Cross-Sell Opportunities
  */
-const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateToTab, dataVersion }) => {
+const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion }) => {
   const [clients, setClients] = useState([]);
   const [benefits, setBenefits] = useState([]);
   const [commercial, setCommercial] = useState([]);
+  const [personal, setPersonal] = useState([]);
   const [renewals, setRenewals] = useState([]);
   const [crossSell, setCrossSell] = useState({ benefits_only: [], commercial_only: [] });
   const [loading, setLoading] = useState(true);
@@ -75,10 +77,11 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [clientsRes, benefitsRes, commercialRes, renewalsRes, crossSellRes] = await Promise.all([
+        const [clientsRes, benefitsRes, commercialRes, personalRes, renewalsRes, crossSellRes] = await Promise.all([
           axios.get(API_CLIENTS),
           axios.get(API_BENEFITS),
           axios.get(API_COMMERCIAL),
+          axios.get(API_PERSONAL),
           axios.get(API_DASHBOARD_RENEWALS),
           axios.get(API_DASHBOARD_CROSS_SELL)
         ]);
@@ -86,6 +89,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
         setClients(clientsRes.data.clients || []);
         setBenefits(benefitsRes.data.benefits || []);
         setCommercial(commercialRes.data.commercial || []);
+        setPersonal(personalRes.data.personal || []);
         setRenewals(renewalsRes.data.renewals || []);
         setCrossSell(crossSellRes.data);
         setLoading(false);
@@ -118,12 +122,15 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
           month: monthKey,
           benefits: 0,
           commercial: 0,
+          personal: 0,
           total: 0
         };
       }
 
       if (renewal.type === 'benefits') {
         grouped[monthKey].benefits += 1;
+      } else if (renewal.type === 'personal') {
+        grouped[monthKey].personal += 1;
       } else {
         grouped[monthKey].commercial += 1;
       }
@@ -399,8 +406,30 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
       });
     });
 
+    // Extract from personal
+    const PERSONAL_TYPES = [
+      { prefix: 'personal_auto', name: 'Personal Auto' },
+      { prefix: 'homeowners', name: 'Homeowners' },
+      { prefix: 'personal_umbrella', name: 'Personal Umbrella' },
+      { prefix: 'event', name: 'Event Insurance' },
+      { prefix: 'visitors_medical', name: 'Visitors Medical' }
+    ];
+    personal.forEach(p => {
+      PERSONAL_TYPES.forEach(({ prefix, name }) => {
+        const item = p[`${prefix}_outstanding_item`];
+        if (item && result[item]) {
+          const renewalField = ['event', 'visitors_medical'].includes(prefix) ? `${prefix}_start_date` : `${prefix}_renewal_date`;
+          result[item].push({
+            client_name: p.client_name, tax_id: p.tax_id, source: 'Personal',
+            prefix,
+            policy: name, carrier: p[`${prefix}_carrier`], renewal_date: p[renewalField]
+          });
+        }
+      });
+    });
+
     return result;
-  }, [benefits, commercial]);
+  }, [benefits, commercial, personal]);
 
   // Prospect (quoting) clients
   const prospectClients = useMemo(() => {
@@ -412,6 +441,9 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
     if (source === 'Benefits') {
       const record = benefits.find(b => b.tax_id === taxId);
       if (record && onOpenBenefitsModal) onOpenBenefitsModal(record, prefix || null);
+    } else if (source === 'Personal') {
+      const record = personal.find(p => p.tax_id === taxId);
+      if (record && onOpenPersonalModal) onOpenPersonalModal(record, prefix || null);
     } else {
       const record = commercial.find(c => c.tax_id === taxId);
       if (record && onOpenCommercialModal) onOpenCommercialModal(record, prefix || null);
@@ -501,6 +533,25 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
               </Box>
             </CardContent>
           </Card>
+
+          <Card
+            sx={{ backgroundColor: '#f3e5f5', border: '1px solid #ce93d8', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
+            onClick={() => onNavigateToTab && onNavigateToTab(4)}
+          >
+            <CardContent>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="body2" color="text.secondary" gutterBottom>
+                    Personal Policies
+                  </Typography>
+                  <Typography variant="h3" sx={{ fontWeight: 'bold', color: '#37474f' }}>
+                    {personal.length}
+                  </Typography>
+                </Box>
+                <SecurityIcon sx={{ fontSize: 60, color: '#9c27b0', opacity: 0.6 }} />
+              </Box>
+            </CardContent>
+          </Card>
         </Box>
 
         {/* Right: Renewals Chart */}
@@ -527,10 +578,11 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                     <YAxis tick={{ fontSize: 9 }} width={25} />
                     <Tooltip
                       labelFormatter={formatMonth}
-                      formatter={(value, name) => [value, name === 'benefits' ? 'Benefits' : 'Commercial']}
+                      formatter={(value, name) => [value, name === 'benefits' ? 'Benefits' : name === 'personal' ? 'Personal' : 'Commercial']}
                     />
                     <Bar dataKey="benefits" stackId="a" fill="#fb8c00" />
                     <Bar dataKey="commercial" stackId="a" fill="#1976d2" />
+                    <Bar dataKey="personal" stackId="a" fill="#9c27b0" />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -580,16 +632,16 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onNavigateTo
                       backgroundColor: isUrgent(client.earliest_date) ? '#fff3cd' : 'transparent',
                       cursor: 'pointer', '&:hover': { backgroundColor: isUrgent(client.earliest_date) ? '#ffecb3' : '#f5f5f5' }
                     }}
-                    onClick={() => handleEditItem(client.tax_id, client.type === 'benefits' ? 'Benefits' : 'Commercial')}
+                    onClick={() => handleEditItem(client.tax_id, client.type === 'benefits' ? 'Benefits' : client.type === 'personal' ? 'Personal' : 'Commercial')}
                   >
                     <TableCell>
                       <strong>{client.client_name}</strong>
                     </TableCell>
                     <TableCell>
                       <Chip
-                        label={client.type === 'benefits' ? 'Benefits' : 'Commercial'}
+                        label={client.type === 'benefits' ? 'Benefits' : client.type === 'personal' ? 'Personal' : 'Commercial'}
                         size="small"
-                        color={client.type === 'benefits' ? 'warning' : 'info'}
+                        color={client.type === 'benefits' ? 'warning' : client.type === 'personal' ? 'secondary' : 'info'}
                       />
                     </TableCell>
                     <TableCell>

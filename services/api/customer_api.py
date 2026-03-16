@@ -161,6 +161,7 @@ class Client(db.Model):
     # Relationships
     employee_benefits = db.relationship('EmployeeBenefit', back_populates='client', cascade='all, delete-orphan')
     commercial_insurance = db.relationship('CommercialInsurance', back_populates='client', cascade='all, delete-orphan')
+    personal_insurance = db.relationship('PersonalInsurance', back_populates='client', cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
@@ -395,6 +396,7 @@ class CommercialInsurance(db.Model):
 
     # 1. Commercial General Liability
     general_liability_carrier = db.Column(db.String(200))
+    general_liability_agency = db.Column(db.String(200))
     general_liability_occ_limit = db.Column(db.String(100))
     general_liability_agg_limit = db.Column(db.String(100))
     general_liability_premium = db.Column(db.Numeric(12, 2))
@@ -402,6 +404,7 @@ class CommercialInsurance(db.Model):
 
     # 2. Commercial Property
     property_carrier = db.Column(db.String(200))
+    property_agency = db.Column(db.String(200))
     property_occ_limit = db.Column(db.String(100))
     property_agg_limit = db.Column(db.String(100))
     property_premium = db.Column(db.Numeric(12, 2))
@@ -409,6 +412,7 @@ class CommercialInsurance(db.Model):
 
     # 3. Business Owners Policy (BOP)
     bop_carrier = db.Column(db.String(200))
+    bop_agency = db.Column(db.String(200))
     bop_occ_limit = db.Column(db.String(100))
     bop_agg_limit = db.Column(db.String(100))
     bop_premium = db.Column(db.Numeric(12, 2))
@@ -416,6 +420,7 @@ class CommercialInsurance(db.Model):
 
     # 4. Umbrella Liability
     umbrella_carrier = db.Column(db.String(200))
+    umbrella_agency = db.Column(db.String(200))
     umbrella_occ_limit = db.Column(db.String(100))
     umbrella_agg_limit = db.Column(db.String(100))
     umbrella_premium = db.Column(db.Numeric(12, 2))
@@ -423,6 +428,7 @@ class CommercialInsurance(db.Model):
 
     # 5. Workers Compensation
     workers_comp_carrier = db.Column(db.String(200))
+    workers_comp_agency = db.Column(db.String(200))
     workers_comp_occ_limit = db.Column(db.String(100))
     workers_comp_agg_limit = db.Column(db.String(100))
     workers_comp_premium = db.Column(db.Numeric(12, 2))
@@ -430,6 +436,7 @@ class CommercialInsurance(db.Model):
 
     # 6. Professional or E&O
     professional_eo_carrier = db.Column(db.String(200))
+    professional_eo_agency = db.Column(db.String(200))
     professional_eo_occ_limit = db.Column(db.String(100))
     professional_eo_agg_limit = db.Column(db.String(100))
     professional_eo_premium = db.Column(db.Numeric(12, 2))
@@ -437,6 +444,7 @@ class CommercialInsurance(db.Model):
 
     # 7. Cyber Liability
     cyber_carrier = db.Column(db.String(200))
+    cyber_agency = db.Column(db.String(200))
     cyber_occ_limit = db.Column(db.String(100))
     cyber_agg_limit = db.Column(db.String(100))
     cyber_premium = db.Column(db.Numeric(12, 2))
@@ -444,6 +452,7 @@ class CommercialInsurance(db.Model):
 
     # 8. Commercial Auto
     auto_carrier = db.Column(db.String(200))
+    auto_agency = db.Column(db.String(200))
     auto_occ_limit = db.Column(db.String(100))
     auto_agg_limit = db.Column(db.String(100))
     auto_premium = db.Column(db.Numeric(12, 2))
@@ -451,6 +460,7 @@ class CommercialInsurance(db.Model):
 
     # 9. EPLI
     epli_carrier = db.Column(db.String(200))
+    epli_agency = db.Column(db.String(200))
     epli_occ_limit = db.Column(db.String(100))
     epli_agg_limit = db.Column(db.String(100))
     epli_premium = db.Column(db.Numeric(12, 2))
@@ -458,6 +468,7 @@ class CommercialInsurance(db.Model):
 
     # 10. NYDBL
     nydbl_carrier = db.Column(db.String(200))
+    nydbl_agency = db.Column(db.String(200))
     nydbl_occ_limit = db.Column(db.String(100))
     nydbl_agg_limit = db.Column(db.String(100))
     nydbl_premium = db.Column(db.Numeric(12, 2))
@@ -465,6 +476,7 @@ class CommercialInsurance(db.Model):
 
     # 11. Surety Bond
     surety_carrier = db.Column(db.String(200))
+    surety_agency = db.Column(db.String(200))
     surety_occ_limit = db.Column(db.String(100))
     surety_agg_limit = db.Column(db.String(100))
     surety_premium = db.Column(db.Numeric(12, 2))
@@ -472,6 +484,7 @@ class CommercialInsurance(db.Model):
 
     # 12. Product Liability
     product_liability_carrier = db.Column(db.String(200))
+    product_liability_agency = db.Column(db.String(200))
     product_liability_occ_limit = db.Column(db.String(100))
     product_liability_agg_limit = db.Column(db.String(100))
     product_liability_premium = db.Column(db.Numeric(12, 2))
@@ -479,6 +492,7 @@ class CommercialInsurance(db.Model):
 
     # 13. Flood
     flood_carrier = db.Column(db.String(200))
+    flood_agency = db.Column(db.String(200))
     flood_occ_limit = db.Column(db.String(100))
     flood_agg_limit = db.Column(db.String(100))
     flood_premium = db.Column(db.Numeric(12, 2))
@@ -486,6 +500,7 @@ class CommercialInsurance(db.Model):
 
     # 14. Crime or Fidelity Bond
     crime_carrier = db.Column(db.String(200))
+    crime_agency = db.Column(db.String(200))
     crime_occ_limit = db.Column(db.String(100))
     crime_agg_limit = db.Column(db.String(100))
     crime_premium = db.Column(db.Numeric(12, 2))
@@ -493,6 +508,7 @@ class CommercialInsurance(db.Model):
 
     # 15. Directors & Officers
     directors_officers_carrier = db.Column(db.String(200))
+    directors_officers_agency = db.Column(db.String(200))
     directors_officers_occ_limit = db.Column(db.String(100))
     directors_officers_agg_limit = db.Column(db.String(100))
     directors_officers_premium = db.Column(db.Numeric(12, 2))
@@ -500,6 +516,7 @@ class CommercialInsurance(db.Model):
 
     # 16. Fiduciary Bond
     fiduciary_carrier = db.Column(db.String(200))
+    fiduciary_agency = db.Column(db.String(200))
     fiduciary_occ_limit = db.Column(db.String(100))
     fiduciary_agg_limit = db.Column(db.String(100))
     fiduciary_premium = db.Column(db.Numeric(12, 2))
@@ -507,6 +524,7 @@ class CommercialInsurance(db.Model):
 
     # 17. Inland Marine
     inland_marine_carrier = db.Column(db.String(200))
+    inland_marine_agency = db.Column(db.String(200))
     inland_marine_occ_limit = db.Column(db.String(100))
     inland_marine_agg_limit = db.Column(db.String(100))
     inland_marine_premium = db.Column(db.Numeric(12, 2))
@@ -575,6 +593,7 @@ class CommercialInsurance(db.Model):
             'client_status': self.client.status if self.client else None,
             'parent_client': self.parent_client,
             'general_liability_carrier': self.general_liability_carrier,
+            'general_liability_agency': self.general_liability_agency,
             'general_liability_occ_limit': self.general_liability_occ_limit,
             'general_liability_agg_limit': self.general_liability_agg_limit,
             'general_liability_premium': format_premium(self.general_liability_premium),
@@ -582,6 +601,7 @@ class CommercialInsurance(db.Model):
             'general_liability_remarks': self.general_liability_remarks,
             'general_liability_outstanding_item': self.general_liability_outstanding_item,
             'property_carrier': self.property_carrier,
+            'property_agency': self.property_agency,
             'property_occ_limit': self.property_occ_limit,
             'property_agg_limit': self.property_agg_limit,
             'property_premium': format_premium(self.property_premium),
@@ -589,6 +609,7 @@ class CommercialInsurance(db.Model):
             'property_remarks': self.property_remarks,
             'property_outstanding_item': self.property_outstanding_item,
             'bop_carrier': self.bop_carrier,
+            'bop_agency': self.bop_agency,
             'bop_occ_limit': self.bop_occ_limit,
             'bop_agg_limit': self.bop_agg_limit,
             'bop_premium': format_premium(self.bop_premium),
@@ -596,11 +617,13 @@ class CommercialInsurance(db.Model):
             'bop_remarks': self.bop_remarks,
             'bop_outstanding_item': self.bop_outstanding_item,
             'umbrella_carrier': self.umbrella_carrier,
+            'umbrella_agency': self.umbrella_agency,
             'umbrella_occ_limit': self.umbrella_occ_limit,
             'umbrella_agg_limit': self.umbrella_agg_limit,
             'umbrella_premium': format_premium(self.umbrella_premium),
             'umbrella_renewal_date': self.umbrella_renewal_date.isoformat() if self.umbrella_renewal_date else None,
             'workers_comp_carrier': self.workers_comp_carrier,
+            'workers_comp_agency': self.workers_comp_agency,
             'workers_comp_occ_limit': self.workers_comp_occ_limit,
             'workers_comp_agg_limit': self.workers_comp_agg_limit,
             'workers_comp_premium': format_premium(self.workers_comp_premium),
@@ -608,16 +631,19 @@ class CommercialInsurance(db.Model):
             'workers_comp_remarks': self.workers_comp_remarks,
             'workers_comp_outstanding_item': self.workers_comp_outstanding_item,
             'professional_eo_carrier': self.professional_eo_carrier,
+            'professional_eo_agency': self.professional_eo_agency,
             'professional_eo_occ_limit': self.professional_eo_occ_limit,
             'professional_eo_agg_limit': self.professional_eo_agg_limit,
             'professional_eo_premium': format_premium(self.professional_eo_premium),
             'professional_eo_renewal_date': self.professional_eo_renewal_date.isoformat() if self.professional_eo_renewal_date else None,
             'cyber_carrier': self.cyber_carrier,
+            'cyber_agency': self.cyber_agency,
             'cyber_occ_limit': self.cyber_occ_limit,
             'cyber_agg_limit': self.cyber_agg_limit,
             'cyber_premium': format_premium(self.cyber_premium),
             'cyber_renewal_date': self.cyber_renewal_date.isoformat() if self.cyber_renewal_date else None,
             'auto_carrier': self.auto_carrier,
+            'auto_agency': self.auto_agency,
             'auto_occ_limit': self.auto_occ_limit,
             'auto_agg_limit': self.auto_agg_limit,
             'auto_premium': format_premium(self.auto_premium),
@@ -625,6 +651,7 @@ class CommercialInsurance(db.Model):
             'auto_remarks': self.auto_remarks,
             'auto_outstanding_item': self.auto_outstanding_item,
             'epli_carrier': self.epli_carrier,
+            'epli_agency': self.epli_agency,
             'epli_occ_limit': self.epli_occ_limit,
             'epli_agg_limit': self.epli_agg_limit,
             'epli_premium': format_premium(self.epli_premium),
@@ -632,6 +659,7 @@ class CommercialInsurance(db.Model):
             'epli_remarks': self.epli_remarks,
             'epli_outstanding_item': self.epli_outstanding_item,
             'nydbl_carrier': self.nydbl_carrier,
+            'nydbl_agency': self.nydbl_agency,
             'nydbl_occ_limit': self.nydbl_occ_limit,
             'nydbl_agg_limit': self.nydbl_agg_limit,
             'nydbl_premium': format_premium(self.nydbl_premium),
@@ -639,6 +667,7 @@ class CommercialInsurance(db.Model):
             'nydbl_remarks': self.nydbl_remarks,
             'nydbl_outstanding_item': self.nydbl_outstanding_item,
             'surety_carrier': self.surety_carrier,
+            'surety_agency': self.surety_agency,
             'surety_occ_limit': self.surety_occ_limit,
             'surety_agg_limit': self.surety_agg_limit,
             'surety_premium': format_premium(self.surety_premium),
@@ -646,6 +675,7 @@ class CommercialInsurance(db.Model):
             'surety_remarks': self.surety_remarks,
             'surety_outstanding_item': self.surety_outstanding_item,
             'product_liability_carrier': self.product_liability_carrier,
+            'product_liability_agency': self.product_liability_agency,
             'product_liability_occ_limit': self.product_liability_occ_limit,
             'product_liability_agg_limit': self.product_liability_agg_limit,
             'product_liability_premium': format_premium(self.product_liability_premium),
@@ -653,6 +683,7 @@ class CommercialInsurance(db.Model):
             'product_liability_remarks': self.product_liability_remarks,
             'product_liability_outstanding_item': self.product_liability_outstanding_item,
             'flood_carrier': self.flood_carrier,
+            'flood_agency': self.flood_agency,
             'flood_occ_limit': self.flood_occ_limit,
             'flood_agg_limit': self.flood_agg_limit,
             'flood_premium': format_premium(self.flood_premium),
@@ -660,11 +691,13 @@ class CommercialInsurance(db.Model):
             'flood_remarks': self.flood_remarks,
             'flood_outstanding_item': self.flood_outstanding_item,
             'crime_carrier': self.crime_carrier,
+            'crime_agency': self.crime_agency,
             'crime_occ_limit': self.crime_occ_limit,
             'crime_agg_limit': self.crime_agg_limit,
             'crime_premium': format_premium(self.crime_premium),
             'crime_renewal_date': self.crime_renewal_date.isoformat() if self.crime_renewal_date else None,
             'directors_officers_carrier': self.directors_officers_carrier,
+            'directors_officers_agency': self.directors_officers_agency,
             'directors_officers_occ_limit': self.directors_officers_occ_limit,
             'directors_officers_agg_limit': self.directors_officers_agg_limit,
             'directors_officers_premium': format_premium(self.directors_officers_premium),
@@ -672,6 +705,7 @@ class CommercialInsurance(db.Model):
             'directors_officers_remarks': self.directors_officers_remarks,
             'directors_officers_outstanding_item': self.directors_officers_outstanding_item,
             'fiduciary_carrier': self.fiduciary_carrier,
+            'fiduciary_agency': self.fiduciary_agency,
             'fiduciary_occ_limit': self.fiduciary_occ_limit,
             'fiduciary_agg_limit': self.fiduciary_agg_limit,
             'fiduciary_premium': format_premium(self.fiduciary_premium),
@@ -679,6 +713,7 @@ class CommercialInsurance(db.Model):
             'fiduciary_remarks': self.fiduciary_remarks,
             'fiduciary_outstanding_item': self.fiduciary_outstanding_item,
             'inland_marine_carrier': self.inland_marine_carrier,
+            'inland_marine_agency': self.inland_marine_agency,
             'inland_marine_occ_limit': self.inland_marine_occ_limit,
             'inland_marine_agg_limit': self.inland_marine_agg_limit,
             'inland_marine_premium': format_premium(self.inland_marine_premium),
@@ -710,6 +745,7 @@ class CommercialPlan(db.Model):
     plan_type = db.Column(db.String(50), nullable=False)
     plan_number = db.Column(db.Integer, nullable=False, default=1)
     carrier = db.Column(db.String(200))
+    agency = db.Column(db.String(200))
     coverage_occ_limit = db.Column(db.String(100))
     coverage_agg_limit = db.Column(db.String(100))
     premium = db.Column(db.Numeric(12, 2))
@@ -727,6 +763,7 @@ class CommercialPlan(db.Model):
             'plan_type': self.plan_type,
             'plan_number': self.plan_number,
             'carrier': self.carrier,
+            'agency': self.agency,
             'occ_limit': self.coverage_occ_limit,
             'agg_limit': self.coverage_agg_limit,
             'premium': float(self.premium) if self.premium else None,
@@ -734,6 +771,130 @@ class CommercialPlan(db.Model):
             'remarks': self.remarks,
             'outstanding_item': self.outstanding_item
         }
+
+
+class PersonalInsurance(db.Model):
+    __tablename__ = 'personal_insurance'
+
+    id = db.Column(db.Integer, primary_key=True)
+    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
+    parent_client = db.Column(db.String(200))
+
+    # 1. Personal Auto
+    personal_auto_carrier = db.Column(db.String(200))
+    personal_auto_bi_occ_limit = db.Column(db.String(100))
+    personal_auto_bi_agg_limit = db.Column(db.String(100))
+    personal_auto_pd_limit = db.Column(db.String(100))
+    personal_auto_renewal_date = db.Column(db.Date)
+    personal_auto_premium = db.Column(db.Numeric(12, 2))
+    personal_auto_outstanding_item = db.Column(db.String(50))
+    personal_auto_remarks = db.Column(db.Text)
+
+    # 2. Homeowners
+    homeowners_carrier = db.Column(db.String(200))
+    homeowners_dwelling_limit = db.Column(db.String(100))
+    homeowners_liability_limit = db.Column(db.String(100))
+    homeowners_renewal_date = db.Column(db.Date)
+    homeowners_premium = db.Column(db.Numeric(12, 2))
+    homeowners_outstanding_item = db.Column(db.String(50))
+    homeowners_remarks = db.Column(db.Text)
+
+    # 3. Personal Umbrella
+    personal_umbrella_carrier = db.Column(db.String(200))
+    personal_umbrella_liability_limit = db.Column(db.String(100))
+    personal_umbrella_deductible = db.Column(db.Numeric(12, 2))
+    personal_umbrella_renewal_date = db.Column(db.Date)
+    personal_umbrella_premium = db.Column(db.Numeric(12, 2))
+    personal_umbrella_outstanding_item = db.Column(db.String(50))
+    personal_umbrella_remarks = db.Column(db.Text)
+
+    # 4. Event Insurance
+    event_carrier = db.Column(db.String(200))
+    event_type = db.Column(db.String(200))
+    event_location = db.Column(db.String(500))
+    event_start_date = db.Column(db.Date)
+    event_end_date = db.Column(db.Date)
+    event_entry_fee = db.Column(db.Numeric(12, 2))
+    event_audience_count = db.Column(db.Integer)
+    event_premium = db.Column(db.Numeric(12, 2))
+    event_outstanding_item = db.Column(db.String(50))
+    event_remarks = db.Column(db.Text)
+
+    # 5. Visitors Medical
+    visitors_medical_carrier = db.Column(db.String(200))
+    visitors_medical_start_date = db.Column(db.Date)
+    visitors_medical_end_date = db.Column(db.Date)
+    visitors_medical_destination_country = db.Column(db.String(200))
+    visitors_medical_premium = db.Column(db.Numeric(12, 2))
+    visitors_medical_outstanding_item = db.Column(db.String(50))
+    visitors_medical_remarks = db.Column(db.Text)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationship
+    client = db.relationship('Client', back_populates='personal_insurance')
+
+    def to_dict(self):
+        def format_premium(val):
+            return float(val) if val else None
+
+        return {
+            'id': self.id,
+            'tax_id': self.tax_id,
+            'client_name': self.client.client_name if self.client else None,
+            'client_status': self.client.status if self.client else None,
+            'parent_client': self.parent_client,
+            # Personal Auto
+            'personal_auto_carrier': self.personal_auto_carrier,
+            'personal_auto_bi_occ_limit': self.personal_auto_bi_occ_limit,
+            'personal_auto_bi_agg_limit': self.personal_auto_bi_agg_limit,
+            'personal_auto_pd_limit': self.personal_auto_pd_limit,
+            'personal_auto_renewal_date': self.personal_auto_renewal_date.isoformat() if self.personal_auto_renewal_date else None,
+            'personal_auto_premium': format_premium(self.personal_auto_premium),
+            'personal_auto_outstanding_item': self.personal_auto_outstanding_item,
+            'personal_auto_remarks': self.personal_auto_remarks,
+            # Homeowners
+            'homeowners_carrier': self.homeowners_carrier,
+            'homeowners_dwelling_limit': self.homeowners_dwelling_limit,
+            'homeowners_liability_limit': self.homeowners_liability_limit,
+            'homeowners_renewal_date': self.homeowners_renewal_date.isoformat() if self.homeowners_renewal_date else None,
+            'homeowners_premium': format_premium(self.homeowners_premium),
+            'homeowners_outstanding_item': self.homeowners_outstanding_item,
+            'homeowners_remarks': self.homeowners_remarks,
+            # Personal Umbrella
+            'personal_umbrella_carrier': self.personal_umbrella_carrier,
+            'personal_umbrella_liability_limit': self.personal_umbrella_liability_limit,
+            'personal_umbrella_deductible': format_premium(self.personal_umbrella_deductible),
+            'personal_umbrella_renewal_date': self.personal_umbrella_renewal_date.isoformat() if self.personal_umbrella_renewal_date else None,
+            'personal_umbrella_premium': format_premium(self.personal_umbrella_premium),
+            'personal_umbrella_outstanding_item': self.personal_umbrella_outstanding_item,
+            'personal_umbrella_remarks': self.personal_umbrella_remarks,
+            # Event Insurance
+            'event_carrier': self.event_carrier,
+            'event_type': self.event_type,
+            'event_location': self.event_location,
+            'event_start_date': self.event_start_date.isoformat() if self.event_start_date else None,
+            'event_end_date': self.event_end_date.isoformat() if self.event_end_date else None,
+            'event_entry_fee': format_premium(self.event_entry_fee),
+            'event_audience_count': self.event_audience_count,
+            'event_premium': format_premium(self.event_premium),
+            'event_outstanding_item': self.event_outstanding_item,
+            'event_remarks': self.event_remarks,
+            # Visitors Medical
+            'visitors_medical_carrier': self.visitors_medical_carrier,
+            'visitors_medical_start_date': self.visitors_medical_start_date.isoformat() if self.visitors_medical_start_date else None,
+            'visitors_medical_end_date': self.visitors_medical_end_date.isoformat() if self.visitors_medical_end_date else None,
+            'visitors_medical_destination_country': self.visitors_medical_destination_country,
+            'visitors_medical_premium': format_premium(self.visitors_medical_premium),
+            'visitors_medical_outstanding_item': self.visitors_medical_outstanding_item,
+            'visitors_medical_remarks': self.visitors_medical_remarks,
+        }
+
+
+PERSONAL_INSURANCE_PRODUCTS = [
+    'personal_auto', 'homeowners', 'personal_umbrella', 'event', 'visitors_medical'
+]
 
 
 class Feedback(db.Model):
@@ -816,6 +977,7 @@ def save_commercial_plans(session, commercial, plans_data):
     for plan_type in MULTI_PLAN_COMMERCIAL_TYPES:
         for idx, plan_info in enumerate(plans_data.get(plan_type, []), 1):
             carrier = plan_info.get('carrier')
+            agency = plan_info.get('agency')
             renewal = plan_info.get('renewal_date')
             occ_limit_val = plan_info.get('occ_limit')
             agg_limit_val = plan_info.get('agg_limit')
@@ -826,6 +988,7 @@ def save_commercial_plans(session, commercial, plans_data):
                     plan_type=plan_type,
                     plan_number=idx,
                     carrier=carrier,
+                    agency=agency,
                     coverage_occ_limit=occ_limit_val,
                     coverage_agg_limit=agg_limit_val,
                     premium=parse_premium(premium_val),
@@ -840,6 +1003,7 @@ def save_commercial_plans(session, commercial, plans_data):
         plans_for_type = plans_data.get(plan_type, [])
         first = plans_for_type[0] if plans_for_type else {}
         setattr(commercial, f'{plan_type}_carrier', first.get('carrier') or None)
+        setattr(commercial, f'{plan_type}_agency', first.get('agency') or None)
         setattr(commercial, f'{plan_type}_occ_limit', first.get('occ_limit') or None)
         setattr(commercial, f'{plan_type}_agg_limit', first.get('agg_limit') or None)
         setattr(commercial, f'{plan_type}_premium', parse_premium(first.get('premium')))
@@ -1426,9 +1590,10 @@ def create_commercial():
             parent_client=data.get('parent_client'),
         )
 
-        # Set single-plan product fields (carrier, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item)
+        # Set single-plan product fields (carrier, agency, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item)
         for product in single_plan_products:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
+            setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
             setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             setattr(commercial, f'{product}_agg_limit', data.get(f'{product}_agg_limit') or None)
             setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
@@ -1439,6 +1604,7 @@ def create_commercial():
         # Multi-plan type flat fields (backward compat - will be overwritten by save_commercial_plans)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
+            setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
             setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             setattr(commercial, f'{product}_agg_limit', data.get(f'{product}_agg_limit') or None)
             setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
@@ -1490,6 +1656,8 @@ def update_commercial(commercial_id):
         for product in single_plan_products:
             if f'{product}_carrier' in data:
                 setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
+            if f'{product}_agency' in data:
+                setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
             if f'{product}_occ_limit' in data:
                 setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             if f'{product}_agg_limit' in data:
@@ -1507,6 +1675,8 @@ def update_commercial(commercial_id):
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
             if f'{product}_carrier' in data:
                 setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
+            if f'{product}_agency' in data:
+                setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
             if f'{product}_occ_limit' in data:
                 setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             if f'{product}_agg_limit' in data:
@@ -1568,93 +1738,110 @@ def clone_commercial(commercial_id):
             tax_id=original.tax_id,
             # Copy all product fields
             general_liability_carrier=original.general_liability_carrier,
+            general_liability_agency=original.general_liability_agency,
             general_liability_occ_limit=original.general_liability_occ_limit,
             general_liability_agg_limit=original.general_liability_agg_limit,
             general_liability_premium=original.general_liability_premium,
             general_liability_renewal_date=original.general_liability_renewal_date,
             property_carrier=original.property_carrier,
+            property_agency=original.property_agency,
             property_occ_limit=original.property_occ_limit,
             property_agg_limit=original.property_agg_limit,
             property_premium=original.property_premium,
             property_renewal_date=original.property_renewal_date,
             bop_carrier=original.bop_carrier,
+            bop_agency=original.bop_agency,
             bop_occ_limit=original.bop_occ_limit,
             bop_agg_limit=original.bop_agg_limit,
             bop_premium=original.bop_premium,
             bop_renewal_date=original.bop_renewal_date,
             umbrella_carrier=original.umbrella_carrier,
+            umbrella_agency=original.umbrella_agency,
             umbrella_occ_limit=original.umbrella_occ_limit,
             umbrella_agg_limit=original.umbrella_agg_limit,
             umbrella_premium=original.umbrella_premium,
             umbrella_renewal_date=original.umbrella_renewal_date,
             workers_comp_carrier=original.workers_comp_carrier,
+            workers_comp_agency=original.workers_comp_agency,
             workers_comp_occ_limit=original.workers_comp_occ_limit,
             workers_comp_agg_limit=original.workers_comp_agg_limit,
             workers_comp_premium=original.workers_comp_premium,
             workers_comp_renewal_date=original.workers_comp_renewal_date,
             professional_eo_carrier=original.professional_eo_carrier,
+            professional_eo_agency=original.professional_eo_agency,
             professional_eo_occ_limit=original.professional_eo_occ_limit,
             professional_eo_agg_limit=original.professional_eo_agg_limit,
             professional_eo_premium=original.professional_eo_premium,
             professional_eo_renewal_date=original.professional_eo_renewal_date,
             cyber_carrier=original.cyber_carrier,
+            cyber_agency=original.cyber_agency,
             cyber_occ_limit=original.cyber_occ_limit,
             cyber_agg_limit=original.cyber_agg_limit,
             cyber_premium=original.cyber_premium,
             cyber_renewal_date=original.cyber_renewal_date,
             auto_carrier=original.auto_carrier,
+            auto_agency=original.auto_agency,
             auto_occ_limit=original.auto_occ_limit,
             auto_agg_limit=original.auto_agg_limit,
             auto_premium=original.auto_premium,
             auto_renewal_date=original.auto_renewal_date,
             epli_carrier=original.epli_carrier,
+            epli_agency=original.epli_agency,
             epli_occ_limit=original.epli_occ_limit,
             epli_agg_limit=original.epli_agg_limit,
             epli_premium=original.epli_premium,
             epli_renewal_date=original.epli_renewal_date,
             nydbl_carrier=original.nydbl_carrier,
+            nydbl_agency=original.nydbl_agency,
             nydbl_occ_limit=original.nydbl_occ_limit,
             nydbl_agg_limit=original.nydbl_agg_limit,
             nydbl_premium=original.nydbl_premium,
             nydbl_renewal_date=original.nydbl_renewal_date,
             surety_carrier=original.surety_carrier,
+            surety_agency=original.surety_agency,
             surety_occ_limit=original.surety_occ_limit,
             surety_agg_limit=original.surety_agg_limit,
             surety_premium=original.surety_premium,
             surety_renewal_date=original.surety_renewal_date,
             product_liability_carrier=original.product_liability_carrier,
+            product_liability_agency=original.product_liability_agency,
             product_liability_occ_limit=original.product_liability_occ_limit,
             product_liability_agg_limit=original.product_liability_agg_limit,
             product_liability_premium=original.product_liability_premium,
             product_liability_renewal_date=original.product_liability_renewal_date,
             flood_carrier=original.flood_carrier,
+            flood_agency=original.flood_agency,
             flood_occ_limit=original.flood_occ_limit,
             flood_agg_limit=original.flood_agg_limit,
             flood_premium=original.flood_premium,
             flood_renewal_date=original.flood_renewal_date,
             crime_carrier=original.crime_carrier,
+            crime_agency=original.crime_agency,
             crime_occ_limit=original.crime_occ_limit,
             crime_agg_limit=original.crime_agg_limit,
             crime_premium=original.crime_premium,
             crime_renewal_date=original.crime_renewal_date,
             directors_officers_carrier=original.directors_officers_carrier,
+            directors_officers_agency=original.directors_officers_agency,
             directors_officers_occ_limit=original.directors_officers_occ_limit,
             directors_officers_agg_limit=original.directors_officers_agg_limit,
             directors_officers_premium=original.directors_officers_premium,
             directors_officers_renewal_date=original.directors_officers_renewal_date,
             fiduciary_carrier=original.fiduciary_carrier,
+            fiduciary_agency=original.fiduciary_agency,
             fiduciary_occ_limit=original.fiduciary_occ_limit,
             fiduciary_agg_limit=original.fiduciary_agg_limit,
             fiduciary_premium=original.fiduciary_premium,
             fiduciary_renewal_date=original.fiduciary_renewal_date,
             inland_marine_carrier=original.inland_marine_carrier,
+            inland_marine_agency=original.inland_marine_agency,
             inland_marine_occ_limit=original.inland_marine_occ_limit,
             inland_marine_agg_limit=original.inland_marine_agg_limit,
             inland_marine_premium=original.inland_marine_premium,
             inland_marine_renewal_date=original.inland_marine_renewal_date
         )
 
-        # Copy remarks and outstanding_item columns for single-plan types
+        # Copy remarks, outstanding_item, and agency columns for single-plan types
         for product in ['general_liability', 'property', 'bop', 'workers_comp', 'auto',
                        'epli', 'nydbl', 'surety', 'product_liability', 'flood',
                        'directors_officers', 'fiduciary', 'inland_marine']:
@@ -1690,6 +1877,237 @@ def clone_commercial(commercial_id):
     except Exception as e:
         session.rollback()
         logging.error(f"Error cloning commercial: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+# ===========================================================================
+# PERSONAL INSURANCE ENDPOINTS
+# ===========================================================================
+
+# Field definitions per personal insurance product type
+PERSONAL_FIELDS = {
+    'personal_auto': {
+        'text': ['carrier'],
+        'limit': ['bi_occ_limit', 'bi_agg_limit', 'pd_limit'],
+        'premium': ['premium'],
+        'date': ['renewal_date'],
+        'other': ['outstanding_item', 'remarks']
+    },
+    'homeowners': {
+        'text': ['carrier'],
+        'limit': ['dwelling_limit', 'liability_limit'],
+        'premium': ['premium'],
+        'date': ['renewal_date'],
+        'other': ['outstanding_item', 'remarks']
+    },
+    'personal_umbrella': {
+        'text': ['carrier'],
+        'limit': ['liability_limit'],
+        'premium': ['deductible', 'premium'],
+        'date': ['renewal_date'],
+        'other': ['outstanding_item', 'remarks']
+    },
+    'event': {
+        'text': ['carrier', 'type', 'location'],
+        'limit': [],
+        'premium': ['entry_fee', 'premium'],
+        'date': ['start_date', 'end_date'],
+        'integer': ['audience_count'],
+        'other': ['outstanding_item', 'remarks']
+    },
+    'visitors_medical': {
+        'text': ['carrier', 'destination_country'],
+        'limit': [],
+        'premium': ['premium'],
+        'date': ['start_date', 'end_date'],
+        'other': ['outstanding_item', 'remarks']
+    }
+}
+
+
+@app.route('/api/personal', methods=['GET'])
+def get_personal():
+    """Get all personal insurance records."""
+    session = Session()
+    try:
+        records = session.query(PersonalInsurance).all()
+        return jsonify({
+            'personal': [r.to_dict() for r in records],
+            'total': len(records)
+        })
+    except Exception as e:
+        logging.error(f"Error fetching personal insurance: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/personal/<int:personal_id>', methods=['GET'])
+def get_personal_by_id(personal_id):
+    """Get single personal insurance record."""
+    session = Session()
+    try:
+        record = session.query(PersonalInsurance).filter_by(id=personal_id).first()
+        if not record:
+            return jsonify({'error': 'Personal insurance not found'}), 404
+        return jsonify({'personal': record.to_dict()})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/personal', methods=['POST'])
+def create_personal():
+    """Create new personal insurance record."""
+    session = Session()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        personal = PersonalInsurance(
+            tax_id=data.get('tax_id'),
+            parent_client=data.get('parent_client'),
+        )
+
+        # Set fields for each product type
+        for product in PERSONAL_INSURANCE_PRODUCTS:
+            fields = PERSONAL_FIELDS[product]
+            for f in fields.get('text', []) + fields.get('limit', []):
+                setattr(personal, f'{product}_{f}', data.get(f'{product}_{f}') or None)
+            for f in fields.get('premium', []):
+                setattr(personal, f'{product}_{f}', parse_premium(data.get(f'{product}_{f}')))
+            for f in fields.get('date', []):
+                setattr(personal, f'{product}_{f}', parse_date(data.get(f'{product}_{f}')))
+            for f in fields.get('integer', []):
+                val = data.get(f'{product}_{f}')
+                setattr(personal, f'{product}_{f}', int(val) if val else None)
+            for f in fields.get('other', []):
+                setattr(personal, f'{product}_{f}', data.get(f'{product}_{f}') or None)
+
+        session.add(personal)
+        session.commit()
+        session.refresh(personal)
+
+        return jsonify({
+            'message': 'Personal insurance created successfully',
+            'personal': personal.to_dict()
+        }), 201
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error creating personal insurance: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/personal/<int:personal_id>', methods=['PUT'])
+def update_personal(personal_id):
+    """Update personal insurance record."""
+    session = Session()
+    try:
+        personal = session.query(PersonalInsurance).filter_by(id=personal_id).first()
+        if not personal:
+            return jsonify({'error': 'Personal insurance not found'}), 404
+
+        data = request.get_json()
+
+        personal.tax_id = data.get('tax_id', personal.tax_id)
+        personal.parent_client = data.get('parent_client', personal.parent_client)
+
+        for product in PERSONAL_INSURANCE_PRODUCTS:
+            fields = PERSONAL_FIELDS[product]
+            for f in fields.get('text', []) + fields.get('limit', []):
+                key = f'{product}_{f}'
+                if key in data:
+                    setattr(personal, key, data.get(key) or None)
+            for f in fields.get('premium', []):
+                key = f'{product}_{f}'
+                if key in data:
+                    setattr(personal, key, parse_premium(data.get(key)))
+            for f in fields.get('date', []):
+                key = f'{product}_{f}'
+                if key in data:
+                    setattr(personal, key, parse_date(data.get(key)))
+            for f in fields.get('integer', []):
+                key = f'{product}_{f}'
+                if key in data:
+                    val = data.get(key)
+                    setattr(personal, key, int(val) if val else None)
+            for f in fields.get('other', []):
+                key = f'{product}_{f}'
+                if key in data:
+                    setattr(personal, key, data.get(key) or None)
+
+        session.commit()
+
+        return jsonify({
+            'message': 'Personal insurance updated successfully',
+            'personal': personal.to_dict()
+        }), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error updating personal insurance: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/personal/<int:personal_id>', methods=['DELETE'])
+def delete_personal(personal_id):
+    """Delete personal insurance record."""
+    session = Session()
+    try:
+        personal = session.query(PersonalInsurance).filter_by(id=personal_id).first()
+        if not personal:
+            return jsonify({'error': 'Personal insurance not found'}), 404
+
+        session.delete(personal)
+        session.commit()
+
+        return jsonify({'message': 'Personal insurance deleted successfully'}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error deleting personal insurance: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/personal/<int:personal_id>/clone', methods=['POST'])
+def clone_personal(personal_id):
+    """Clone personal insurance record."""
+    session = Session()
+    try:
+        original = session.query(PersonalInsurance).filter_by(id=personal_id).first()
+        if not original:
+            return jsonify({'error': 'Personal insurance not found'}), 404
+
+        new_personal = PersonalInsurance(tax_id=original.tax_id, parent_client=original.parent_client)
+
+        # Copy all product fields
+        for product in PERSONAL_INSURANCE_PRODUCTS:
+            fields = PERSONAL_FIELDS[product]
+            all_fields = (fields.get('text', []) + fields.get('limit', []) +
+                         fields.get('premium', []) + fields.get('date', []) +
+                         fields.get('integer', []) + fields.get('other', []))
+            for f in all_fields:
+                setattr(new_personal, f'{product}_{f}', getattr(original, f'{product}_{f}', None))
+
+        session.add(new_personal)
+        session.commit()
+        session.refresh(new_personal)
+
+        return jsonify({
+            'message': 'Personal insurance cloned successfully',
+            'personal': new_personal.to_dict()
+        }), 201
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error cloning personal insurance: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()
@@ -1796,6 +2214,29 @@ def get_dashboard_renewals():
                         'client_name': comm.client.client_name if comm.client else None,
                         'tax_id': comm.tax_id,
                         'carrier': getattr(comm, field_name.replace('_renewal_date', '_carrier'), None)
+                    })
+
+        # Get personal insurance renewals
+        personal_renewal_fields = [
+            ('personal_auto_renewal_date', 'Personal Auto'),
+            ('homeowners_renewal_date', 'Homeowners'),
+            ('personal_umbrella_renewal_date', 'Personal Umbrella'),
+            ('event_start_date', 'Event Insurance'),
+            ('visitors_medical_start_date', 'Visitors Medical')
+        ]
+        personal_records = session.query(PersonalInsurance).all()
+        for pers in personal_records:
+            for field_name, policy_type in personal_renewal_fields:
+                renewal_date = getattr(pers, field_name)
+                if renewal_date and today <= renewal_date <= twelve_months:
+                    carrier_field = field_name.replace('_renewal_date', '_carrier').replace('_start_date', '_carrier')
+                    renewals.append({
+                        'type': 'personal',
+                        'policy_type': policy_type,
+                        'renewal_date': renewal_date.isoformat(),
+                        'client_name': pers.client.client_name if pers.client else None,
+                        'tax_id': pers.tax_id,
+                        'carrier': getattr(pers, carrier_field, None)
                     })
 
         # Sort by renewal date
@@ -2092,25 +2533,25 @@ def export_to_excel():
         commercial_sections = [(1, 3, '')]
         col_pos = 4
 
-        # Single-plan type columns (7 cols each: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+        # Single-plan type columns (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
         comm_single_col_start = col_pos
         for prefix, label in commercial_single_plan_defs:
-            commercial_headers.extend(['Carrier', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item'])
-            commercial_sections.append((col_pos, col_pos + 6, label))
-            col_pos += 7
+            commercial_headers.extend(['Carrier', 'Agency', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item'])
+            commercial_sections.append((col_pos, col_pos + 7, label))
+            col_pos += 8
 
-        # Multi-plan type columns (7 cols per plan: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+        # Multi-plan type columns (8 cols per plan: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
         comm_multi_col_map = {}
         for plan_type, label in commercial_multi_plan_defs:
             n = comm_max_plans[plan_type]
             start = col_pos
             for i in range(1, n + 1):
                 suffix = f' {i}' if n > 1 else ''
-                commercial_headers.extend([f'Carrier{suffix}', f'Occ Limit{suffix}', f'Agg Limit{suffix}', f'Premium{suffix}', f'Renewal Date{suffix}', f'Remarks{suffix}', f'Outstanding Item{suffix}'])
+                commercial_headers.extend([f'Carrier{suffix}', f'Agency{suffix}', f'Occ Limit{suffix}', f'Agg Limit{suffix}', f'Premium{suffix}', f'Renewal Date{suffix}', f'Remarks{suffix}', f'Outstanding Item{suffix}'])
             comm_multi_col_map[plan_type] = start
-            end = col_pos + n * 7 - 1
+            end = col_pos + n * 8 - 1
             commercial_sections.append((start, end, label))
-            col_pos += n * 7
+            col_pos += n * 8
 
         # Write section headers (Row 1)
         for start_col, end_col, title in commercial_sections:
@@ -2133,20 +2574,21 @@ def export_to_excel():
             ws_commercial.cell(row=row_idx, column=2, value=client_name)
             ws_commercial.cell(row=row_idx, column=3, value=comm.parent_client)
 
-            # Single-plan types (7 cols each: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+            # Single-plan types (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
             sc = comm_single_col_start
             for prefix, label in commercial_single_plan_defs:
                 ws_commercial.cell(row=row_idx, column=sc, value=getattr(comm, f'{prefix}_carrier', None) or 'None')
-                ws_commercial.cell(row=row_idx, column=sc + 1, value=getattr(comm, f'{prefix}_occ_limit', None) or 'N/A')
-                ws_commercial.cell(row=row_idx, column=sc + 2, value=getattr(comm, f'{prefix}_agg_limit', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 1, value=getattr(comm, f'{prefix}_agency', None))
+                ws_commercial.cell(row=row_idx, column=sc + 2, value=getattr(comm, f'{prefix}_occ_limit', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 3, value=getattr(comm, f'{prefix}_agg_limit', None) or 'N/A')
                 premium = getattr(comm, f'{prefix}_premium', None)
-                ws_commercial.cell(row=row_idx, column=sc + 3, value=float(premium) if premium else 0)
-                ws_commercial.cell(row=row_idx, column=sc + 4, value=getattr(comm, f'{prefix}_renewal_date', None) or 'N/A')
-                ws_commercial.cell(row=row_idx, column=sc + 5, value=getattr(comm, f'{prefix}_remarks', None))
-                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_outstanding_item', None))
-                sc += 7
+                ws_commercial.cell(row=row_idx, column=sc + 4, value=float(premium) if premium else 0)
+                ws_commercial.cell(row=row_idx, column=sc + 5, value=getattr(comm, f'{prefix}_renewal_date', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_remarks', None))
+                ws_commercial.cell(row=row_idx, column=sc + 7, value=getattr(comm, f'{prefix}_outstanding_item', None))
+                sc += 8
 
-            # Multi-plan types (7 cols per plan: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+            # Multi-plan types (8 cols per plan: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
             plans_by_type = {}
             for plan in comm.commercial_plans:
                 plans_by_type.setdefault(plan.plan_type, []).append(plan)
@@ -2155,13 +2597,78 @@ def export_to_excel():
                 start = comm_multi_col_map[plan_type]
                 for i in range(comm_max_plans[plan_type]):
                     if i < len(type_plans):
-                        ws_commercial.cell(row=row_idx, column=start + i * 7, value=type_plans[i].carrier)
-                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 1, value=type_plans[i].coverage_occ_limit)
-                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 2, value=type_plans[i].coverage_agg_limit)
-                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 3, value=float(type_plans[i].premium) if type_plans[i].premium else 0)
-                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 4, value=type_plans[i].renewal_date)
-                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 5, value=type_plans[i].remarks)
-                        ws_commercial.cell(row=row_idx, column=start + i * 7 + 6, value=type_plans[i].outstanding_item)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8, value=type_plans[i].carrier)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 1, value=type_plans[i].agency)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 2, value=type_plans[i].coverage_occ_limit)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 3, value=type_plans[i].coverage_agg_limit)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 4, value=float(type_plans[i].premium) if type_plans[i].premium else 0)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 5, value=type_plans[i].renewal_date)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 6, value=type_plans[i].remarks)
+                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 7, value=type_plans[i].outstanding_item)
+
+        # ========== PERSONAL INSURANCE SHEET ==========
+        ws_personal = wb.create_sheet("Personal")
+
+        personal_records = session.query(PersonalInsurance).all()
+
+        personal_product_defs = [
+            ('personal_auto', 'Personal Auto', ['Carrier', 'BI Occ Limit', 'BI Agg Limit', 'PD Limit', 'Premium', 'Renewal Date', 'Outstanding Item', 'Remarks']),
+            ('homeowners', 'Homeowners', ['Carrier', 'Dwelling Limit', 'Liability Limit', 'Premium', 'Renewal Date', 'Outstanding Item', 'Remarks']),
+            ('personal_umbrella', 'Personal Umbrella', ['Carrier', 'Liability Limit', 'Deductible', 'Premium', 'Renewal Date', 'Outstanding Item', 'Remarks']),
+            ('event', 'Event Insurance', ['Carrier', 'Type of Event', 'Event Location', 'Start Date', 'End Date', 'Entry Fee', 'Audience Count', 'Premium', 'Outstanding Item', 'Remarks']),
+            ('visitors_medical', 'Visitors Medical', ['Carrier', 'Start Date', 'End Date', 'Destination Country', 'Premium', 'Outstanding Item', 'Remarks']),
+        ]
+
+        # Field name mapping (column label -> db field suffix)
+        personal_field_map = {
+            'personal_auto': ['carrier', 'bi_occ_limit', 'bi_agg_limit', 'pd_limit', 'premium', 'renewal_date', 'outstanding_item', 'remarks'],
+            'homeowners': ['carrier', 'dwelling_limit', 'liability_limit', 'premium', 'renewal_date', 'outstanding_item', 'remarks'],
+            'personal_umbrella': ['carrier', 'liability_limit', 'deductible', 'premium', 'renewal_date', 'outstanding_item', 'remarks'],
+            'event': ['carrier', 'type', 'location', 'start_date', 'end_date', 'entry_fee', 'audience_count', 'premium', 'outstanding_item', 'remarks'],
+            'visitors_medical': ['carrier', 'start_date', 'end_date', 'destination_country', 'premium', 'outstanding_item', 'remarks'],
+        }
+
+        personal_headers = ['Tax ID', 'Client Name', 'Parent Client']
+        personal_sections = [(1, 3, '')]
+        pcol = 4
+
+        for prefix, label, cols in personal_product_defs:
+            personal_headers.extend(cols)
+            personal_sections.append((pcol, pcol + len(cols) - 1, label))
+            pcol += len(cols)
+
+        # Write section headers (Row 1)
+        for start_col, end_col, title in personal_sections:
+            if title:
+                if start_col != end_col:
+                    ws_personal.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
+                cell = ws_personal.cell(row=1, column=start_col, value=title)
+                cell.font = section_font
+                cell.fill = section_fill
+
+        # Write column headers (Row 2)
+        for col, header in enumerate(personal_headers, 1):
+            cell = ws_personal.cell(row=2, column=col, value=header)
+            cell.font = header_font
+
+        # Write personal data
+        for row_idx, rec in enumerate(personal_records, 3):
+            client_name = rec.client.client_name if rec.client else None
+            ws_personal.cell(row=row_idx, column=1, value=rec.tax_id)
+            ws_personal.cell(row=row_idx, column=2, value=client_name)
+            ws_personal.cell(row=row_idx, column=3, value=rec.parent_client)
+
+            pc = 4
+            for prefix, label, cols in personal_product_defs:
+                field_names = personal_field_map[prefix]
+                for fi, field_suffix in enumerate(field_names):
+                    val = getattr(rec, f'{prefix}_{field_suffix}', None)
+                    if val is not None and hasattr(val, 'isoformat'):
+                        pass  # date stays as-is for Excel
+                    elif isinstance(val, (int, float)):
+                        val = float(val) if val else 0
+                    ws_personal.cell(row=row_idx, column=pc + fi, value=val)
+                pc += len(field_names)
 
         # Save to BytesIO
         output = io.BytesIO()
@@ -2205,6 +2712,8 @@ def import_from_excel():
             'benefits_updated': 0,
             'commercial_created': 0,
             'commercial_updated': 0,
+            'personal_created': 0,
+            'personal_updated': 0,
             'errors': []
         }
 
@@ -2212,6 +2721,7 @@ def import_from_excel():
         error_rows_clients = []      # [(row_tuple, error_msg), ...]
         error_rows_benefits = []
         error_rows_commercial = []
+        error_rows_personal = []
 
         # ========== IMPORT CLIENTS ==========
         if 'Clients' in wb.sheetnames:
@@ -2452,7 +2962,7 @@ def import_from_excel():
             for cell in ws_commercial[1]:
                 section_headers.append(str(cell.value).strip() if cell.value else '')
 
-            # Single-plan types: 7 cols each (Carrier, Occ Limit, Agg Limit, Premium, Renewal Date, Remarks, Outstanding Item)
+            # Single-plan types: 8 cols each (Carrier, Agency, Occ Limit, Agg Limit, Premium, Renewal Date, Remarks, Outstanding Item)
             commercial_single_import_defs = [
                 ('general_liability', 'Commercial General Liability'),
                 ('property', 'Commercial Property'),
@@ -2469,7 +2979,7 @@ def import_from_excel():
                 ('inland_marine', 'Inland Marine')
             ]
 
-            # Multi-plan types: dynamic cols (Carrier, Occ Limit, Agg Limit, Premium, Renewal Date, Remarks, Outstanding Item per plan)
+            # Multi-plan types: dynamic cols (Carrier, Agency, Occ Limit, Agg Limit, Premium, Renewal Date, Remarks, Outstanding Item per plan)
             commercial_multi_import_defs = [
                 ('umbrella', 'Umbrella Liability'),
                 ('professional_eo', 'Professional or E&O'),
@@ -2490,7 +3000,7 @@ def import_from_excel():
                     comm_single_col_map[prefix] = section_col_map[label]
 
             # Build column maps for multi-plan types — detect how many plans per type
-            comm_multi_col_map = {}  # plan_type -> [(carrier_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col), ...]
+            comm_multi_col_map = {}  # plan_type -> [(carrier_col, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col), ...]
             for plan_type, label in commercial_multi_import_defs:
                 if label in section_col_map:
                     start = section_col_map[label]
@@ -2500,14 +3010,16 @@ def import_from_excel():
                     while i < len(comm_headers):
                         h = comm_headers[i].upper()
                         if 'CARRIER' in h:
-                            occ_limit_col = i + 1 if i + 1 < len(comm_headers) and 'OCC' in comm_headers[i + 1].upper() else None
-                            agg_limit_col = i + 2 if i + 2 < len(comm_headers) and 'AGG' in comm_headers[i + 2].upper() else None
-                            premium_col = i + 3 if i + 3 < len(comm_headers) and 'PREMIUM' in comm_headers[i + 3].upper() else None
-                            renewal_col = i + 4 if i + 4 < len(comm_headers) and 'RENEWAL' in comm_headers[i + 4].upper() else None
-                            remarks_col = i + 5 if i + 5 < len(comm_headers) and 'REMARKS' in comm_headers[i + 5].upper() else None
-                            oi_col = i + 6 if i + 6 < len(comm_headers) and 'OUTSTANDING' in comm_headers[i + 6].upper() else None
-                            plans.append((i, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col))
-                            i += 7
+                            agency_col = i + 1 if i + 1 < len(comm_headers) and 'AGENCY' in comm_headers[i + 1].upper() else None
+                            offset = 2 if agency_col is not None else 1
+                            occ_limit_col = i + offset if i + offset < len(comm_headers) and 'OCC' in comm_headers[i + offset].upper() else None
+                            agg_limit_col = i + offset + 1 if i + offset + 1 < len(comm_headers) and 'AGG' in comm_headers[i + offset + 1].upper() else None
+                            premium_col = i + offset + 2 if i + offset + 2 < len(comm_headers) and 'PREMIUM' in comm_headers[i + offset + 2].upper() else None
+                            renewal_col = i + offset + 3 if i + offset + 3 < len(comm_headers) and 'RENEWAL' in comm_headers[i + offset + 3].upper() else None
+                            remarks_col = i + offset + 4 if i + offset + 4 < len(comm_headers) and 'REMARKS' in comm_headers[i + offset + 4].upper() else None
+                            oi_col = i + offset + 5 if i + offset + 5 < len(comm_headers) and 'OUTSTANDING' in comm_headers[i + offset + 5].upper() else None
+                            plans.append((i, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col))
+                            i += offset + 6
                         else:
                             break
                     comm_multi_col_map[plan_type] = plans
@@ -2554,7 +3066,7 @@ def import_from_excel():
                         'parent_client': row[2] if len(row) > 2 else None
                     }
 
-                    # Single-plan types (7 cols each: carrier, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+                    # Single-plan types (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
                     for prefix, label in commercial_single_import_defs:
                         if prefix in comm_single_col_map:
                             sc = comm_single_col_map[prefix]
@@ -2562,18 +3074,19 @@ def import_from_excel():
                             if carrier and carrier == 'None':
                                 carrier = None
                             commercial_data[f'{prefix}_carrier'] = carrier
-                            occ_limit_val = safe_val(sc + 1)
+                            commercial_data[f'{prefix}_agency'] = safe_val(sc + 1)
+                            occ_limit_val = safe_val(sc + 2)
                             if occ_limit_val and occ_limit_val == 'N/A':
                                 occ_limit_val = None
                             commercial_data[f'{prefix}_occ_limit'] = occ_limit_val
-                            agg_limit_val = safe_val(sc + 2)
+                            agg_limit_val = safe_val(sc + 3)
                             if agg_limit_val and agg_limit_val == 'N/A':
                                 agg_limit_val = None
                             commercial_data[f'{prefix}_agg_limit'] = agg_limit_val
-                            commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 3))
-                            commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 4))
-                            commercial_data[f'{prefix}_remarks'] = safe_val(sc + 5)
-                            commercial_data[f'{prefix}_outstanding_item'] = safe_val(sc + 6)
+                            commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 4))
+                            commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 5))
+                            commercial_data[f'{prefix}_remarks'] = safe_val(sc + 6)
+                            commercial_data[f'{prefix}_outstanding_item'] = safe_val(sc + 7)
 
                     if existing:
                         for key, val in commercial_data.items():
@@ -2590,8 +3103,9 @@ def import_from_excel():
                     # Multi-plan types: create CommercialPlan child records
                     session.query(CommercialPlan).filter_by(commercial_insurance_id=comm_obj.id).delete()
                     for plan_type, cols_list in comm_multi_col_map.items():
-                        for plan_num, (carrier_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col) in enumerate(cols_list, 1):
+                        for plan_num, (carrier_col, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
+                            agency = safe_val(agency_col) if agency_col is not None else None
                             occ_limit_val = safe_val(occ_limit_col) if occ_limit_col is not None else None
                             agg_limit_val = safe_val(agg_limit_col) if agg_limit_col is not None else None
                             premium = safe_decimal(safe_val(premium_col)) if premium_col is not None else None
@@ -2604,6 +3118,7 @@ def import_from_excel():
                                     plan_type=plan_type,
                                     plan_number=plan_num,
                                     carrier=carrier,
+                                    agency=agency,
                                     coverage_occ_limit=occ_limit_val if occ_limit_val and occ_limit_val != 'N/A' else None,
                                     coverage_agg_limit=agg_limit_val if agg_limit_val and agg_limit_val != 'N/A' else None,
                                     premium=premium,
@@ -2615,6 +3130,7 @@ def import_from_excel():
                                 # Set flat fields from first plan for backward compat
                                 if plan_num == 1:
                                     setattr(comm_obj, f'{plan_type}_carrier', carrier)
+                                    setattr(comm_obj, f'{plan_type}_agency', agency)
                                     setattr(comm_obj, f'{plan_type}_occ_limit', occ_limit_val if occ_limit_val and occ_limit_val != 'N/A' else None)
                                     setattr(comm_obj, f'{plan_type}_agg_limit', agg_limit_val if agg_limit_val and agg_limit_val != 'N/A' else None)
                                     setattr(comm_obj, f'{plan_type}_premium', premium)
@@ -2624,6 +3140,116 @@ def import_from_excel():
                     error_rows_commercial.append((row, str(e)))
                     stats['errors'].append(f"Commercial row {row_idx}: {str(e)}")
 
+        # ========== IMPORT PERSONAL INSURANCE ==========
+        if 'Personal' in wb.sheetnames:
+            ws_personal = wb['Personal']
+
+            # Read headers from row 2
+            pers_headers = []
+            for cell in ws_personal[2]:
+                pers_headers.append(str(cell.value).strip() if cell.value else '')
+
+            # Read section headers from row 1
+            pers_section_headers = []
+            for cell in ws_personal[1]:
+                pers_section_headers.append(str(cell.value).strip() if cell.value else '')
+
+            # Map section label -> start column (0-based)
+            pers_section_col_map = {}
+            for i, sh in enumerate(pers_section_headers):
+                if sh and sh != 'None':
+                    pers_section_col_map[sh] = i
+
+            # Product defs: (prefix, section_label, [db_field_suffixes])
+            pers_import_defs = [
+                ('personal_auto', 'Personal Auto', ['carrier', 'bi_occ_limit', 'bi_agg_limit', 'pd_limit', 'premium', 'renewal_date', 'outstanding_item', 'remarks']),
+                ('homeowners', 'Homeowners', ['carrier', 'dwelling_limit', 'liability_limit', 'premium', 'renewal_date', 'outstanding_item', 'remarks']),
+                ('personal_umbrella', 'Personal Umbrella', ['carrier', 'liability_limit', 'deductible', 'premium', 'renewal_date', 'outstanding_item', 'remarks']),
+                ('event', 'Event Insurance', ['carrier', 'type', 'location', 'start_date', 'end_date', 'entry_fee', 'audience_count', 'premium', 'outstanding_item', 'remarks']),
+                ('visitors_medical', 'Visitors Medical', ['carrier', 'start_date', 'end_date', 'destination_country', 'premium', 'outstanding_item', 'remarks']),
+            ]
+
+            # Determine column start for each product from section headers
+            pers_product_col_map = {}
+            for prefix, label, fields in pers_import_defs:
+                if label in pers_section_col_map:
+                    pers_product_col_map[prefix] = (pers_section_col_map[label], fields)
+
+            premium_fields = {'premium', 'deductible', 'entry_fee'}
+            date_fields = {'renewal_date', 'start_date', 'end_date'}
+            integer_fields = {'audience_count'}
+
+            for row_idx, row in enumerate(ws_personal.iter_rows(min_row=3, values_only=True), start=3):
+                if not row[0]:
+                    continue
+                try:
+                    tax_id = str(row[0]).strip() if row[0] else None
+                    if not tax_id:
+                        continue
+
+                    client = session.query(Client).filter_by(tax_id=tax_id).first()
+                    if not client:
+                        error_rows_personal.append((row, f"Client with tax_id {tax_id} not found"))
+                        stats['errors'].append(f"Personal row {row_idx}: Client with tax_id {tax_id} not found")
+                        continue
+
+                    def parse_excel_date_p(val):
+                        if val is None or val == '' or val == 'N/A':
+                            return None
+                        if isinstance(val, datetime):
+                            return val.date()
+                        try:
+                            return parse(str(val)).date()
+                        except:
+                            return None
+
+                    def safe_decimal_p(val):
+                        if val is None or val == '' or val == 'N/A':
+                            return None
+                        try:
+                            return float(val)
+                        except:
+                            return None
+
+                    def safe_val_p(idx):
+                        return row[idx] if len(row) > idx and row[idx] else None
+
+                    existing = session.query(PersonalInsurance).filter_by(tax_id=tax_id).first()
+
+                    personal_data = {
+                        'tax_id': tax_id,
+                        'parent_client': row[2] if len(row) > 2 else None
+                    }
+
+                    for prefix, label, fields in pers_import_defs:
+                        if prefix in pers_product_col_map:
+                            start_col, field_list = pers_product_col_map[prefix]
+                            for fi, field_suffix in enumerate(field_list):
+                                val = safe_val_p(start_col + fi)
+                                key = f'{prefix}_{field_suffix}'
+                                if field_suffix in date_fields:
+                                    personal_data[key] = parse_excel_date_p(val)
+                                elif field_suffix in premium_fields:
+                                    personal_data[key] = safe_decimal_p(val)
+                                elif field_suffix in integer_fields:
+                                    personal_data[key] = int(val) if val else None
+                                else:
+                                    personal_data[key] = val
+
+                    if existing:
+                        for key, val in personal_data.items():
+                            if val is not None:
+                                setattr(existing, key, val)
+                        stats['personal_updated'] += 1
+                    else:
+                        pers_obj = PersonalInsurance(**personal_data)
+                        session.add(pers_obj)
+                        stats['personal_created'] += 1
+
+                except Exception as e:
+                    error_rows_personal.append((row, str(e)))
+                    stats['errors'].append(f"Personal row {row_idx}: {str(e)}")
+
         session.commit()
 
         # ========== BUILD ERRORS WORKBOOK ==========
@@ -2632,7 +3258,7 @@ def import_from_excel():
             'stats': stats
         }
 
-        has_errors = error_rows_clients or error_rows_benefits or error_rows_commercial
+        has_errors = error_rows_clients or error_rows_benefits or error_rows_commercial or error_rows_personal
         if has_errors:
             error_wb = Workbook()
             error_wb.remove(error_wb.active)  # Remove default sheet
@@ -2692,6 +3318,8 @@ def import_from_excel():
                 copy_headers_and_write_errors('Employee Benefits', error_rows_benefits)
             if 'Commercial' in wb.sheetnames:
                 copy_headers_and_write_errors('Commercial', error_rows_commercial)
+                if 'Personal' in wb.sheetnames:
+                    copy_headers_and_write_errors('Personal', error_rows_personal)
 
             # Encode as base64
             error_output = io.BytesIO()

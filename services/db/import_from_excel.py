@@ -271,12 +271,15 @@ def import_commercial_insurance(conn):
             # Excel structure: Carrier, Limit, Premium, Renewal Date (then .1, .2, .3, etc.)
             for col_suffix, product_prefix in products:
                 carrier_col = f"Carrier{col_suffix}"
+                agency_col = f"Agency{col_suffix}"
                 limit_col = f"Limit{col_suffix}"
                 premium_col = f"Premium{col_suffix}"
                 renewal_col = f"Renewal Date{col_suffix}"
 
                 if carrier_col in row:
                     data[f"{product_prefix}_carrier"] = clean_value(row[carrier_col])
+                if agency_col in row:
+                    data[f"{product_prefix}_agency"] = clean_value(row[agency_col])
                 if limit_col in row:
                     data[f"{product_prefix}_limit"] = clean_value(row[limit_col])
                 if premium_col in row:
