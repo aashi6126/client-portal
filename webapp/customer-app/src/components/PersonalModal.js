@@ -63,7 +63,7 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
     // Personal Umbrella
     personal_umbrella_carrier: '', personal_umbrella_liability_limit: '', personal_umbrella_deductible: '', personal_umbrella_renewal_date: '', personal_umbrella_premium: '', personal_umbrella_outstanding_item: '', personal_umbrella_remarks: '',
     // Event Insurance
-    event_carrier: '', event_type_of_event: '', event_location: '', event_start_date: '', event_end_date: '', event_entry_fee: '', event_audience_count: '', event_premium: '', event_outstanding_item: '', event_remarks: '',
+    event_carrier: '', event_type: '', event_location: '', event_start_date: '', event_end_date: '', event_entry_fee: '', event_audience_count: '', event_premium: '', event_outstanding_item: '', event_remarks: '',
     // Visitors Medical
     visitors_medical_carrier: '', visitors_medical_start_date: '', visitors_medical_end_date: '', visitors_medical_destination_country: '', visitors_medical_premium: '', visitors_medical_outstanding_item: '', visitors_medical_remarks: ''
   });
@@ -252,8 +252,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
               <TextField
                 label="Bodily Injury Occ Limit"
                 type="number"
-                value={formData[`${prefix}_bodily_injury_occ_limit`] || ''}
-                onChange={handleChange(`${prefix}_bodily_injury_occ_limit`)}
+                value={formData[`${prefix}_bi_occ_limit`] || ''}
+                onChange={handleChange(`${prefix}_bi_occ_limit`)}
                 fullWidth
                 size="small"
                 InputProps={{
@@ -266,8 +266,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
               <TextField
                 label="Bodily Injury Agg Limit"
                 type="number"
-                value={formData[`${prefix}_bodily_injury_agg_limit`] || ''}
-                onChange={handleChange(`${prefix}_bodily_injury_agg_limit`)}
+                value={formData[`${prefix}_bi_agg_limit`] || ''}
+                onChange={handleChange(`${prefix}_bi_agg_limit`)}
                 fullWidth
                 size="small"
                 InputProps={{
@@ -280,8 +280,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
               <TextField
                 label="Property Damage Limit"
                 type="number"
-                value={formData[`${prefix}_property_damage_limit`] || ''}
-                onChange={handleChange(`${prefix}_property_damage_limit`)}
+                value={formData[`${prefix}_pd_limit`] || ''}
+                onChange={handleChange(`${prefix}_pd_limit`)}
                 fullWidth
                 size="small"
                 InputProps={{
@@ -481,8 +481,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
             <Grid item xs={12} sm={6}>
               <TextField
                 label="Type of Event"
-                value={formData[`${prefix}_type_of_event`] || ''}
-                onChange={handleChange(`${prefix}_type_of_event`)}
+                value={formData[`${prefix}_type`] || ''}
+                onChange={handleChange(`${prefix}_type`)}
                 fullWidth
                 size="small"
               />
