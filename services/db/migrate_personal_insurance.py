@@ -41,13 +41,31 @@ def migrate_database(db_path):
         ''')
         print("  Created individuals table")
 
-    # Create personal_insurance table
+    # Create or upgrade personal_insurance table
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='personal_insurance'")
     if cursor.fetchone():
-        print("  personal_insurance table already exists, skipping")
-        conn.commit()
-        conn.close()
-        return True
+        # Check if it has the new individual_id column
+        cursor.execute("PRAGMA table_info(personal_insurance)")
+        cols = {row[1] for row in cursor.fetchall()}
+        if 'individual_id' in cols:
+            print("  personal_insurance table already up to date, skipping")
+            conn.commit()
+            conn.close()
+            return True
+        else:
+            # Old schema with tax_id — check if empty, then recreate
+            cursor.execute("SELECT COUNT(*) FROM personal_insurance")
+            count = cursor.fetchone()[0]
+            if count == 0:
+                cursor.execute("DROP TABLE personal_insurance")
+                print("  Dropped old personal_insurance table (empty, had tax_id schema)")
+            else:
+                print(f"  WARNING: personal_insurance has {count} rows with old tax_id schema.")
+                print("  Adding individual_id column. You may need to manually migrate data.")
+                cursor.execute("ALTER TABLE personal_insurance ADD COLUMN individual_id VARCHAR(50) REFERENCES individuals(individual_id)")
+                conn.commit()
+                conn.close()
+                return True
 
     cursor.execute('''
         CREATE TABLE personal_insurance (
