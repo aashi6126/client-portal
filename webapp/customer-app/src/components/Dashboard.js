@@ -498,7 +498,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
 
           <Card
             sx={{ backgroundColor: '#fff3e0', border: '1px solid #ffcc80', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-            onClick={() => onNavigateToTab && onNavigateToTab(2)}
+            onClick={() => onNavigateToTab && onNavigateToTab(3)}
           >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -517,7 +517,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
 
           <Card
             sx={{ backgroundColor: '#e3f2fd', border: '1px solid #90caf9', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-            onClick={() => onNavigateToTab && onNavigateToTab(3)}
+            onClick={() => onNavigateToTab && onNavigateToTab(4)}
           >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
@@ -536,7 +536,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
 
           <Card
             sx={{ backgroundColor: '#f3e5f5', border: '1px solid #ce93d8', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-            onClick={() => onNavigateToTab && onNavigateToTab(4)}
+            onClick={() => onNavigateToTab && onNavigateToTab(5)}
           >
             <CardContent>
               <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

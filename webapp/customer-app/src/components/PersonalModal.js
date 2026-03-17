@@ -43,7 +43,7 @@ const isPastDate = (dateStr) => {
 /**
  * PersonalModal - Form for creating/editing personal insurance records
  */
-const PersonalModal = ({ open, onClose, personal, onSave, clients = [], initialCoverageTab = null }) => {
+const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], initialCoverageTab = null }) => {
   // Insurance product types configuration
   const insuranceProducts = [
     { name: 'Personal Auto', tabLabel: 'Auto', prefix: 'personal_auto' },
@@ -55,10 +55,9 @@ const PersonalModal = ({ open, onClose, personal, onSave, clients = [], initialC
 
   // Initialize form with all fields
   const getInitialFormData = () => ({
-    tax_id: '',
-    parent_client: '',
+    individual_id: '',
     // Personal Auto
-    personal_auto_carrier: '', personal_auto_bodily_injury_occ_limit: '', personal_auto_bodily_injury_agg_limit: '', personal_auto_property_damage_limit: '', personal_auto_renewal_date: '', personal_auto_premium: '', personal_auto_outstanding_item: '', personal_auto_remarks: '',
+    personal_auto_carrier: '', personal_auto_bi_occ_limit: '', personal_auto_bi_agg_limit: '', personal_auto_pd_limit: '', personal_auto_renewal_date: '', personal_auto_premium: '', personal_auto_outstanding_item: '', personal_auto_remarks: '',
     // Homeowners
     homeowners_carrier: '', homeowners_dwelling_limit: '', homeowners_liability_limit: '', homeowners_renewal_date: '', homeowners_premium: '', homeowners_outstanding_item: '', homeowners_remarks: '',
     // Personal Umbrella
@@ -117,12 +116,12 @@ const PersonalModal = ({ open, onClose, personal, onSave, clients = [], initialC
     }
   };
 
-  // Handle client selection
-  const handleClientChange = (event, newValue) => {
+  // Handle individual selection
+  const handleIndividualChange = (event, newValue) => {
     if (newValue) {
-      setFormData({ ...formData, tax_id: newValue.tax_id });
-      if (errors.tax_id) {
-        setErrors({ ...errors, tax_id: null });
+      setFormData({ ...formData, individual_id: newValue.individual_id });
+      if (errors.individual_id) {
+        setErrors({ ...errors, individual_id: null });
       }
     }
   };
@@ -131,8 +130,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, clients = [], initialC
   const validate = () => {
     const newErrors = {};
 
-    if (!formData.tax_id || formData.tax_id.trim() === '') {
-      newErrors.tax_id = 'Client is required';
+    if (!formData.individual_id || formData.individual_id.trim() === '') {
+      newErrors.individual_id = 'Individual is required';
     }
 
     setErrors(newErrors);
@@ -150,7 +149,7 @@ const PersonalModal = ({ open, onClose, personal, onSave, clients = [], initialC
   };
 
   const isEditMode = Boolean(personal && personal.id);
-  const selectedClient = clients.find(c => c.tax_id === formData.tax_id);
+  const selectedIndividual = individuals.find(i => i.individual_id === formData.individual_id);
 
   // Get available coverages (not yet added)
   const availableCoverages = insuranceProducts.filter(
@@ -659,35 +658,24 @@ const PersonalModal = ({ open, onClose, personal, onSave, clients = [], initialC
           {/* Client Information */}
           <Box sx={{ mb: 3 }}>
             <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold' }}>
-              Client Information
+              Individual Information
             </Typography>
             <Autocomplete
-              options={clients}
-              getOptionLabel={(option) => `${option.client_name} (${option.tax_id})`}
-              value={selectedClient || null}
-              onChange={handleClientChange}
+              options={individuals}
+              getOptionLabel={(option) => `${option.first_name || ''} ${option.last_name || ''} (${option.individual_id})`}
+              value={selectedIndividual || null}
+              onChange={handleIndividualChange}
               renderInput={(params) => (
                 <TextField
                   {...params}
-                  label="Select Client *"
-                  error={Boolean(errors.tax_id)}
-                  helperText={errors.tax_id}
+                  label="Select Individual *"
+                  error={Boolean(errors.individual_id)}
+                  helperText={errors.individual_id}
                   size="small"
                 />
               )}
               disabled={isEditMode}
               fullWidth
-              sx={{ mb: 2 }}
-            />
-            <Autocomplete
-              freeSolo
-              options={clients.map(c => c.client_name).filter(Boolean)}
-              value={formData.parent_client || ''}
-              onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-              onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-              renderInput={(params) => (
-                <TextField {...params} label="Parent Client" size="small" fullWidth />
-              )}
             />
           </Box>
 

@@ -43,10 +43,13 @@ import CommercialTable from './components/CommercialTable';
 import CommercialModal from './components/CommercialModal';
 import PersonalTable from './components/PersonalTable';
 import PersonalModal from './components/PersonalModal';
+import IndividualTable from './components/IndividualTable';
+import IndividualModal from './components/IndividualModal';
 import PocManagement from './components/PocManagement';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
+const API_INDIVIDUALS = '/api/individuals';
 const API_BENEFITS = '/api/benefits';
 const API_COMMERCIAL = '/api/commercial';
 const API_PERSONAL = '/api/personal';
@@ -58,6 +61,7 @@ function NewApp() {
 
   // Data states
   const [clients, setClients] = useState([]);
+  const [individuals, setIndividuals] = useState([]);
   const [benefits, setBenefits] = useState([]);
   const [commercial, setCommercial] = useState([]);
   const [personal, setPersonal] = useState([]);
@@ -79,6 +83,10 @@ function NewApp() {
   // Modal states for Clients
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [currentClient, setCurrentClient] = useState(null);
+
+  // Modal states for Individuals
+  const [individualModalOpen, setIndividualModalOpen] = useState(false);
+  const [currentIndividual, setCurrentIndividual] = useState(null);
 
   // Modal states for Benefits
   const [benefitsModalOpen, setBenefitsModalOpen] = useState(false);
@@ -104,6 +112,7 @@ function NewApp() {
 
   // Search states
   const [clientSearch, setClientSearch] = useState('');
+  const [individualSearch, setIndividualSearch] = useState('');
   const [benefitsSearch, setBenefitsSearch] = useState('');
   const [commercialSearch, setCommercialSearch] = useState('');
   const [personalSearch, setPersonalSearch] = useState('');
@@ -128,6 +137,7 @@ function NewApp() {
   // Fetch all data
   const fetchAllData = () => {
     fetchClients();
+    fetchIndividuals();
     fetchBenefits();
     fetchCommercial();
     fetchPersonal();
@@ -182,6 +192,45 @@ function NewApp() {
         setDataVersion(v => v + 1);
       })
       .catch(error => console.error('Error cloning client:', error));
+  };
+
+  // ========== INDIVIDUAL OPERATIONS ==========
+
+  const fetchIndividuals = () => {
+    axios.get(API_INDIVIDUALS)
+      .then(response => {
+        setIndividuals(response.data.individuals || []);
+      })
+      .catch(error => console.error('Error fetching individuals:', error));
+  };
+
+  const openIndividualModal = (individual = null) => {
+    setCurrentIndividual(individual);
+    setIndividualModalOpen(true);
+  };
+
+  const saveIndividual = (individualData) => {
+    if (individualData.id) {
+      axios.put(`${API_INDIVIDUALS}/${individualData.id}`, individualData)
+        .then(() => {
+          setIndividualModalOpen(false);
+          fetchIndividuals();
+          setDataVersion(v => v + 1);
+        })
+        .catch(error => console.error('Error updating individual:', error));
+    } else {
+      axios.post(API_INDIVIDUALS, individualData)
+        .then(() => {
+          setIndividualModalOpen(false);
+          fetchIndividuals();
+          setDataVersion(v => v + 1);
+        })
+        .catch(error => console.error('Error creating individual:', error));
+    }
+  };
+
+  const deleteIndividual = (individual) => {
+    setDeleteDialog({ open: true, type: 'individual', item: individual });
   };
 
   // ========== BENEFITS OPERATIONS ==========
@@ -371,6 +420,14 @@ function NewApp() {
           setDataVersion(v => v + 1);
         })
         .catch(error => console.error('Error deleting commercial:', error));
+    } else if (type === 'individual') {
+      axios.delete(`${API_INDIVIDUALS}/${item.id}`)
+        .then(() => {
+          fetchIndividuals();
+          fetchPersonal();
+          setDataVersion(v => v + 1);
+        })
+        .catch(error => console.error('Error deleting individual:', error));
     } else if (type === 'personal') {
       axios.delete(`${API_PERSONAL}/${item.id}`)
         .then(() => {
@@ -406,6 +463,15 @@ function NewApp() {
     return clients.filter(client =>
       Object.values(client).some(val =>
         val && val.toString().toLowerCase().includes(clientSearch.toLowerCase())
+      )
+    );
+  };
+
+  const filterIndividuals = () => {
+    if (!individualSearch) return individuals;
+    return individuals.filter(ind =>
+      Object.values(ind).some(val =>
+        val && val.toString().toLowerCase().includes(individualSearch.toLowerCase())
       )
     );
   };
@@ -621,6 +687,7 @@ function NewApp() {
           <Tabs value={activeTab} onChange={handleTabChange}>
             <Tab label="Dashboard" />
             <Tab label="Clients" />
+            <Tab label="Individuals" />
             <Tab label="Employee Benefits" />
             <Tab label="Commercial Insurance" />
             <Tab label="Personal Insurance" />
@@ -674,8 +741,42 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 2: Employee Benefits */}
+        {/* Tab 2: Individuals */}
         {activeTab === 2 && (
+          <Box mt={2}>
+            <Paper sx={{ p: 2, mb: 2 }}>
+              <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+                <Typography variant="h6">
+                  Individuals ({filterIndividuals().length} of {individuals.length})
+                </Typography>
+                <Button
+                  variant="contained"
+                  color="primary"
+                  startIcon={<AddIcon />}
+                  onClick={() => openIndividualModal()}
+                >
+                  Add Individual
+                </Button>
+              </Stack>
+              <TextField
+                label="Search individuals..."
+                value={individualSearch}
+                onChange={(e) => setIndividualSearch(e.target.value)}
+                variant="outlined"
+                size="small"
+                fullWidth
+              />
+            </Paper>
+            <IndividualTable
+              individuals={filterIndividuals()}
+              onEdit={openIndividualModal}
+              onDelete={deleteIndividual}
+            />
+          </Box>
+        )}
+
+        {/* Tab 3: Employee Benefits */}
+        {activeTab === 3 && (
           <Box mt={2}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -708,8 +809,8 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 3: Commercial Insurance */}
-        {activeTab === 3 && (
+        {/* Tab 4: Commercial Insurance */}
+        {activeTab === 4 && (
           <Box mt={2}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -742,8 +843,8 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 4: Personal Insurance */}
-        {activeTab === 4 && (
+        {/* Tab 5: Personal Insurance */}
+        {activeTab === 5 && (
           <Box mt={2}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
@@ -776,13 +877,13 @@ function NewApp() {
           </Box>
         )}
 
-        {/* Tab 5: PoC Management */}
-        {activeTab === 5 && (
+        {/* Tab 6: PoC Management */}
+        {activeTab === 6 && (
           <PocManagement dataVersion={dataVersion} />
         )}
 
-        {/* Tab 6: Feedback */}
-        {activeTab === 6 && (
+        {/* Tab 7: Feedback */}
+        {activeTab === 7 && (
           <Box mt={2}>
             <Paper sx={{ p: 2, mb: 2 }}>
               <Stack direction="row" spacing={2} alignItems="center" justifyContent="space-between">
@@ -906,8 +1007,15 @@ function NewApp() {
         onClose={() => setPersonalModalOpen(false)}
         personal={currentPersonal}
         onSave={savePersonal}
-        clients={currentPersonal ? clients : clients.filter(c => !personal.some(p => p.tax_id === c.tax_id))}
+        individuals={currentPersonal ? individuals : individuals.filter(i => !personal.some(p => p.individual_id === i.individual_id))}
         initialCoverageTab={personalInitialTab}
+      />
+
+      <IndividualModal
+        open={individualModalOpen}
+        onClose={() => setIndividualModalOpen(false)}
+        individual={currentIndividual}
+        onSave={saveIndividual}
       />
 
       {/* Delete Confirmation Dialog */}
@@ -919,10 +1027,17 @@ function NewApp() {
         <DialogContent>
           <DialogContentText>
             Are you sure you want to delete this {deleteDialog.type}?
+            {deleteDialog.type === 'individual' && (
+              <Box sx={{ mt: 2, p: 1, backgroundColor: '#fff3cd', borderRadius: 1 }}>
+                <Typography variant="body2" color="warning.dark">
+                  <strong>Warning:</strong> Deleting this individual will also delete all associated Personal Insurance records.
+                </Typography>
+              </Box>
+            )}
             {deleteDialog.type === 'client' && (
               <Box sx={{ mt: 2, p: 1, backgroundColor: '#fff3cd', borderRadius: 1 }}>
                 <Typography variant="body2" color="warning.dark">
-                  <strong>Warning:</strong> Deleting this client will also delete all associated Employee Benefits, Commercial Insurance, and Personal Insurance records.
+                  <strong>Warning:</strong> Deleting this client will also delete all associated Employee Benefits and Commercial Insurance records.
                 </Typography>
               </Box>
             )}

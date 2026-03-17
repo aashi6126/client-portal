@@ -1,5 +1,5 @@
 """
-Migration script to create the personal_insurance table.
+Migration script to create the individuals and personal_insurance tables.
 """
 
 import sqlite3
@@ -15,18 +15,44 @@ def migrate_database(db_path):
     conn = sqlite3.connect(db_path)
     cursor = conn.cursor()
 
-    # Check if table already exists
+    # Create individuals table
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='individuals'")
+    if cursor.fetchone():
+        print("  individuals table already exists, skipping")
+    else:
+        cursor.execute('''
+            CREATE TABLE individuals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                individual_id VARCHAR(50) UNIQUE NOT NULL,
+                first_name VARCHAR(200),
+                last_name VARCHAR(200),
+                email VARCHAR(200),
+                phone_number VARCHAR(50),
+
+                address_line_1 VARCHAR(200),
+                address_line_2 VARCHAR(200),
+                city VARCHAR(100),
+                state VARCHAR(50),
+                zip_code VARCHAR(20),
+                status VARCHAR(50) DEFAULT 'Active',
+                created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        ''')
+        print("  Created individuals table")
+
+    # Create personal_insurance table
     cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='personal_insurance'")
     if cursor.fetchone():
         print("  personal_insurance table already exists, skipping")
+        conn.commit()
         conn.close()
         return True
 
     cursor.execute('''
         CREATE TABLE personal_insurance (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
-            tax_id VARCHAR(50) NOT NULL REFERENCES clients(tax_id),
-            parent_client VARCHAR(200),
+            individual_id VARCHAR(50) NOT NULL REFERENCES individuals(individual_id),
 
             -- Personal Auto
             personal_auto_carrier VARCHAR(200),
@@ -100,7 +126,7 @@ if __name__ == "__main__":
     ]
 
     print("=" * 60)
-    print("Personal Insurance Table Migration")
+    print("Individuals & Personal Insurance Table Migration")
     print("=" * 60)
     print()
 

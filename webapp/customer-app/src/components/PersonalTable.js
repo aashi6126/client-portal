@@ -235,20 +235,20 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
 // Column definitions for Personal Insurance table
 const getPersonalColumns = (onEdit) => [
   {
-    id: 'tax_id',
-    label: 'Tax ID',
+    id: 'individual_id',
+    label: 'Individual ID',
     sticky: true,
     sortable: true,
-    minWidth: 90
+    minWidth: 120
   },
   {
-    id: 'client_name',
-    label: 'Client Name',
+    id: 'individual_name',
+    label: 'Individual Name',
     sticky: true,
     sortable: true,
     minWidth: 140,
     render: (value, row) => {
-      const dotColor = row.client_status === 'Active' ? '#4caf50' : row.client_status === 'Prospect' ? '#ff9800' : '#999';
+      const dotColor = row.individual_status === 'Active' ? '#4caf50' : row.individual_status === 'Prospect' ? '#ff9800' : '#999';
       return (
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
           <span style={{
@@ -265,8 +265,6 @@ const getPersonalColumns = (onEdit) => [
     }
   },
   {
-    id: 'parent_client',
-    label: 'Parent Client',
     sortable: true,
     minWidth: 140
   },

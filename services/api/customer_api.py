@@ -161,7 +161,6 @@ class Client(db.Model):
     # Relationships
     employee_benefits = db.relationship('EmployeeBenefit', back_populates='client', cascade='all, delete-orphan')
     commercial_insurance = db.relationship('CommercialInsurance', back_populates='client', cascade='all, delete-orphan')
-    personal_insurance = db.relationship('PersonalInsurance', back_populates='client', cascade='all, delete-orphan')
 
     def to_dict(self):
         return {
@@ -179,6 +178,45 @@ class Client(db.Model):
             'status': self.status,
             'gross_revenue': float(self.gross_revenue) if self.gross_revenue else None,
             'total_ees': self.total_ees
+        }
+
+
+class Individual(db.Model):
+    __tablename__ = 'individuals'
+
+    id = db.Column(db.Integer, primary_key=True)
+    individual_id = db.Column(db.String(50), unique=True, nullable=False)
+    first_name = db.Column(db.String(200))
+    last_name = db.Column(db.String(200))
+    email = db.Column(db.String(200))
+    phone_number = db.Column(db.String(50))
+    address_line_1 = db.Column(db.String(200))
+    address_line_2 = db.Column(db.String(200))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    zip_code = db.Column(db.String(20))
+    status = db.Column(db.String(50), default='Active')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    # Relationships
+    personal_insurance = db.relationship('PersonalInsurance', back_populates='individual', cascade='all, delete-orphan')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'individual_id': self.individual_id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'full_name': f"{self.first_name or ''} {self.last_name or ''}".strip(),
+            'email': self.email,
+            'phone_number': self.phone_number,
+            'address_line_1': self.address_line_1,
+            'address_line_2': self.address_line_2,
+            'city': self.city,
+            'state': self.state,
+            'zip_code': self.zip_code,
+            'status': self.status
         }
 
 
@@ -777,8 +815,7 @@ class PersonalInsurance(db.Model):
     __tablename__ = 'personal_insurance'
 
     id = db.Column(db.Integer, primary_key=True)
-    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
-    parent_client = db.Column(db.String(200))
+    individual_id = db.Column(db.String(50), db.ForeignKey('individuals.individual_id'), nullable=False)
 
     # 1. Personal Auto
     personal_auto_carrier = db.Column(db.String(200))
@@ -833,7 +870,7 @@ class PersonalInsurance(db.Model):
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationship
-    client = db.relationship('Client', back_populates='personal_insurance')
+    individual = db.relationship('Individual', back_populates='personal_insurance')
 
     def to_dict(self):
         def format_premium(val):
@@ -841,10 +878,9 @@ class PersonalInsurance(db.Model):
 
         return {
             'id': self.id,
-            'tax_id': self.tax_id,
-            'client_name': self.client.client_name if self.client else None,
-            'client_status': self.client.status if self.client else None,
-            'parent_client': self.parent_client,
+            'individual_id': self.individual_id,
+            'individual_name': f"{self.individual.first_name or ''} {self.individual.last_name or ''}".strip() if self.individual else None,
+            'individual_status': self.individual.status if self.individual else None,
             # Personal Auto
             'personal_auto_carrier': self.personal_auto_carrier,
             'personal_auto_bi_occ_limit': self.personal_auto_bi_occ_limit,
@@ -1883,6 +1919,143 @@ def clone_commercial(commercial_id):
 
 
 # ===========================================================================
+# INDIVIDUAL ENDPOINTS
+# ===========================================================================
+
+def generate_individual_id(session):
+    """Generate next individual ID in format 00-#######."""
+    last = session.query(Individual).order_by(Individual.id.desc()).first()
+    if last and last.individual_id:
+        try:
+            num = int(last.individual_id.split('-')[1]) + 1
+        except (IndexError, ValueError):
+            num = 1
+    else:
+        num = 1
+    return f"00-{num:07d}"
+
+
+@app.route('/api/individuals', methods=['GET'])
+def get_individuals():
+    """Get all individuals."""
+    session = Session()
+    try:
+        individuals = session.query(Individual).all()
+        return jsonify({
+            'individuals': [i.to_dict() for i in individuals],
+            'total': len(individuals)
+        })
+    except Exception as e:
+        logging.error(f"Error fetching individuals: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/individuals', methods=['POST'])
+def create_individual():
+    """Create a new individual with auto-generated ID."""
+    session = Session()
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({'error': 'No data provided'}), 400
+
+        zip_code = data.get('zip_code', '')
+        if zip_code and not re.match(r'^\d{5}$', str(zip_code)):
+            return jsonify({'error': 'Zip code must be exactly 5 digits'}), 400
+
+        individual = Individual(
+            individual_id=generate_individual_id(session),
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            email=data.get('email'),
+            phone_number=data.get('phone_number'),
+            address_line_1=data.get('address_line_1'),
+            address_line_2=data.get('address_line_2'),
+            city=data.get('city'),
+            state=data.get('state'),
+            zip_code=data.get('zip_code'),
+            status=data.get('status', 'Active')
+        )
+
+        session.add(individual)
+        session.commit()
+
+        return jsonify({
+            'message': 'Individual created successfully',
+            'individual': individual.to_dict()
+        }), 201
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error creating individual: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/individuals/<int:individual_id>', methods=['PUT'])
+def update_individual(individual_id):
+    """Update an individual."""
+    session = Session()
+    try:
+        individual = session.query(Individual).filter_by(id=individual_id).first()
+        if not individual:
+            return jsonify({'error': 'Individual not found'}), 404
+
+        data = request.get_json()
+
+        zip_code = data.get('zip_code', individual.zip_code)
+        if zip_code and not re.match(r'^\d{5}$', str(zip_code)):
+            return jsonify({'error': 'Zip code must be exactly 5 digits'}), 400
+
+        individual.first_name = data.get('first_name', individual.first_name)
+        individual.last_name = data.get('last_name', individual.last_name)
+        individual.email = data.get('email', individual.email)
+        individual.phone_number = data.get('phone_number', individual.phone_number)
+        individual.address_line_1 = data.get('address_line_1', individual.address_line_1)
+        individual.address_line_2 = data.get('address_line_2', individual.address_line_2)
+        individual.city = data.get('city', individual.city)
+        individual.state = data.get('state', individual.state)
+        individual.zip_code = data.get('zip_code', individual.zip_code)
+        individual.status = data.get('status', individual.status)
+
+        session.commit()
+
+        return jsonify({
+            'message': 'Individual updated successfully',
+            'individual': individual.to_dict()
+        }), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error updating individual: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/individuals/<int:individual_id>', methods=['DELETE'])
+def delete_individual(individual_id):
+    """Delete an individual."""
+    session = Session()
+    try:
+        individual = session.query(Individual).filter_by(id=individual_id).first()
+        if not individual:
+            return jsonify({'error': 'Individual not found'}), 404
+
+        session.delete(individual)
+        session.commit()
+
+        return jsonify({'message': 'Individual deleted successfully'}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error deleting individual: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+# ===========================================================================
 # PERSONAL INSURANCE ENDPOINTS
 # ===========================================================================
 
@@ -1969,8 +2142,7 @@ def create_personal():
             return jsonify({'error': 'No data provided'}), 400
 
         personal = PersonalInsurance(
-            tax_id=data.get('tax_id'),
-            parent_client=data.get('parent_client'),
+            individual_id=data.get('individual_id'),
         )
 
         # Set fields for each product type
@@ -2015,8 +2187,7 @@ def update_personal(personal_id):
 
         data = request.get_json()
 
-        personal.tax_id = data.get('tax_id', personal.tax_id)
-        personal.parent_client = data.get('parent_client', personal.parent_client)
+        personal.individual_id = data.get('individual_id', personal.individual_id)
 
         for product in PERSONAL_INSURANCE_PRODUCTS:
             fields = PERSONAL_FIELDS[product]
@@ -2086,7 +2257,7 @@ def clone_personal(personal_id):
         if not original:
             return jsonify({'error': 'Personal insurance not found'}), 404
 
-        new_personal = PersonalInsurance(tax_id=original.tax_id, parent_client=original.parent_client)
+        new_personal = PersonalInsurance(individual_id=original.individual_id)
 
         # Copy all product fields
         for product in PERSONAL_INSURANCE_PRODUCTS:
@@ -2230,12 +2401,14 @@ def get_dashboard_renewals():
                 renewal_date = getattr(pers, field_name)
                 if renewal_date and today <= renewal_date <= twelve_months:
                     carrier_field = field_name.replace('_renewal_date', '_carrier').replace('_start_date', '_carrier')
+                    ind = pers.individual
+                    ind_name = f"{ind.first_name or ''} {ind.last_name or ''}".strip() if ind else None
                     renewals.append({
                         'type': 'personal',
                         'policy_type': policy_type,
                         'renewal_date': renewal_date.isoformat(),
-                        'client_name': pers.client.client_name if pers.client else None,
-                        'tax_id': pers.tax_id,
+                        'client_name': ind_name,
+                        'tax_id': pers.individual_id,
                         'carrier': getattr(pers, carrier_field, None)
                     })
 
@@ -2628,9 +2801,9 @@ def export_to_excel():
             'visitors_medical': ['carrier', 'start_date', 'end_date', 'destination_country', 'premium', 'outstanding_item', 'remarks'],
         }
 
-        personal_headers = ['Tax ID', 'Client Name', 'Parent Client']
-        personal_sections = [(1, 3, '')]
-        pcol = 4
+        personal_headers = ['Individual ID', 'Individual Name']
+        personal_sections = [(1, 2, '')]
+        pcol = 3
 
         for prefix, label, cols in personal_product_defs:
             personal_headers.extend(cols)
@@ -2653,12 +2826,12 @@ def export_to_excel():
 
         # Write personal data
         for row_idx, rec in enumerate(personal_records, 3):
-            client_name = rec.client.client_name if rec.client else None
-            ws_personal.cell(row=row_idx, column=1, value=rec.tax_id)
-            ws_personal.cell(row=row_idx, column=2, value=client_name)
-            ws_personal.cell(row=row_idx, column=3, value=rec.parent_client)
+            ind = rec.individual
+            ind_name = f"{ind.first_name or ''} {ind.last_name or ''}".strip() if ind else None
+            ws_personal.cell(row=row_idx, column=1, value=rec.individual_id)
+            ws_personal.cell(row=row_idx, column=2, value=ind_name)
 
-            pc = 4
+            pc = 3
             for prefix, label, cols in personal_product_defs:
                 field_names = personal_field_map[prefix]
                 for fi, field_suffix in enumerate(field_names):
@@ -3183,14 +3356,14 @@ def import_from_excel():
                 if not row[0]:
                     continue
                 try:
-                    tax_id = str(row[0]).strip() if row[0] else None
-                    if not tax_id:
+                    ind_id = str(row[0]).strip() if row[0] else None
+                    if not ind_id:
                         continue
 
-                    client = session.query(Client).filter_by(tax_id=tax_id).first()
-                    if not client:
-                        error_rows_personal.append((row, f"Client with tax_id {tax_id} not found"))
-                        stats['errors'].append(f"Personal row {row_idx}: Client with tax_id {tax_id} not found")
+                    ind = session.query(Individual).filter_by(individual_id=ind_id).first()
+                    if not ind:
+                        error_rows_personal.append((row, f"Individual with id {ind_id} not found"))
+                        stats['errors'].append(f"Personal row {row_idx}: Individual with id {ind_id} not found")
                         continue
 
                     def parse_excel_date_p(val):
@@ -3214,11 +3387,10 @@ def import_from_excel():
                     def safe_val_p(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
 
-                    existing = session.query(PersonalInsurance).filter_by(tax_id=tax_id).first()
+                    existing = session.query(PersonalInsurance).filter_by(individual_id=ind_id).first()
 
                     personal_data = {
-                        'tax_id': tax_id,
-                        'parent_client': row[2] if len(row) > 2 else None
+                        'individual_id': ind_id,
                     }
 
                     for prefix, label, fields in pers_import_defs:
