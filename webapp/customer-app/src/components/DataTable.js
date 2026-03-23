@@ -6,6 +6,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TablePagination,
   Paper,
   IconButton,
   TableSortLabel,
@@ -37,6 +38,8 @@ const DataTable = ({
 }) => {
   const [orderBy, setOrderBy] = useState(defaultOrderBy);
   const [order, setOrder] = useState(defaultOrder);
+  const [page, setPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(50);
 
   // Pre-compute sticky column left offsets
   const actionsWidth = 80;
@@ -136,8 +139,19 @@ const DataTable = ({
     return strValue;
   };
 
+  // Reset page when data changes
+  React.useEffect(() => {
+    setPage(0);
+  }, [data.length]);
+
+  const paginatedData = React.useMemo(() => {
+    const start = page * rowsPerPage;
+    return sortedData.slice(start, start + rowsPerPage);
+  }, [sortedData, page, rowsPerPage]);
+
   return (
-    <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 250px)', overflow: 'auto' }}>
+    <Box>
+    <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 300px)', overflow: 'auto' }}>
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
@@ -201,7 +215,7 @@ const DataTable = ({
               </TableCell>
             </TableRow>
           ) : (
-            sortedData.map((row, index) => (
+            paginatedData.map((row, index) => (
               <TableRow
                 key={row[idField] || index}
                 hover
@@ -270,6 +284,19 @@ const DataTable = ({
         </TableBody>
       </Table>
     </TableContainer>
+    <TablePagination
+      component="div"
+      count={sortedData.length}
+      page={page}
+      onPageChange={(e, newPage) => setPage(newPage)}
+      rowsPerPage={rowsPerPage}
+      onRowsPerPageChange={(e) => {
+        setRowsPerPage(parseInt(e.target.value, 10));
+        setPage(0);
+      }}
+      rowsPerPageOptions={[25, 50, 100, 250]}
+    />
+    </Box>
   );
 };
 
