@@ -662,16 +662,17 @@ function NewApp() {
                 color="inherit"
                 startIcon={<FileUploadIcon />}
                 onClick={handleImportClick}
-                disabled={importing}
+                disabled
                 size="small"
               >
-                {importing ? 'Importing...' : 'Import'}
+                Import
               </Button>
               <Button
                 variant="outlined"
                 color="inherit"
                 startIcon={<FileDownloadIcon />}
                 onClick={handleExport}
+                disabled
                 size="small"
               >
                 Export
