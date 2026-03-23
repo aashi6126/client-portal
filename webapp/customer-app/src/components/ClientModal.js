@@ -183,7 +183,7 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
                 placeholder="##-#######"
                 error={Boolean(errors.tax_id)}
                 helperText={errors.tax_id}
-                disabled={isEditMode} // Tax ID should not be changed after creation
+                disabled={false}
                 inputProps={{ maxLength: 10 }}
               />
             </Grid>
