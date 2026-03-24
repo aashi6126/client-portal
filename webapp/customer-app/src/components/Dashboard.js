@@ -671,7 +671,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
                         {client.policies.map((policy, pIdx) => (
                           <Chip
                             key={pIdx}
-                            label={`${policy.policy_type}${policy.carrier ? ` (${policy.carrier})` : ''}`}
+                            label={policy.policy_type}
                             size="small"
                             variant="outlined"
                             sx={{ fontSize: '0.75rem' }}
