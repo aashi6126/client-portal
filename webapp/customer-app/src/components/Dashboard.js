@@ -69,6 +69,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [renewalTab, setRenewalTab] = useState(0);
+  const [renewalTypeFilter, setRenewalTypeFilter] = useState('all');
   const [outstandingTab, setOutstandingTab] = useState(0);
   const [crossSellTab, setCrossSellTab] = useState(0);
 
@@ -203,15 +204,18 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
     };
   }, [renewals]);
 
-  // Get current tab's renewals
+  // Get current tab's renewals, filtered by type
   const currentRenewals = useMemo(() => {
+    let list;
     switch (renewalTab) {
-      case 0: return renewalsByRange.month1;
-      case 1: return renewalsByRange.month2;
-      case 2: return renewalsByRange.month3;
-      default: return renewalsByRange.month1;
+      case 0: list = renewalsByRange.month1; break;
+      case 1: list = renewalsByRange.month2; break;
+      case 2: list = renewalsByRange.month3; break;
+      default: list = renewalsByRange.month1;
     }
-  }, [renewalTab, renewalsByRange]);
+    if (renewalTypeFilter === 'all') return list;
+    return list.filter(r => r.type === renewalTypeFilter);
+  }, [renewalTab, renewalsByRange, renewalTypeFilter]);
 
   // Format month for display
   const formatMonth = (monthKey) => {
@@ -609,9 +613,27 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
           <Tab label={`${getMonthLabel(1)} (${renewalsByRange.month2.length})`} />
           <Tab label={`${getMonthLabel(2)} (${renewalsByRange.month3.length})`} />
         </Tabs>
-        <Typography variant="body2" color="text.secondary" gutterBottom sx={{ mb: 2 }}>
-          {currentRenewals.length} renewal{currentRenewals.length !== 1 ? 's' : ''} coming up
-        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+          {[
+            { value: 'all', label: 'All' },
+            { value: 'benefits', label: 'Benefits', color: 'warning' },
+            { value: 'commercial', label: 'Commercial', color: 'info' },
+            { value: 'personal', label: 'Personal', color: 'secondary' }
+          ].map(({ value, label, color }) => (
+            <Chip
+              key={value}
+              label={label}
+              size="small"
+              color={renewalTypeFilter === value ? (color || 'default') : 'default'}
+              variant={renewalTypeFilter === value ? 'filled' : 'outlined'}
+              onClick={() => setRenewalTypeFilter(value)}
+              sx={{ cursor: 'pointer' }}
+            />
+          ))}
+          <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+            {currentRenewals.length} renewal{currentRenewals.length !== 1 ? 's' : ''}
+          </Typography>
+        </Box>
         {currentRenewals.length > 0 ? (
           <TableContainer sx={{ maxHeight: 400 }}>
             <Table stickyHeader size="small">
