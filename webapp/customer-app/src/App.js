@@ -117,6 +117,9 @@ function NewApp() {
   const [commercialSearch, setCommercialSearch] = useState('');
   const [personalSearch, setPersonalSearch] = useState('');
 
+  // Admin mode — enable via ?admin=true in URL
+  const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
+
   // Import/Export states
   const [importing, setImporting] = useState(false);
   const fileInputRef = useRef(null);
@@ -680,17 +683,17 @@ function NewApp() {
                 color="inherit"
                 startIcon={<FileUploadIcon />}
                 onClick={handleImportClick}
-                disabled
+                disabled={!isAdmin || importing}
                 size="small"
               >
-                Import
+                {importing ? 'Importing...' : 'Import'}
               </Button>
               <Button
                 variant="outlined"
                 color="inherit"
                 startIcon={<FileDownloadIcon />}
                 onClick={handleExport}
-                disabled
+                disabled={!isAdmin}
                 size="small"
               >
                 Export
