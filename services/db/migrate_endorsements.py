@@ -51,7 +51,8 @@ def migrate():
     eo_endorsements = [
         'endorsement_tech_eo',
         'endorsement_allied_healthcare',
-        'endorsement_staffing'
+        'endorsement_staffing',
+        'endorsement_medical_malpractice'
     ]
 
     if table_exists(cursor, 'commercial_plans'):
