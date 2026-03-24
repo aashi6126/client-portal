@@ -481,7 +481,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                   size="small"
                 />
               )}
-              disabled={isEditMode}
+              disabled={false}
               fullWidth
               sx={{ mb: 2 }}
             />

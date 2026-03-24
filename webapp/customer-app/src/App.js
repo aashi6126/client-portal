@@ -168,7 +168,10 @@ function NewApp() {
           fetchClients();
           setDataVersion(v => v + 1);
         })
-        .catch(error => console.error('Error updating client:', error));
+        .catch(error => {
+          console.error('Error updating client:', error);
+          alert('Error updating client: ' + (error.response?.data?.error || error.message));
+        });
     } else {
       // Create new client
       axios.post(API_CLIENTS, clientData)
@@ -177,7 +180,10 @@ function NewApp() {
           fetchClients();
           setDataVersion(v => v + 1);
         })
-        .catch(error => console.error('Error creating client:', error));
+        .catch(error => {
+          console.error('Error creating client:', error);
+          alert('Error creating client: ' + (error.response?.data?.error || error.message));
+        });
     }
   };
 
@@ -315,7 +321,10 @@ function NewApp() {
           fetchCommercial();
           setDataVersion(v => v + 1);
         })
-        .catch(error => console.error('Error updating commercial:', error));
+        .catch(error => {
+          console.error('Error updating commercial:', error);
+          alert('Error updating commercial: ' + (error.response?.data?.error || error.message));
+        });
     } else {
       // Create new commercial
       axios.post(API_COMMERCIAL, commercialData)
@@ -324,7 +333,10 @@ function NewApp() {
           fetchCommercial();
           setDataVersion(v => v + 1);
         })
-        .catch(error => console.error('Error creating commercial:', error));
+        .catch(error => {
+          console.error('Error creating commercial:', error);
+          alert('Error creating commercial: ' + (error.response?.data?.error || error.message));
+        });
     }
   };
 
@@ -365,7 +377,10 @@ function NewApp() {
           fetchPersonal();
           setDataVersion(v => v + 1);
         })
-        .catch(error => console.error('Error updating personal:', error));
+        .catch(error => {
+          console.error('Error updating personal:', error);
+          alert('Error updating personal: ' + (error.response?.data?.error || error.message));
+        });
     } else {
       axios.post(API_PERSONAL, personalData)
         .then(() => {
@@ -373,7 +388,10 @@ function NewApp() {
           fetchPersonal();
           setDataVersion(v => v + 1);
         })
-        .catch(error => console.error('Error creating personal:', error));
+        .catch(error => {
+          console.error('Error creating personal:', error);
+          alert('Error creating personal: ' + (error.response?.data?.error || error.message));
+        });
     }
   };
 

@@ -494,7 +494,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   size="small"
                 />
               )}
-              disabled={isEditMode}
+              disabled={false}
               fullWidth
               sx={{ mb: 2 }}
             />

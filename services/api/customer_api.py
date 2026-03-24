@@ -1148,7 +1148,28 @@ def update_client(client_id):
         if zip_code and not re.match(r'^\d{5}$', str(zip_code)):
             return jsonify({'error': 'Zip code must be exactly 5 digits'}), 400
 
-        client.tax_id = data.get('tax_id', client.tax_id)
+        old_tax_id = client.tax_id
+        new_tax_id = data.get('tax_id', client.tax_id)
+
+        # If tax_id changed, update all associated policies
+        if new_tax_id != old_tax_id:
+            # Check new tax_id isn't already taken by another client
+            existing = session.query(Client).filter(
+                Client.tax_id == new_tax_id, Client.id != client_id
+            ).first()
+            if existing:
+                return jsonify({'error': f'Tax ID {new_tax_id} is already assigned to another client'}), 400
+
+            # Update tax_id in associated employee benefits
+            session.query(EmployeeBenefit).filter_by(tax_id=old_tax_id).update(
+                {'tax_id': new_tax_id}, synchronize_session='fetch'
+            )
+            # Update tax_id in associated commercial insurance
+            session.query(CommercialInsurance).filter_by(tax_id=old_tax_id).update(
+                {'tax_id': new_tax_id}, synchronize_session='fetch'
+            )
+
+        client.tax_id = new_tax_id
         client.client_name = data.get('client_name', client.client_name)
         client.contact_person = data.get('contact_person', client.contact_person)
         client.email = data.get('email', client.email)

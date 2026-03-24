@@ -674,7 +674,7 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
                   size="small"
                 />
               )}
-              disabled={isEditMode}
+              disabled={false}
               fullWidth
             />
           </Box>
