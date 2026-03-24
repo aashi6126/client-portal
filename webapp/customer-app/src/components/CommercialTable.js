@@ -78,16 +78,25 @@ const getActiveProducts = (row) => {
       const label = MULTI_PLAN_LABELS[pt];
       typePlans.forEach((plan, idx) => {
         if (plan.carrier || plan.renewal_date || plan.occ_limit || plan.agg_limit || plan.premium) {
+          const eoEndorsements = [];
+          if (pt === 'professional_eo') {
+            if (plan.endorsement_tech_eo) eoEndorsements.push('Tech E&O');
+            if (plan.endorsement_staffing) eoEndorsements.push('Staffing');
+            if (plan.endorsement_allied_healthcare) eoEndorsements.push('Allied Healthcare');
+            if (plan.endorsement_medical_malpractice) eoEndorsements.push('Medical Malpractice');
+          }
           products.push({
             prefix: pt,
             shortName: typePlans.length > 1 ? `${label} ${idx + 1}` : label,
             carrier: plan.carrier,
+            policyNumber: plan.policy_number,
             renewalDate: plan.renewal_date,
             premium: plan.premium,
             occ_limit: plan.occ_limit,
             agg_limit: plan.agg_limit,
             remarks: plan.remarks,
-            outstandingItem: plan.outstanding_item
+            outstandingItem: plan.outstanding_item,
+            endorsements: eoEndorsements
           });
         }
       });
@@ -100,6 +109,7 @@ const getActiveProducts = (row) => {
           prefix: pt,
           shortName: MULTI_PLAN_LABELS[pt],
           carrier: row[`${pt}_carrier`],
+          policyNumber: row[`${pt}_policy_number`],
           renewalDate: row[`${pt}_renewal_date`],
           premium: row[`${pt}_premium`],
           occ_limit: row[`${pt}_occ_limit`],
@@ -114,17 +124,30 @@ const getActiveProducts = (row) => {
   // Single-plan types (always flat)
   Object.entries(SINGLE_PLAN_PRODUCTS).forEach(([key, name]) => {
     if (row[`${key}_carrier`]) {
-      products.push({
+      const product = {
         prefix: key,
         shortName: name,
         carrier: row[`${key}_carrier`],
+        policyNumber: row[`${key}_policy_number`],
         renewalDate: row[`${key}_renewal_date`],
         premium: row[`${key}_premium`],
         occ_limit: row[`${key}_occ_limit`],
         agg_limit: row[`${key}_agg_limit`],
         remarks: row[`${key}_remarks`],
-        outstandingItem: row[`${key}_outstanding_item`]
-      });
+        outstandingItem: row[`${key}_outstanding_item`],
+        endorsements: []
+      };
+      if (key === 'general_liability') {
+        const glEndorsements = [
+          { key: 'general_liability_endorsement_bop', label: 'BOP' },
+          { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
+          { key: 'general_liability_endorsement_foreign', label: 'Foreign' },
+          { key: 'general_liability_endorsement_molestation', label: 'Molestation' },
+          { key: 'general_liability_endorsement_marine', label: 'Marine' }
+        ];
+        product.endorsements = glEndorsements.filter(e => row[e.key]).map(e => e.label);
+      }
+      products.push(product);
     }
   });
 
@@ -279,10 +302,12 @@ const getCommercialColumns = (onEdit) => [
               <Box>
                 <div><strong>{product.shortName}</strong></div>
                 <div>Carrier: {product.carrier || 'N/A'}</div>
+                {product.policyNumber && <div>Policy #: {product.policyNumber}</div>}
                 <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : 'N/A'}</div>
                 <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
+                {product.endorsements && product.endorsements.length > 0 && <div>Endorsements: {product.endorsements.join(', ')}</div>}
                 {hasRemarks && <div>Remarks: {product.remarks}</div>}
                 {product.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[product.outstandingItem] || 'inherit', fontWeight: 600 }}>{product.outstandingItem}</span></div>}
               </Box>
@@ -324,10 +349,12 @@ const getCommercialColumns = (onEdit) => [
                     <Box key={idx} sx={{ mb: idx < products.length - 6 ? 1 : 0 }}>
                       <div><strong>{product.shortName}</strong></div>
                       <div>Carrier: {product.carrier || 'N/A'}</div>
+                      {product.policyNumber && <div>Policy #: {product.policyNumber}</div>}
                       <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : 'N/A'}</div>
                       <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
+                      {product.endorsements && product.endorsements.length > 0 && <div>Endorsements: {product.endorsements.join(', ')}</div>}
                       {product.remarks && <div>Remarks: {product.remarks}</div>}
                       {product.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[product.outstandingItem] || 'inherit', fontWeight: 600 }}>{product.outstandingItem}</span></div>}
                     </Box>

@@ -115,7 +115,7 @@ def after_request(response):
 # ===========================================================================
 # DATABASE CONFIGURATION
 # ===========================================================================
-db_uri = os.environ.get('DATABASE_URI', 'sqlite://///Users/amandetail/workspaces/client-portal/client-portal/services/customer.db')
+db_uri = os.environ.get('DATABASE_URI', 'sqlite:///' + os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'customer.db'))
 
 # Ensure database directory exists (SQLite can create the file but not the directory)
 if db_uri.startswith('sqlite'):
@@ -435,14 +435,21 @@ class CommercialInsurance(db.Model):
     # 1. Commercial General Liability
     general_liability_carrier = db.Column(db.String(200))
     general_liability_agency = db.Column(db.String(200))
+    general_liability_policy_number = db.Column(db.String(100))
     general_liability_occ_limit = db.Column(db.String(100))
     general_liability_agg_limit = db.Column(db.String(100))
     general_liability_premium = db.Column(db.Numeric(12, 2))
     general_liability_renewal_date = db.Column(db.Date)
+    general_liability_endorsement_bop = db.Column(db.Boolean, default=False)
+    general_liability_endorsement_marine = db.Column(db.Boolean, default=False)
+    general_liability_endorsement_foreign = db.Column(db.Boolean, default=False)
+    general_liability_endorsement_molestation = db.Column(db.Boolean, default=False)
+    general_liability_endorsement_staffing = db.Column(db.Boolean, default=False)
 
     # 2. Commercial Property
     property_carrier = db.Column(db.String(200))
     property_agency = db.Column(db.String(200))
+    property_policy_number = db.Column(db.String(100))
     property_occ_limit = db.Column(db.String(100))
     property_agg_limit = db.Column(db.String(100))
     property_premium = db.Column(db.Numeric(12, 2))
@@ -451,6 +458,7 @@ class CommercialInsurance(db.Model):
     # 3. Business Owners Policy (BOP)
     bop_carrier = db.Column(db.String(200))
     bop_agency = db.Column(db.String(200))
+    bop_policy_number = db.Column(db.String(100))
     bop_occ_limit = db.Column(db.String(100))
     bop_agg_limit = db.Column(db.String(100))
     bop_premium = db.Column(db.Numeric(12, 2))
@@ -459,6 +467,7 @@ class CommercialInsurance(db.Model):
     # 4. Umbrella Liability
     umbrella_carrier = db.Column(db.String(200))
     umbrella_agency = db.Column(db.String(200))
+    umbrella_policy_number = db.Column(db.String(100))
     umbrella_occ_limit = db.Column(db.String(100))
     umbrella_agg_limit = db.Column(db.String(100))
     umbrella_premium = db.Column(db.Numeric(12, 2))
@@ -467,6 +476,7 @@ class CommercialInsurance(db.Model):
     # 5. Workers Compensation
     workers_comp_carrier = db.Column(db.String(200))
     workers_comp_agency = db.Column(db.String(200))
+    workers_comp_policy_number = db.Column(db.String(100))
     workers_comp_occ_limit = db.Column(db.String(100))
     workers_comp_agg_limit = db.Column(db.String(100))
     workers_comp_premium = db.Column(db.Numeric(12, 2))
@@ -475,6 +485,7 @@ class CommercialInsurance(db.Model):
     # 6. Professional or E&O
     professional_eo_carrier = db.Column(db.String(200))
     professional_eo_agency = db.Column(db.String(200))
+    professional_eo_policy_number = db.Column(db.String(100))
     professional_eo_occ_limit = db.Column(db.String(100))
     professional_eo_agg_limit = db.Column(db.String(100))
     professional_eo_premium = db.Column(db.Numeric(12, 2))
@@ -483,6 +494,7 @@ class CommercialInsurance(db.Model):
     # 7. Cyber Liability
     cyber_carrier = db.Column(db.String(200))
     cyber_agency = db.Column(db.String(200))
+    cyber_policy_number = db.Column(db.String(100))
     cyber_occ_limit = db.Column(db.String(100))
     cyber_agg_limit = db.Column(db.String(100))
     cyber_premium = db.Column(db.Numeric(12, 2))
@@ -491,6 +503,7 @@ class CommercialInsurance(db.Model):
     # 8. Commercial Auto
     auto_carrier = db.Column(db.String(200))
     auto_agency = db.Column(db.String(200))
+    auto_policy_number = db.Column(db.String(100))
     auto_occ_limit = db.Column(db.String(100))
     auto_agg_limit = db.Column(db.String(100))
     auto_premium = db.Column(db.Numeric(12, 2))
@@ -499,6 +512,7 @@ class CommercialInsurance(db.Model):
     # 9. EPLI
     epli_carrier = db.Column(db.String(200))
     epli_agency = db.Column(db.String(200))
+    epli_policy_number = db.Column(db.String(100))
     epli_occ_limit = db.Column(db.String(100))
     epli_agg_limit = db.Column(db.String(100))
     epli_premium = db.Column(db.Numeric(12, 2))
@@ -507,6 +521,7 @@ class CommercialInsurance(db.Model):
     # 10. NYDBL
     nydbl_carrier = db.Column(db.String(200))
     nydbl_agency = db.Column(db.String(200))
+    nydbl_policy_number = db.Column(db.String(100))
     nydbl_occ_limit = db.Column(db.String(100))
     nydbl_agg_limit = db.Column(db.String(100))
     nydbl_premium = db.Column(db.Numeric(12, 2))
@@ -515,6 +530,7 @@ class CommercialInsurance(db.Model):
     # 11. Surety Bond
     surety_carrier = db.Column(db.String(200))
     surety_agency = db.Column(db.String(200))
+    surety_policy_number = db.Column(db.String(100))
     surety_occ_limit = db.Column(db.String(100))
     surety_agg_limit = db.Column(db.String(100))
     surety_premium = db.Column(db.Numeric(12, 2))
@@ -523,6 +539,7 @@ class CommercialInsurance(db.Model):
     # 12. Product Liability
     product_liability_carrier = db.Column(db.String(200))
     product_liability_agency = db.Column(db.String(200))
+    product_liability_policy_number = db.Column(db.String(100))
     product_liability_occ_limit = db.Column(db.String(100))
     product_liability_agg_limit = db.Column(db.String(100))
     product_liability_premium = db.Column(db.Numeric(12, 2))
@@ -531,6 +548,7 @@ class CommercialInsurance(db.Model):
     # 13. Flood
     flood_carrier = db.Column(db.String(200))
     flood_agency = db.Column(db.String(200))
+    flood_policy_number = db.Column(db.String(100))
     flood_occ_limit = db.Column(db.String(100))
     flood_agg_limit = db.Column(db.String(100))
     flood_premium = db.Column(db.Numeric(12, 2))
@@ -539,6 +557,7 @@ class CommercialInsurance(db.Model):
     # 14. Crime or Fidelity Bond
     crime_carrier = db.Column(db.String(200))
     crime_agency = db.Column(db.String(200))
+    crime_policy_number = db.Column(db.String(100))
     crime_occ_limit = db.Column(db.String(100))
     crime_agg_limit = db.Column(db.String(100))
     crime_premium = db.Column(db.Numeric(12, 2))
@@ -547,6 +566,7 @@ class CommercialInsurance(db.Model):
     # 15. Directors & Officers
     directors_officers_carrier = db.Column(db.String(200))
     directors_officers_agency = db.Column(db.String(200))
+    directors_officers_policy_number = db.Column(db.String(100))
     directors_officers_occ_limit = db.Column(db.String(100))
     directors_officers_agg_limit = db.Column(db.String(100))
     directors_officers_premium = db.Column(db.Numeric(12, 2))
@@ -555,6 +575,7 @@ class CommercialInsurance(db.Model):
     # 16. Fiduciary Bond
     fiduciary_carrier = db.Column(db.String(200))
     fiduciary_agency = db.Column(db.String(200))
+    fiduciary_policy_number = db.Column(db.String(100))
     fiduciary_occ_limit = db.Column(db.String(100))
     fiduciary_agg_limit = db.Column(db.String(100))
     fiduciary_premium = db.Column(db.Numeric(12, 2))
@@ -563,6 +584,7 @@ class CommercialInsurance(db.Model):
     # 17. Inland Marine
     inland_marine_carrier = db.Column(db.String(200))
     inland_marine_agency = db.Column(db.String(200))
+    inland_marine_policy_number = db.Column(db.String(100))
     inland_marine_occ_limit = db.Column(db.String(100))
     inland_marine_agg_limit = db.Column(db.String(100))
     inland_marine_premium = db.Column(db.Numeric(12, 2))
@@ -632,14 +654,21 @@ class CommercialInsurance(db.Model):
             'parent_client': self.parent_client,
             'general_liability_carrier': self.general_liability_carrier,
             'general_liability_agency': self.general_liability_agency,
+            'general_liability_policy_number': self.general_liability_policy_number,
             'general_liability_occ_limit': self.general_liability_occ_limit,
             'general_liability_agg_limit': self.general_liability_agg_limit,
             'general_liability_premium': format_premium(self.general_liability_premium),
             'general_liability_renewal_date': self.general_liability_renewal_date.isoformat() if self.general_liability_renewal_date else None,
             'general_liability_remarks': self.general_liability_remarks,
             'general_liability_outstanding_item': self.general_liability_outstanding_item,
+            'general_liability_endorsement_bop': self.general_liability_endorsement_bop or False,
+            'general_liability_endorsement_marine': self.general_liability_endorsement_marine or False,
+            'general_liability_endorsement_foreign': self.general_liability_endorsement_foreign or False,
+            'general_liability_endorsement_molestation': self.general_liability_endorsement_molestation or False,
+            'general_liability_endorsement_staffing': self.general_liability_endorsement_staffing or False,
             'property_carrier': self.property_carrier,
             'property_agency': self.property_agency,
+            'property_policy_number': self.property_policy_number,
             'property_occ_limit': self.property_occ_limit,
             'property_agg_limit': self.property_agg_limit,
             'property_premium': format_premium(self.property_premium),
@@ -648,6 +677,7 @@ class CommercialInsurance(db.Model):
             'property_outstanding_item': self.property_outstanding_item,
             'bop_carrier': self.bop_carrier,
             'bop_agency': self.bop_agency,
+            'bop_policy_number': self.bop_policy_number,
             'bop_occ_limit': self.bop_occ_limit,
             'bop_agg_limit': self.bop_agg_limit,
             'bop_premium': format_premium(self.bop_premium),
@@ -656,12 +686,14 @@ class CommercialInsurance(db.Model):
             'bop_outstanding_item': self.bop_outstanding_item,
             'umbrella_carrier': self.umbrella_carrier,
             'umbrella_agency': self.umbrella_agency,
+            'umbrella_policy_number': self.umbrella_policy_number,
             'umbrella_occ_limit': self.umbrella_occ_limit,
             'umbrella_agg_limit': self.umbrella_agg_limit,
             'umbrella_premium': format_premium(self.umbrella_premium),
             'umbrella_renewal_date': self.umbrella_renewal_date.isoformat() if self.umbrella_renewal_date else None,
             'workers_comp_carrier': self.workers_comp_carrier,
             'workers_comp_agency': self.workers_comp_agency,
+            'workers_comp_policy_number': self.workers_comp_policy_number,
             'workers_comp_occ_limit': self.workers_comp_occ_limit,
             'workers_comp_agg_limit': self.workers_comp_agg_limit,
             'workers_comp_premium': format_premium(self.workers_comp_premium),
@@ -670,18 +702,21 @@ class CommercialInsurance(db.Model):
             'workers_comp_outstanding_item': self.workers_comp_outstanding_item,
             'professional_eo_carrier': self.professional_eo_carrier,
             'professional_eo_agency': self.professional_eo_agency,
+            'professional_eo_policy_number': self.professional_eo_policy_number,
             'professional_eo_occ_limit': self.professional_eo_occ_limit,
             'professional_eo_agg_limit': self.professional_eo_agg_limit,
             'professional_eo_premium': format_premium(self.professional_eo_premium),
             'professional_eo_renewal_date': self.professional_eo_renewal_date.isoformat() if self.professional_eo_renewal_date else None,
             'cyber_carrier': self.cyber_carrier,
             'cyber_agency': self.cyber_agency,
+            'cyber_policy_number': self.cyber_policy_number,
             'cyber_occ_limit': self.cyber_occ_limit,
             'cyber_agg_limit': self.cyber_agg_limit,
             'cyber_premium': format_premium(self.cyber_premium),
             'cyber_renewal_date': self.cyber_renewal_date.isoformat() if self.cyber_renewal_date else None,
             'auto_carrier': self.auto_carrier,
             'auto_agency': self.auto_agency,
+            'auto_policy_number': self.auto_policy_number,
             'auto_occ_limit': self.auto_occ_limit,
             'auto_agg_limit': self.auto_agg_limit,
             'auto_premium': format_premium(self.auto_premium),
@@ -690,6 +725,7 @@ class CommercialInsurance(db.Model):
             'auto_outstanding_item': self.auto_outstanding_item,
             'epli_carrier': self.epli_carrier,
             'epli_agency': self.epli_agency,
+            'epli_policy_number': self.epli_policy_number,
             'epli_occ_limit': self.epli_occ_limit,
             'epli_agg_limit': self.epli_agg_limit,
             'epli_premium': format_premium(self.epli_premium),
@@ -698,6 +734,7 @@ class CommercialInsurance(db.Model):
             'epli_outstanding_item': self.epli_outstanding_item,
             'nydbl_carrier': self.nydbl_carrier,
             'nydbl_agency': self.nydbl_agency,
+            'nydbl_policy_number': self.nydbl_policy_number,
             'nydbl_occ_limit': self.nydbl_occ_limit,
             'nydbl_agg_limit': self.nydbl_agg_limit,
             'nydbl_premium': format_premium(self.nydbl_premium),
@@ -706,6 +743,7 @@ class CommercialInsurance(db.Model):
             'nydbl_outstanding_item': self.nydbl_outstanding_item,
             'surety_carrier': self.surety_carrier,
             'surety_agency': self.surety_agency,
+            'surety_policy_number': self.surety_policy_number,
             'surety_occ_limit': self.surety_occ_limit,
             'surety_agg_limit': self.surety_agg_limit,
             'surety_premium': format_premium(self.surety_premium),
@@ -714,6 +752,7 @@ class CommercialInsurance(db.Model):
             'surety_outstanding_item': self.surety_outstanding_item,
             'product_liability_carrier': self.product_liability_carrier,
             'product_liability_agency': self.product_liability_agency,
+            'product_liability_policy_number': self.product_liability_policy_number,
             'product_liability_occ_limit': self.product_liability_occ_limit,
             'product_liability_agg_limit': self.product_liability_agg_limit,
             'product_liability_premium': format_premium(self.product_liability_premium),
@@ -722,6 +761,7 @@ class CommercialInsurance(db.Model):
             'product_liability_outstanding_item': self.product_liability_outstanding_item,
             'flood_carrier': self.flood_carrier,
             'flood_agency': self.flood_agency,
+            'flood_policy_number': self.flood_policy_number,
             'flood_occ_limit': self.flood_occ_limit,
             'flood_agg_limit': self.flood_agg_limit,
             'flood_premium': format_premium(self.flood_premium),
@@ -730,12 +770,14 @@ class CommercialInsurance(db.Model):
             'flood_outstanding_item': self.flood_outstanding_item,
             'crime_carrier': self.crime_carrier,
             'crime_agency': self.crime_agency,
+            'crime_policy_number': self.crime_policy_number,
             'crime_occ_limit': self.crime_occ_limit,
             'crime_agg_limit': self.crime_agg_limit,
             'crime_premium': format_premium(self.crime_premium),
             'crime_renewal_date': self.crime_renewal_date.isoformat() if self.crime_renewal_date else None,
             'directors_officers_carrier': self.directors_officers_carrier,
             'directors_officers_agency': self.directors_officers_agency,
+            'directors_officers_policy_number': self.directors_officers_policy_number,
             'directors_officers_occ_limit': self.directors_officers_occ_limit,
             'directors_officers_agg_limit': self.directors_officers_agg_limit,
             'directors_officers_premium': format_premium(self.directors_officers_premium),
@@ -744,6 +786,7 @@ class CommercialInsurance(db.Model):
             'directors_officers_outstanding_item': self.directors_officers_outstanding_item,
             'fiduciary_carrier': self.fiduciary_carrier,
             'fiduciary_agency': self.fiduciary_agency,
+            'fiduciary_policy_number': self.fiduciary_policy_number,
             'fiduciary_occ_limit': self.fiduciary_occ_limit,
             'fiduciary_agg_limit': self.fiduciary_agg_limit,
             'fiduciary_premium': format_premium(self.fiduciary_premium),
@@ -752,6 +795,7 @@ class CommercialInsurance(db.Model):
             'fiduciary_outstanding_item': self.fiduciary_outstanding_item,
             'inland_marine_carrier': self.inland_marine_carrier,
             'inland_marine_agency': self.inland_marine_agency,
+            'inland_marine_policy_number': self.inland_marine_policy_number,
             'inland_marine_occ_limit': self.inland_marine_occ_limit,
             'inland_marine_agg_limit': self.inland_marine_agg_limit,
             'inland_marine_premium': format_premium(self.inland_marine_premium),
@@ -784,6 +828,7 @@ class CommercialPlan(db.Model):
     plan_number = db.Column(db.Integer, nullable=False, default=1)
     carrier = db.Column(db.String(200))
     agency = db.Column(db.String(200))
+    policy_number = db.Column(db.String(100))
     coverage_occ_limit = db.Column(db.String(100))
     coverage_agg_limit = db.Column(db.String(100))
     premium = db.Column(db.Numeric(12, 2))
@@ -791,6 +836,12 @@ class CommercialPlan(db.Model):
     flag = db.Column(db.Boolean, default=False)
     remarks = db.Column(db.Text)
     outstanding_item = db.Column(db.String(50))
+
+    # Endorsements (used by professional_eo plans)
+    endorsement_tech_eo = db.Column(db.Boolean, default=False)
+    endorsement_allied_healthcare = db.Column(db.Boolean, default=False)
+    endorsement_staffing = db.Column(db.Boolean, default=False)
+    endorsement_medical_malpractice = db.Column(db.Boolean, default=False)
 
     # Relationship
     commercial_insurance = db.relationship('CommercialInsurance', back_populates='commercial_plans')
@@ -802,12 +853,17 @@ class CommercialPlan(db.Model):
             'plan_number': self.plan_number,
             'carrier': self.carrier,
             'agency': self.agency,
+            'policy_number': self.policy_number,
             'occ_limit': self.coverage_occ_limit,
             'agg_limit': self.coverage_agg_limit,
             'premium': float(self.premium) if self.premium else None,
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
             'remarks': self.remarks,
-            'outstanding_item': self.outstanding_item
+            'outstanding_item': self.outstanding_item,
+            'endorsement_tech_eo': self.endorsement_tech_eo or False,
+            'endorsement_allied_healthcare': self.endorsement_allied_healthcare or False,
+            'endorsement_staffing': self.endorsement_staffing or False,
+            'endorsement_medical_malpractice': self.endorsement_medical_malpractice or False
         }
 
 
@@ -1014,6 +1070,7 @@ def save_commercial_plans(session, commercial, plans_data):
         for idx, plan_info in enumerate(plans_data.get(plan_type, []), 1):
             carrier = plan_info.get('carrier')
             agency = plan_info.get('agency')
+            policy_number = plan_info.get('policy_number')
             renewal = plan_info.get('renewal_date')
             occ_limit_val = plan_info.get('occ_limit')
             agg_limit_val = plan_info.get('agg_limit')
@@ -1025,12 +1082,17 @@ def save_commercial_plans(session, commercial, plans_data):
                     plan_number=idx,
                     carrier=carrier,
                     agency=agency,
+                    policy_number=policy_number or None,
                     coverage_occ_limit=occ_limit_val,
                     coverage_agg_limit=agg_limit_val,
                     premium=parse_premium(premium_val),
                     renewal_date=parse_date(renewal),
                     remarks=plan_info.get('remarks') or None,
-                    outstanding_item=plan_info.get('outstanding_item') or None
+                    outstanding_item=plan_info.get('outstanding_item') or None,
+                    endorsement_tech_eo=bool(plan_info.get('endorsement_tech_eo')),
+                    endorsement_allied_healthcare=bool(plan_info.get('endorsement_allied_healthcare')),
+                    endorsement_staffing=bool(plan_info.get('endorsement_staffing')),
+                    endorsement_medical_malpractice=bool(plan_info.get('endorsement_medical_malpractice'))
                 )
                 session.add(plan)
 
@@ -1040,6 +1102,7 @@ def save_commercial_plans(session, commercial, plans_data):
         first = plans_for_type[0] if plans_for_type else {}
         setattr(commercial, f'{plan_type}_carrier', first.get('carrier') or None)
         setattr(commercial, f'{plan_type}_agency', first.get('agency') or None)
+        setattr(commercial, f'{plan_type}_policy_number', first.get('policy_number') or None)
         setattr(commercial, f'{plan_type}_occ_limit', first.get('occ_limit') or None)
         setattr(commercial, f'{plan_type}_agg_limit', first.get('agg_limit') or None)
         setattr(commercial, f'{plan_type}_premium', parse_premium(first.get('premium')))
@@ -1647,10 +1710,11 @@ def create_commercial():
             parent_client=data.get('parent_client'),
         )
 
-        # Set single-plan product fields (carrier, agency, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item)
+        # Set single-plan product fields (carrier, agency, policy_number, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item)
         for product in single_plan_products:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
+            setattr(commercial, f'{product}_policy_number', data.get(f'{product}_policy_number') or None)
             setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             setattr(commercial, f'{product}_agg_limit', data.get(f'{product}_agg_limit') or None)
             setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
@@ -1658,10 +1722,16 @@ def create_commercial():
             setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
             setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
 
+        # GL endorsements
+        for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
+            setattr(commercial, f'general_liability_endorsement_{endorsement}',
+                    bool(data.get(f'general_liability_endorsement_{endorsement}')))
+
         # Multi-plan type flat fields (backward compat - will be overwritten by save_commercial_plans)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
+            setattr(commercial, f'{product}_policy_number', data.get(f'{product}_policy_number') or None)
             setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             setattr(commercial, f'{product}_agg_limit', data.get(f'{product}_agg_limit') or None)
             setattr(commercial, f'{product}_premium', parse_premium(data.get(f'{product}_premium')))
@@ -1715,6 +1785,8 @@ def update_commercial(commercial_id):
                 setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             if f'{product}_agency' in data:
                 setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
+            if f'{product}_policy_number' in data:
+                setattr(commercial, f'{product}_policy_number', data.get(f'{product}_policy_number') or None)
             if f'{product}_occ_limit' in data:
                 setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             if f'{product}_agg_limit' in data:
@@ -1728,12 +1800,20 @@ def update_commercial(commercial_id):
             if f'{product}_outstanding_item' in data:
                 setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
 
+        # Update GL endorsements
+        for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
+            key = f'general_liability_endorsement_{endorsement}'
+            if key in data:
+                setattr(commercial, key, bool(data.get(key)))
+
         # Update multi-plan type flat fields (backward compat)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
             if f'{product}_carrier' in data:
                 setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             if f'{product}_agency' in data:
                 setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
+            if f'{product}_policy_number' in data:
+                setattr(commercial, f'{product}_policy_number', data.get(f'{product}_policy_number') or None)
             if f'{product}_occ_limit' in data:
                 setattr(commercial, f'{product}_occ_limit', data.get(f'{product}_occ_limit') or None)
             if f'{product}_agg_limit' in data:

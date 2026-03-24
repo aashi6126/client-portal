@@ -4,7 +4,7 @@
   "description": "Client Portal - Full Stack Application",
   "scripts": {
     "build:web": "cd webapp/customer-app && npm run build",
-    "start:api": "/opt/anaconda3/bin/python3 services/api/customer_api.py",
+    "start:api": "python3 services/api/customer_api.py",
     "prestart:api": "npm run build:web",
     "start:web": "cd webapp/customer-app && npm start",
     "start": "concurrently \"npm:start:api\" \"npm:start:web\"",
