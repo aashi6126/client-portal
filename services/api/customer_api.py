@@ -144,6 +144,7 @@ class Client(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     tax_id = db.Column(db.String(50), unique=True, nullable=False)
     client_name = db.Column(db.String(200))
+    dba = db.Column(db.String(200))
     contact_person = db.Column(db.String(200))
     email = db.Column(db.String(200))
     phone_number = db.Column(db.String(50))
@@ -167,6 +168,7 @@ class Client(db.Model):
             'id': self.id,
             'tax_id': self.tax_id,
             'client_name': self.client_name,
+            'dba': self.dba,
             'contact_person': self.contact_person,
             'email': self.email,
             'phone_number': self.phone_number,
@@ -1162,6 +1164,7 @@ def create_client():
         client = Client(
             tax_id=data.get('tax_id'),
             client_name=data.get('client_name'),
+            dba=data.get('dba'),
             contact_person=data.get('contact_person'),
             email=data.get('email'),
             phone_number=data.get('phone_number'),
@@ -1234,6 +1237,7 @@ def update_client(client_id):
 
         client.tax_id = new_tax_id
         client.client_name = data.get('client_name', client.client_name)
+        client.dba = data.get('dba', client.dba)
         client.contact_person = data.get('contact_person', client.contact_person)
         client.email = data.get('email', client.email)
         client.phone_number = data.get('phone_number', client.phone_number)

@@ -34,6 +34,12 @@ export const clientColumns = [
     }
   },
   {
+    id: 'dba',
+    label: 'DBA',
+    sortable: true,
+    minWidth: 140
+  },
+  {
     id: 'gross_revenue',
     label: 'Gross Revenue',
     sortable: true,

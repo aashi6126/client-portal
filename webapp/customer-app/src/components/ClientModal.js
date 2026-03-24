@@ -38,6 +38,7 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
   const [formData, setFormData] = useState({
     tax_id: '',
     client_name: '',
+    dba: '',
     status: 'Active',
     gross_revenue: '',
     total_ees: '',
@@ -59,6 +60,7 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
       setFormData({
         tax_id: client.tax_id || '',
         client_name: client.client_name || '',
+        dba: client.dba || '',
         status: client.status || 'Active',
         gross_revenue: client.gross_revenue ?? '',
         total_ees: client.total_ees ?? '',
@@ -76,6 +78,7 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
       setFormData({
         tax_id: '',
         client_name: '',
+        dba: '',
         status: 'Active',
         gross_revenue: '',
         total_ees: '',
@@ -198,6 +201,17 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
                 size="small"
                 error={Boolean(errors.client_name)}
                 helperText={errors.client_name}
+              />
+            </Grid>
+
+            {/* DBA */}
+            <Grid item xs={12} sm={6}>
+              <TextField
+                label="DBA"
+                value={formData.dba}
+                onChange={handleChange('dba')}
+                fullWidth
+                size="small"
               />
             </Grid>
 
