@@ -284,8 +284,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
       { key: 'product_liability_carrier', name: 'Product' },
       { key: 'flood_carrier', name: 'Flood' },
       { key: 'directors_officers_carrier', name: 'D&O' },
-      { key: 'fiduciary_carrier', name: 'Fiduciary' },
-      { key: 'inland_marine_carrier', name: 'Marine' }
+      { key: 'fiduciary_carrier', name: 'Fiduciary' }
     ];
     const totalCommercialTypes = commercialMultiPlanDefs.length + commercialSinglePlanDefs.length; // 17
 
@@ -346,11 +345,10 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
       { prefix: 'auto', name: 'Auto' }, { prefix: 'epli', name: 'EPLI' },
       { prefix: 'nydbl', name: 'NYDBL' }, { prefix: 'surety', name: 'Surety' },
       { prefix: 'product_liability', name: 'Product' }, { prefix: 'flood', name: 'Flood' },
-      { prefix: 'directors_officers', name: 'D&O' }, { prefix: 'fiduciary', name: 'Fiduciary' },
-      { prefix: 'inland_marine', name: 'Marine' }
+      { prefix: 'directors_officers', name: 'D&O' }, { prefix: 'fiduciary', name: 'Fiduciary' }
     ];
 
-    const result = { 'Cancel Due': [], 'Premium Due': [], 'In Audit': [] };
+    const result = [];
 
     // Extract from benefits
     benefits.forEach(b => {
@@ -358,12 +356,14 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
       BENEFIT_MULTI_PLAN_TYPES.forEach(pt => {
         const typePlans = (b.plans && b.plans[pt]) || [];
         typePlans.forEach((plan, idx) => {
-          if (plan.outstanding_item && result[plan.outstanding_item]) {
-            result[plan.outstanding_item].push({
+          if (plan.outstanding_item) {
+            result.push({
               client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
               prefix: pt,
               policy: typePlans.length > 1 ? `${BENEFIT_MULTI_LABELS[pt]} ${idx + 1}` : BENEFIT_MULTI_LABELS[pt],
-              carrier: plan.carrier, renewal_date: plan.renewal_date
+              carrier: plan.carrier, renewal_date: plan.renewal_date,
+              outstanding_item: plan.outstanding_item,
+              due_date: plan.outstanding_item_due_date
             });
           }
         });
@@ -371,11 +371,13 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
       // Single-plan types
       BENEFIT_SINGLE_TYPES.forEach(({ prefix, name }) => {
         const item = b[`${prefix}_outstanding_item`];
-        if (item && result[item]) {
-          result[item].push({
+        if (item) {
+          result.push({
             client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
             prefix,
-            policy: name, carrier: b[`${prefix}_carrier`], renewal_date: b[`${prefix}_renewal_date`]
+            policy: name, carrier: b[`${prefix}_carrier`], renewal_date: b[`${prefix}_renewal_date`],
+            outstanding_item: item,
+            due_date: b[`${prefix}_outstanding_item_due_date`]
           });
         }
       });
@@ -387,12 +389,14 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
       COMMERCIAL_MULTI_PLAN_TYPES.forEach(pt => {
         const typePlans = (c.plans && c.plans[pt]) || [];
         typePlans.forEach((plan, idx) => {
-          if (plan.outstanding_item && result[plan.outstanding_item]) {
-            result[plan.outstanding_item].push({
+          if (plan.outstanding_item) {
+            result.push({
               client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
               prefix: pt,
               policy: typePlans.length > 1 ? `${COMMERCIAL_MULTI_LABELS[pt]} ${idx + 1}` : COMMERCIAL_MULTI_LABELS[pt],
-              carrier: plan.carrier, renewal_date: plan.renewal_date
+              carrier: plan.carrier, renewal_date: plan.renewal_date,
+              outstanding_item: plan.outstanding_item,
+              due_date: plan.outstanding_item_due_date
             });
           }
         });
@@ -400,11 +404,13 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
       // Single-plan types
       COMMERCIAL_SINGLE_TYPES.forEach(({ prefix, name }) => {
         const item = c[`${prefix}_outstanding_item`];
-        if (item && result[item]) {
-          result[item].push({
+        if (item) {
+          result.push({
             client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
             prefix,
-            policy: name, carrier: c[`${prefix}_carrier`], renewal_date: c[`${prefix}_renewal_date`]
+            policy: name, carrier: c[`${prefix}_carrier`], renewal_date: c[`${prefix}_renewal_date`],
+            outstanding_item: item,
+            due_date: c[`${prefix}_outstanding_item_due_date`]
           });
         }
       });
@@ -421,15 +427,25 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
     personal.forEach(p => {
       PERSONAL_TYPES.forEach(({ prefix, name }) => {
         const item = p[`${prefix}_outstanding_item`];
-        if (item && result[item]) {
+        if (item) {
           const renewalField = ['event', 'visitors_medical'].includes(prefix) ? `${prefix}_start_date` : `${prefix}_renewal_date`;
-          result[item].push({
+          result.push({
             client_name: p.client_name, tax_id: p.tax_id, source: 'Personal',
             prefix,
-            policy: name, carrier: p[`${prefix}_carrier`], renewal_date: p[renewalField]
+            policy: name, carrier: p[`${prefix}_carrier`], renewal_date: p[renewalField],
+            outstanding_item: item,
+            due_date: p[`${prefix}_outstanding_item_due_date`]
           });
         }
       });
+    });
+
+    // Sort by due date (soonest first, then items without due date)
+    result.sort((a, b) => {
+      if (a.due_date && b.due_date) return a.due_date.localeCompare(b.due_date);
+      if (a.due_date) return -1;
+      if (b.due_date) return 1;
+      return 0;
     });
 
     return result;
@@ -713,25 +729,13 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
           onChange={(_, newValue) => setOutstandingTab(newValue)}
           sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
         >
-          {[
-            { label: 'Cancel Due', data: outstandingPolicies['Cancel Due'] },
-            { label: 'Premium Due', data: outstandingPolicies['Premium Due'] },
-            { label: 'In Audit', data: outstandingPolicies['In Audit'] },
-            { label: 'Prospects', data: prospectClients }
-          ].map(({ label, data }, idx) => (
-            <Tab key={label} label={`${label} (${data.length})`} />
-          ))}
+          <Tab label={`Outstanding Items (${outstandingPolicies.length})`} />
+          <Tab label={`Prospects (${prospectClients.length})`} />
         </Tabs>
 
-        {/* Cancel Due / Premium Due / In Audit tabs */}
-        {outstandingTab < 3 && (() => {
-          const tabDefs = [
-            { key: 'Cancel Due', bgColor: '#ffebee', borderColor: '#ef9a9a' },
-            { key: 'Premium Due', bgColor: '#fff3e0', borderColor: '#ffcc80' },
-            { key: 'In Audit', bgColor: '#e3f2fd', borderColor: '#90caf9' }
-          ];
-          const { key, bgColor, borderColor } = tabDefs[outstandingTab];
-          const items = outstandingPolicies[key];
+        {/* Outstanding Items tab */}
+        {outstandingTab === 0 && (() => {
+          const items = outstandingPolicies;
           return items.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table stickyHeader size="small">
@@ -740,44 +744,51 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
                     <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Policy</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Outstanding Item</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Carrier</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Renewal Date</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {items.map((item, idx) => (
+                  {items.map((item, idx) => {
+                    const isOverdue = item.due_date && new Date(item.due_date + 'T00:00:00') < new Date();
+                    return (
                     <TableRow
                       key={idx}
-                      sx={{ backgroundColor: bgColor, cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
+                      sx={{ backgroundColor: isOverdue ? '#ffebee' : item.due_date ? '#fff3e0' : 'inherit', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
                       onClick={() => handleEditItem(item.tax_id, item.source, item.prefix)}
                     >
                       <TableCell><strong>{item.client_name}</strong></TableCell>
                       <TableCell>{item.policy}</TableCell>
                       <TableCell>
-                        <Chip label={item.source} size="small" color={item.source === 'Benefits' ? 'warning' : 'info'} sx={{ fontSize: '0.75rem' }} />
+                        <Chip label={item.source} size="small" color={item.source === 'Benefits' ? 'warning' : item.source === 'Commercial' ? 'info' : 'default'} sx={{ fontSize: '0.75rem' }} />
+                      </TableCell>
+                      <TableCell>{item.outstanding_item}</TableCell>
+                      <TableCell sx={{ color: isOverdue ? '#d32f2f' : 'inherit', fontWeight: isOverdue ? 700 : 400 }}>
+                        {item.due_date ? formatDate(item.due_date) : '—'}
                       </TableCell>
                       <TableCell>{item.carrier || '—'}</TableCell>
-                      <TableCell>{item.renewal_date ? formatDate(item.renewal_date) : '—'}</TableCell>
                       <TableCell>
                         <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
                           Edit
                         </Button>
                       </TableCell>
                     </TableRow>
-                  ))}
+                    );
+                  })}
                 </TableBody>
               </Table>
             </TableContainer>
           ) : (
             <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              No {key.toLowerCase()} items
+              No outstanding items
             </Typography>
           );
         })()}
 
         {/* Prospects tab */}
-        {outstandingTab === 3 && (
+        {outstandingTab === 1 && (
           prospectClients.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table stickyHeader size="small">

@@ -306,13 +306,21 @@ class EmployeeBenefit(db.Model):
     voluntary_life_remarks = db.Column(db.Text)
 
     # Outstanding item columns for single-plan types
-    ltd_outstanding_item = db.Column(db.String(50))
-    std_outstanding_item = db.Column(db.String(50))
-    k401_outstanding_item = db.Column(db.String(50))
-    critical_illness_outstanding_item = db.Column(db.String(50))
-    accident_outstanding_item = db.Column(db.String(50))
-    hospital_outstanding_item = db.Column(db.String(50))
-    voluntary_life_outstanding_item = db.Column(db.String(50))
+    outstanding_item_due_date = db.Column(db.Date)
+    ltd_outstanding_item = db.Column(db.Text)
+    ltd_outstanding_item_due_date = db.Column(db.Date)
+    std_outstanding_item = db.Column(db.Text)
+    std_outstanding_item_due_date = db.Column(db.Date)
+    k401_outstanding_item = db.Column(db.Text)
+    k401_outstanding_item_due_date = db.Column(db.Date)
+    critical_illness_outstanding_item = db.Column(db.Text)
+    critical_illness_outstanding_item_due_date = db.Column(db.Date)
+    accident_outstanding_item = db.Column(db.Text)
+    accident_outstanding_item_due_date = db.Column(db.Date)
+    hospital_outstanding_item = db.Column(db.Text)
+    hospital_outstanding_item_due_date = db.Column(db.Date)
+    voluntary_life_outstanding_item = db.Column(db.Text)
+    voluntary_life_outstanding_item_due_date = db.Column(db.Date)
 
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -331,6 +339,7 @@ class EmployeeBenefit(db.Model):
             'form_fire_code': self.form_fire_code,
             'enrollment_poc': self.enrollment_poc,
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
+            'outstanding_item_due_date': self.outstanding_item_due_date.isoformat() if self.outstanding_item_due_date else None,
             'funding': self.funding,
             'current_carrier': self.current_carrier,
             'num_employees_at_renewal': self.num_employees_at_renewal,
@@ -350,30 +359,37 @@ class EmployeeBenefit(db.Model):
             'ltd_carrier': self.ltd_carrier,
             'ltd_remarks': self.ltd_remarks,
             'ltd_outstanding_item': self.ltd_outstanding_item,
+            'ltd_outstanding_item_due_date': self.ltd_outstanding_item_due_date.isoformat() if self.ltd_outstanding_item_due_date else None,
             'std_renewal_date': self.std_renewal_date.isoformat() if self.std_renewal_date else None,
             'std_carrier': self.std_carrier,
             'std_remarks': self.std_remarks,
             'std_outstanding_item': self.std_outstanding_item,
+            'std_outstanding_item_due_date': self.std_outstanding_item_due_date.isoformat() if self.std_outstanding_item_due_date else None,
             'k401_renewal_date': self.k401_renewal_date.isoformat() if self.k401_renewal_date else None,
             'k401_carrier': self.k401_carrier,
             'k401_remarks': self.k401_remarks,
             'k401_outstanding_item': self.k401_outstanding_item,
+            'k401_outstanding_item_due_date': self.k401_outstanding_item_due_date.isoformat() if self.k401_outstanding_item_due_date else None,
             'critical_illness_renewal_date': self.critical_illness_renewal_date.isoformat() if self.critical_illness_renewal_date else None,
             'critical_illness_carrier': self.critical_illness_carrier,
             'critical_illness_remarks': self.critical_illness_remarks,
             'critical_illness_outstanding_item': self.critical_illness_outstanding_item,
+            'critical_illness_outstanding_item_due_date': self.critical_illness_outstanding_item_due_date.isoformat() if self.critical_illness_outstanding_item_due_date else None,
             'accident_renewal_date': self.accident_renewal_date.isoformat() if self.accident_renewal_date else None,
             'accident_carrier': self.accident_carrier,
             'accident_remarks': self.accident_remarks,
             'accident_outstanding_item': self.accident_outstanding_item,
+            'accident_outstanding_item_due_date': self.accident_outstanding_item_due_date.isoformat() if self.accident_outstanding_item_due_date else None,
             'hospital_renewal_date': self.hospital_renewal_date.isoformat() if self.hospital_renewal_date else None,
             'hospital_carrier': self.hospital_carrier,
             'hospital_remarks': self.hospital_remarks,
             'hospital_outstanding_item': self.hospital_outstanding_item,
+            'hospital_outstanding_item_due_date': self.hospital_outstanding_item_due_date.isoformat() if self.hospital_outstanding_item_due_date else None,
             'voluntary_life_renewal_date': self.voluntary_life_renewal_date.isoformat() if self.voluntary_life_renewal_date else None,
             'voluntary_life_carrier': self.voluntary_life_carrier,
             'voluntary_life_remarks': self.voluntary_life_remarks,
             'voluntary_life_outstanding_item': self.voluntary_life_outstanding_item,
+            'voluntary_life_outstanding_item_due_date': self.voluntary_life_outstanding_item_due_date.isoformat() if self.voluntary_life_outstanding_item_due_date else None,
             'plans': self._get_plans_dict()
         }
 
@@ -428,6 +444,7 @@ class CommercialInsurance(db.Model):
     tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
 
     parent_client = db.Column(db.String(200))
+    assigned_to = db.Column(db.String(200))
 
     # Core fields
     remarks = db.Column(db.Text)
@@ -626,19 +643,34 @@ class CommercialInsurance(db.Model):
     inland_marine_remarks = db.Column(db.Text)
 
     # Outstanding item columns for single-plan types
-    general_liability_outstanding_item = db.Column(db.String(50))
-    property_outstanding_item = db.Column(db.String(50))
-    bop_outstanding_item = db.Column(db.String(50))
-    workers_comp_outstanding_item = db.Column(db.String(50))
-    auto_outstanding_item = db.Column(db.String(50))
-    epli_outstanding_item = db.Column(db.String(50))
-    nydbl_outstanding_item = db.Column(db.String(50))
-    surety_outstanding_item = db.Column(db.String(50))
-    product_liability_outstanding_item = db.Column(db.String(50))
-    flood_outstanding_item = db.Column(db.String(50))
-    directors_officers_outstanding_item = db.Column(db.String(50))
-    fiduciary_outstanding_item = db.Column(db.String(50))
-    inland_marine_outstanding_item = db.Column(db.String(50))
+    general_liability_outstanding_item = db.Column(db.Text)
+    property_outstanding_item = db.Column(db.Text)
+    bop_outstanding_item = db.Column(db.Text)
+    workers_comp_outstanding_item = db.Column(db.Text)
+    auto_outstanding_item = db.Column(db.Text)
+    epli_outstanding_item = db.Column(db.Text)
+    nydbl_outstanding_item = db.Column(db.Text)
+    surety_outstanding_item = db.Column(db.Text)
+    product_liability_outstanding_item = db.Column(db.Text)
+    flood_outstanding_item = db.Column(db.Text)
+    directors_officers_outstanding_item = db.Column(db.Text)
+    fiduciary_outstanding_item = db.Column(db.Text)
+    inland_marine_outstanding_item = db.Column(db.Text)
+
+    # Outstanding item due date columns
+    general_liability_outstanding_item_due_date = db.Column(db.Date)
+    property_outstanding_item_due_date = db.Column(db.Date)
+    bop_outstanding_item_due_date = db.Column(db.Date)
+    workers_comp_outstanding_item_due_date = db.Column(db.Date)
+    auto_outstanding_item_due_date = db.Column(db.Date)
+    epli_outstanding_item_due_date = db.Column(db.Date)
+    nydbl_outstanding_item_due_date = db.Column(db.Date)
+    surety_outstanding_item_due_date = db.Column(db.Date)
+    product_liability_outstanding_item_due_date = db.Column(db.Date)
+    flood_outstanding_item_due_date = db.Column(db.Date)
+    directors_officers_outstanding_item_due_date = db.Column(db.Date)
+    fiduciary_outstanding_item_due_date = db.Column(db.Date)
+    inland_marine_outstanding_item_due_date = db.Column(db.Date)
 
     # Relationships
     client = db.relationship('Client', back_populates='commercial_insurance')
@@ -654,6 +686,7 @@ class CommercialInsurance(db.Model):
             'client_name': self.client.client_name if self.client else None,
             'client_status': self.client.status if self.client else None,
             'parent_client': self.parent_client,
+            'assigned_to': self.assigned_to,
             'general_liability_carrier': self.general_liability_carrier,
             'general_liability_agency': self.general_liability_agency,
             'general_liability_policy_number': self.general_liability_policy_number,
@@ -663,6 +696,7 @@ class CommercialInsurance(db.Model):
             'general_liability_renewal_date': self.general_liability_renewal_date.isoformat() if self.general_liability_renewal_date else None,
             'general_liability_remarks': self.general_liability_remarks,
             'general_liability_outstanding_item': self.general_liability_outstanding_item,
+            'general_liability_outstanding_item_due_date': self.general_liability_outstanding_item_due_date.isoformat() if self.general_liability_outstanding_item_due_date else None,
             'general_liability_endorsement_bop': self.general_liability_endorsement_bop or False,
             'general_liability_endorsement_marine': self.general_liability_endorsement_marine or False,
             'general_liability_endorsement_foreign': self.general_liability_endorsement_foreign or False,
@@ -677,6 +711,7 @@ class CommercialInsurance(db.Model):
             'property_renewal_date': self.property_renewal_date.isoformat() if self.property_renewal_date else None,
             'property_remarks': self.property_remarks,
             'property_outstanding_item': self.property_outstanding_item,
+            'property_outstanding_item_due_date': self.property_outstanding_item_due_date.isoformat() if self.property_outstanding_item_due_date else None,
             'bop_carrier': self.bop_carrier,
             'bop_agency': self.bop_agency,
             'bop_policy_number': self.bop_policy_number,
@@ -686,6 +721,7 @@ class CommercialInsurance(db.Model):
             'bop_renewal_date': self.bop_renewal_date.isoformat() if self.bop_renewal_date else None,
             'bop_remarks': self.bop_remarks,
             'bop_outstanding_item': self.bop_outstanding_item,
+            'bop_outstanding_item_due_date': self.bop_outstanding_item_due_date.isoformat() if self.bop_outstanding_item_due_date else None,
             'umbrella_carrier': self.umbrella_carrier,
             'umbrella_agency': self.umbrella_agency,
             'umbrella_policy_number': self.umbrella_policy_number,
@@ -702,6 +738,7 @@ class CommercialInsurance(db.Model):
             'workers_comp_renewal_date': self.workers_comp_renewal_date.isoformat() if self.workers_comp_renewal_date else None,
             'workers_comp_remarks': self.workers_comp_remarks,
             'workers_comp_outstanding_item': self.workers_comp_outstanding_item,
+            'workers_comp_outstanding_item_due_date': self.workers_comp_outstanding_item_due_date.isoformat() if self.workers_comp_outstanding_item_due_date else None,
             'professional_eo_carrier': self.professional_eo_carrier,
             'professional_eo_agency': self.professional_eo_agency,
             'professional_eo_policy_number': self.professional_eo_policy_number,
@@ -725,6 +762,7 @@ class CommercialInsurance(db.Model):
             'auto_renewal_date': self.auto_renewal_date.isoformat() if self.auto_renewal_date else None,
             'auto_remarks': self.auto_remarks,
             'auto_outstanding_item': self.auto_outstanding_item,
+            'auto_outstanding_item_due_date': self.auto_outstanding_item_due_date.isoformat() if self.auto_outstanding_item_due_date else None,
             'epli_carrier': self.epli_carrier,
             'epli_agency': self.epli_agency,
             'epli_policy_number': self.epli_policy_number,
@@ -734,6 +772,7 @@ class CommercialInsurance(db.Model):
             'epli_renewal_date': self.epli_renewal_date.isoformat() if self.epli_renewal_date else None,
             'epli_remarks': self.epli_remarks,
             'epli_outstanding_item': self.epli_outstanding_item,
+            'epli_outstanding_item_due_date': self.epli_outstanding_item_due_date.isoformat() if self.epli_outstanding_item_due_date else None,
             'nydbl_carrier': self.nydbl_carrier,
             'nydbl_agency': self.nydbl_agency,
             'nydbl_policy_number': self.nydbl_policy_number,
@@ -743,6 +782,7 @@ class CommercialInsurance(db.Model):
             'nydbl_renewal_date': self.nydbl_renewal_date.isoformat() if self.nydbl_renewal_date else None,
             'nydbl_remarks': self.nydbl_remarks,
             'nydbl_outstanding_item': self.nydbl_outstanding_item,
+            'nydbl_outstanding_item_due_date': self.nydbl_outstanding_item_due_date.isoformat() if self.nydbl_outstanding_item_due_date else None,
             'surety_carrier': self.surety_carrier,
             'surety_agency': self.surety_agency,
             'surety_policy_number': self.surety_policy_number,
@@ -752,6 +792,7 @@ class CommercialInsurance(db.Model):
             'surety_renewal_date': self.surety_renewal_date.isoformat() if self.surety_renewal_date else None,
             'surety_remarks': self.surety_remarks,
             'surety_outstanding_item': self.surety_outstanding_item,
+            'surety_outstanding_item_due_date': self.surety_outstanding_item_due_date.isoformat() if self.surety_outstanding_item_due_date else None,
             'product_liability_carrier': self.product_liability_carrier,
             'product_liability_agency': self.product_liability_agency,
             'product_liability_policy_number': self.product_liability_policy_number,
@@ -761,6 +802,7 @@ class CommercialInsurance(db.Model):
             'product_liability_renewal_date': self.product_liability_renewal_date.isoformat() if self.product_liability_renewal_date else None,
             'product_liability_remarks': self.product_liability_remarks,
             'product_liability_outstanding_item': self.product_liability_outstanding_item,
+            'product_liability_outstanding_item_due_date': self.product_liability_outstanding_item_due_date.isoformat() if self.product_liability_outstanding_item_due_date else None,
             'flood_carrier': self.flood_carrier,
             'flood_agency': self.flood_agency,
             'flood_policy_number': self.flood_policy_number,
@@ -770,6 +812,7 @@ class CommercialInsurance(db.Model):
             'flood_renewal_date': self.flood_renewal_date.isoformat() if self.flood_renewal_date else None,
             'flood_remarks': self.flood_remarks,
             'flood_outstanding_item': self.flood_outstanding_item,
+            'flood_outstanding_item_due_date': self.flood_outstanding_item_due_date.isoformat() if self.flood_outstanding_item_due_date else None,
             'crime_carrier': self.crime_carrier,
             'crime_agency': self.crime_agency,
             'crime_policy_number': self.crime_policy_number,
@@ -786,6 +829,7 @@ class CommercialInsurance(db.Model):
             'directors_officers_renewal_date': self.directors_officers_renewal_date.isoformat() if self.directors_officers_renewal_date else None,
             'directors_officers_remarks': self.directors_officers_remarks,
             'directors_officers_outstanding_item': self.directors_officers_outstanding_item,
+            'directors_officers_outstanding_item_due_date': self.directors_officers_outstanding_item_due_date.isoformat() if self.directors_officers_outstanding_item_due_date else None,
             'fiduciary_carrier': self.fiduciary_carrier,
             'fiduciary_agency': self.fiduciary_agency,
             'fiduciary_policy_number': self.fiduciary_policy_number,
@@ -795,6 +839,7 @@ class CommercialInsurance(db.Model):
             'fiduciary_renewal_date': self.fiduciary_renewal_date.isoformat() if self.fiduciary_renewal_date else None,
             'fiduciary_remarks': self.fiduciary_remarks,
             'fiduciary_outstanding_item': self.fiduciary_outstanding_item,
+            'fiduciary_outstanding_item_due_date': self.fiduciary_outstanding_item_due_date.isoformat() if self.fiduciary_outstanding_item_due_date else None,
             'inland_marine_carrier': self.inland_marine_carrier,
             'inland_marine_agency': self.inland_marine_agency,
             'inland_marine_policy_number': self.inland_marine_policy_number,
@@ -804,6 +849,7 @@ class CommercialInsurance(db.Model):
             'inland_marine_renewal_date': self.inland_marine_renewal_date.isoformat() if self.inland_marine_renewal_date else None,
             'inland_marine_remarks': self.inland_marine_remarks,
             'inland_marine_outstanding_item': self.inland_marine_outstanding_item,
+            'inland_marine_outstanding_item_due_date': self.inland_marine_outstanding_item_due_date.isoformat() if self.inland_marine_outstanding_item_due_date else None,
             'plans': self._get_commercial_plans_dict()
         }
         return result
@@ -837,7 +883,8 @@ class CommercialPlan(db.Model):
     renewal_date = db.Column(db.Date)
     flag = db.Column(db.Boolean, default=False)
     remarks = db.Column(db.Text)
-    outstanding_item = db.Column(db.String(50))
+    outstanding_item = db.Column(db.Text)
+    outstanding_item_due_date = db.Column(db.Date)
 
     # Endorsements (used by professional_eo plans)
     endorsement_tech_eo = db.Column(db.Boolean, default=False)
@@ -862,10 +909,55 @@ class CommercialPlan(db.Model):
             'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
             'remarks': self.remarks,
             'outstanding_item': self.outstanding_item,
+            'outstanding_item_due_date': self.outstanding_item_due_date.isoformat() if self.outstanding_item_due_date else None,
             'endorsement_tech_eo': self.endorsement_tech_eo or False,
             'endorsement_allied_healthcare': self.endorsement_allied_healthcare or False,
             'endorsement_staffing': self.endorsement_staffing or False,
             'endorsement_medical_malpractice': self.endorsement_medical_malpractice or False
+        }
+
+
+class HomeownersPolicy(db.Model):
+    __tablename__ = 'homeowners_policies'
+
+    id = db.Column(db.Integer, primary_key=True)
+    personal_insurance_id = db.Column(db.Integer, db.ForeignKey('personal_insurance.id'), nullable=False)
+    policy_number = db.Column(db.Integer, nullable=False, default=1)
+    carrier = db.Column(db.String(200))
+    dwelling_limit = db.Column(db.String(100))
+    liability_limit = db.Column(db.String(100))
+    premium = db.Column(db.Numeric(12, 2))
+    renewal_date = db.Column(db.Date)
+    remarks = db.Column(db.Text)
+    outstanding_item = db.Column(db.Text)
+    outstanding_item_due_date = db.Column(db.Date)
+    property_address_line_1 = db.Column(db.String(200))
+    property_address_line_2 = db.Column(db.String(200))
+    property_city = db.Column(db.String(100))
+    property_state = db.Column(db.String(50))
+    property_zip = db.Column(db.String(20))
+    is_primary_residence = db.Column(db.Boolean, default=False)
+
+    personal_insurance = db.relationship('PersonalInsurance', back_populates='homeowners_policies')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'policy_number': self.policy_number,
+            'carrier': self.carrier,
+            'dwelling_limit': self.dwelling_limit,
+            'liability_limit': self.liability_limit,
+            'premium': float(self.premium) if self.premium else None,
+            'renewal_date': self.renewal_date.isoformat() if self.renewal_date else None,
+            'remarks': self.remarks,
+            'outstanding_item': self.outstanding_item,
+            'outstanding_item_due_date': self.outstanding_item_due_date.isoformat() if self.outstanding_item_due_date else None,
+            'property_address_line_1': self.property_address_line_1,
+            'property_address_line_2': self.property_address_line_2,
+            'property_city': self.property_city,
+            'property_state': self.property_state,
+            'property_zip': self.property_zip,
+            'is_primary_residence': self.is_primary_residence or False
         }
 
 
@@ -927,8 +1019,9 @@ class PersonalInsurance(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-    # Relationship
+    # Relationships
     individual = db.relationship('Individual', back_populates='personal_insurance')
+    homeowners_policies = db.relationship('HomeownersPolicy', back_populates='personal_insurance', cascade='all, delete-orphan')
 
     def to_dict(self):
         def format_premium(val):
@@ -956,6 +1049,7 @@ class PersonalInsurance(db.Model):
             'homeowners_premium': format_premium(self.homeowners_premium),
             'homeowners_outstanding_item': self.homeowners_outstanding_item,
             'homeowners_remarks': self.homeowners_remarks,
+            'homeowners_policies_list': [p.to_dict() for p in sorted(self.homeowners_policies, key=lambda x: x.policy_number)],
             # Personal Umbrella
             'personal_umbrella_carrier': self.personal_umbrella_carrier,
             'personal_umbrella_liability_limit': self.personal_umbrella_liability_limit,
@@ -1091,6 +1185,7 @@ def save_commercial_plans(session, commercial, plans_data):
                     renewal_date=parse_date(renewal),
                     remarks=plan_info.get('remarks') or None,
                     outstanding_item=plan_info.get('outstanding_item') or None,
+                    outstanding_item_due_date=parse_date(plan_info.get('outstanding_item_due_date')),
                     endorsement_tech_eo=bool(plan_info.get('endorsement_tech_eo')),
                     endorsement_allied_healthcare=bool(plan_info.get('endorsement_allied_healthcare')),
                     endorsement_staffing=bool(plan_info.get('endorsement_staffing')),
@@ -1111,6 +1206,47 @@ def save_commercial_plans(session, commercial, plans_data):
         setattr(commercial, f'{plan_type}_renewal_date', parse_date(first.get('renewal_date')))
 
 
+def save_homeowners_policies(session, personal, policies_data):
+    """Save homeowners policy child records. Deletes existing first."""
+    session.query(HomeownersPolicy).filter_by(personal_insurance_id=personal.id).delete()
+    session.flush()
+    for idx, p in enumerate(policies_data or [], 1):
+        carrier = p.get('carrier')
+        dwelling = p.get('dwelling_limit')
+        liability = p.get('liability_limit')
+        premium = p.get('premium')
+        renewal = p.get('renewal_date')
+        if carrier or dwelling or liability or premium or renewal:
+            policy = HomeownersPolicy(
+                personal_insurance_id=personal.id,
+                policy_number=idx,
+                carrier=carrier,
+                dwelling_limit=dwelling,
+                liability_limit=liability,
+                premium=parse_premium(premium),
+                renewal_date=parse_date(renewal),
+                remarks=p.get('remarks') or None,
+                outstanding_item=p.get('outstanding_item') or None,
+                outstanding_item_due_date=parse_date(p.get('outstanding_item_due_date')),
+                property_address_line_1=p.get('property_address_line_1') or None,
+                property_address_line_2=p.get('property_address_line_2') or None,
+                property_city=p.get('property_city') or None,
+                property_state=p.get('property_state') or None,
+                property_zip=p.get('property_zip') or None,
+                is_primary_residence=bool(p.get('is_primary_residence'))
+            )
+            session.add(policy)
+    # Update flat fields from first policy for backward compat
+    first = policies_data[0] if policies_data else {}
+    personal.homeowners_carrier = first.get('carrier') or None
+    personal.homeowners_dwelling_limit = first.get('dwelling_limit') or None
+    personal.homeowners_liability_limit = first.get('liability_limit') or None
+    personal.homeowners_premium = parse_premium(first.get('premium'))
+    personal.homeowners_renewal_date = parse_date(first.get('renewal_date'))
+    personal.homeowners_remarks = first.get('remarks') or None
+    personal.homeowners_outstanding_item = first.get('outstanding_item') or None
+
+
 def parse_premium(val):
     """Parse premium value to float, returning None for empty/invalid values."""
     if val is None or val == '':
@@ -1119,6 +1255,33 @@ def parse_premium(val):
         return float(val)
     except (ValueError, TypeError):
         return None
+
+
+def format_limit(val):
+    """Convert a limit value to millions for storage.
+    '1,000,000' or 1000000 → '1'
+    '2,000,000' or 2000000 → '2'
+    '5,000,000' or 5000000 → '5'
+    '500,000' or 500000 → '0.5'
+    Already in millions (e.g. '1', '2', '5') → kept as-is.
+    Non-numeric strings (e.g. 'N/A') → kept as-is."""
+    if val is None or val == '':
+        return None
+    s = str(val).strip()
+    if s.upper() == 'N/A':
+        return None
+    # Remove commas to get raw number
+    raw = s.replace(',', '')
+    try:
+        num = float(raw)
+        # If >= 100000, assume it's in raw dollars — convert to millions
+        if num >= 100000:
+            m = num / 1000000
+            return str(int(m)) if m == int(m) else str(m)
+        # Otherwise already in millions or a small value — keep as-is
+        return str(int(num)) if num == int(num) else str(num)
+    except (ValueError, TypeError):
+        return s
 
 
 # ===========================================================================
@@ -1397,30 +1560,38 @@ def create_benefit():
             ltd_carrier=data.get('ltd_carrier'),
             ltd_remarks=data.get('ltd_remarks'),
             ltd_outstanding_item=data.get('ltd_outstanding_item'),
+            ltd_outstanding_item_due_date=parse_date(data.get('ltd_outstanding_item_due_date')),
             std_renewal_date=parse_date(data.get('std_renewal_date')),
             std_carrier=data.get('std_carrier'),
             std_remarks=data.get('std_remarks'),
             std_outstanding_item=data.get('std_outstanding_item'),
+            std_outstanding_item_due_date=parse_date(data.get('std_outstanding_item_due_date')),
             k401_renewal_date=parse_date(data.get('k401_renewal_date')),
             k401_carrier=data.get('k401_carrier'),
             k401_remarks=data.get('k401_remarks'),
             k401_outstanding_item=data.get('k401_outstanding_item'),
+            k401_outstanding_item_due_date=parse_date(data.get('k401_outstanding_item_due_date')),
             critical_illness_renewal_date=parse_date(data.get('critical_illness_renewal_date')),
             critical_illness_carrier=data.get('critical_illness_carrier'),
             critical_illness_remarks=data.get('critical_illness_remarks'),
             critical_illness_outstanding_item=data.get('critical_illness_outstanding_item'),
+            critical_illness_outstanding_item_due_date=parse_date(data.get('critical_illness_outstanding_item_due_date')),
             accident_renewal_date=parse_date(data.get('accident_renewal_date')),
             accident_carrier=data.get('accident_carrier'),
             accident_remarks=data.get('accident_remarks'),
             accident_outstanding_item=data.get('accident_outstanding_item'),
+            accident_outstanding_item_due_date=parse_date(data.get('accident_outstanding_item_due_date')),
             hospital_renewal_date=parse_date(data.get('hospital_renewal_date')),
             hospital_carrier=data.get('hospital_carrier'),
             hospital_remarks=data.get('hospital_remarks'),
             hospital_outstanding_item=data.get('hospital_outstanding_item'),
+            hospital_outstanding_item_due_date=parse_date(data.get('hospital_outstanding_item_due_date')),
             voluntary_life_renewal_date=parse_date(data.get('voluntary_life_renewal_date')),
             voluntary_life_carrier=data.get('voluntary_life_carrier'),
             voluntary_life_remarks=data.get('voluntary_life_remarks'),
-            voluntary_life_outstanding_item=data.get('voluntary_life_outstanding_item')
+            voluntary_life_outstanding_item=data.get('voluntary_life_outstanding_item'),
+            voluntary_life_outstanding_item_due_date=parse_date(data.get('voluntary_life_outstanding_item_due_date')),
+            outstanding_item_due_date=parse_date(data.get('outstanding_item_due_date'))
         )
 
         session.add(benefit)
@@ -1516,12 +1687,18 @@ def update_benefit(benefit_id):
         if 'voluntary_life_carrier' in data:
             benefit.voluntary_life_carrier = data.get('voluntary_life_carrier')
 
-        # Update single-plan remarks and outstanding_item columns
+        # Update outstanding_item_due_date for core
+        if 'outstanding_item_due_date' in data:
+            benefit.outstanding_item_due_date = parse_date(data.get('outstanding_item_due_date'))
+
+        # Update single-plan remarks, outstanding_item, and due_date columns
         for prefix in ['ltd', 'std', 'k401', 'critical_illness', 'accident', 'hospital', 'voluntary_life']:
             if f'{prefix}_remarks' in data:
                 setattr(benefit, f'{prefix}_remarks', data.get(f'{prefix}_remarks'))
             if f'{prefix}_outstanding_item' in data:
                 setattr(benefit, f'{prefix}_outstanding_item', data.get(f'{prefix}_outstanding_item'))
+            if f'{prefix}_outstanding_item_due_date' in data:
+                setattr(benefit, f'{prefix}_outstanding_item_due_date', parse_date(data.get(f'{prefix}_outstanding_item_due_date')))
 
         # Save multi-plan child records if provided
         if 'plans' in data:
@@ -1712,9 +1889,10 @@ def create_commercial():
         commercial = CommercialInsurance(
             tax_id=data.get('tax_id'),
             parent_client=data.get('parent_client'),
+            assigned_to=data.get('assigned_to') or None,
         )
 
-        # Set single-plan product fields (carrier, agency, policy_number, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item)
+        # Set single-plan product fields
         for product in single_plan_products:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
             setattr(commercial, f'{product}_agency', data.get(f'{product}_agency') or None)
@@ -1725,6 +1903,7 @@ def create_commercial():
             setattr(commercial, f'{product}_renewal_date', parse_date(data.get(f'{product}_renewal_date')))
             setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
             setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
+            setattr(commercial, f'{product}_outstanding_item_due_date', parse_date(data.get(f'{product}_outstanding_item_due_date')))
 
         # GL endorsements
         for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
@@ -1777,6 +1956,8 @@ def update_commercial(commercial_id):
         # Update core fields
         commercial.tax_id = data.get('tax_id', commercial.tax_id)
         commercial.parent_client = data.get('parent_client', commercial.parent_client)
+        if 'assigned_to' in data:
+            commercial.assigned_to = data.get('assigned_to') or None
 
         # Update single-plan insurance products
         single_plan_products = [
@@ -1803,6 +1984,8 @@ def update_commercial(commercial_id):
                 setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
             if f'{product}_outstanding_item' in data:
                 setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
+            if f'{product}_outstanding_item_due_date' in data:
+                setattr(commercial, f'{product}_outstanding_item_due_date', parse_date(data.get(f'{product}_outstanding_item_due_date')))
 
         # Update GL endorsements
         for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
@@ -2266,6 +2449,12 @@ def create_personal():
                 setattr(personal, f'{product}_{f}', data.get(f'{product}_{f}') or None)
 
         session.add(personal)
+        session.flush()
+
+        # Save homeowners policies if provided
+        if 'homeowners_policies_list' in data:
+            save_homeowners_policies(session, personal, data['homeowners_policies_list'])
+
         session.commit()
         session.refresh(personal)
 
@@ -2318,7 +2507,12 @@ def update_personal(personal_id):
                 if key in data:
                     setattr(personal, key, data.get(key) or None)
 
+        # Save homeowners policies if provided
+        if 'homeowners_policies_list' in data:
+            save_homeowners_policies(session, personal, data['homeowners_policies_list'])
+
         session.commit()
+        session.refresh(personal)
 
         return jsonify({
             'message': 'Personal insurance updated successfully',
@@ -2605,7 +2799,7 @@ def export_to_excel():
         ws_clients['C1'].fill = section_fill
 
         # Row 2: Column headers
-        client_headers = ['Tax ID', 'Client Name ', 'Status', 'Gross Revenue', 'Total EEs',
+        client_headers = ['Tax ID', 'Client Name ', 'DBA', 'Status', 'Gross Revenue', 'Total EEs',
                          'Contact Person', 'Email', ' Phone Number',
                          'Address Line 1', 'Address Line 2', 'City', 'State', 'Zip Code']
         for col, header in enumerate(client_headers, 1):
@@ -2617,17 +2811,18 @@ def export_to_excel():
         for row_idx, client in enumerate(clients, 3):
             ws_clients.cell(row=row_idx, column=1, value=client.tax_id)
             ws_clients.cell(row=row_idx, column=2, value=client.client_name)
-            ws_clients.cell(row=row_idx, column=3, value=client.status)
-            ws_clients.cell(row=row_idx, column=4, value=float(client.gross_revenue) if client.gross_revenue else None)
-            ws_clients.cell(row=row_idx, column=5, value=client.total_ees)
-            ws_clients.cell(row=row_idx, column=6, value=client.contact_person)
-            ws_clients.cell(row=row_idx, column=7, value=client.email)
-            ws_clients.cell(row=row_idx, column=8, value=client.phone_number)
-            ws_clients.cell(row=row_idx, column=9, value=client.address_line_1)
-            ws_clients.cell(row=row_idx, column=10, value=client.address_line_2)
-            ws_clients.cell(row=row_idx, column=11, value=client.city)
-            ws_clients.cell(row=row_idx, column=12, value=client.state)
-            zip_cell = ws_clients.cell(row=row_idx, column=13, value=client.zip_code)
+            ws_clients.cell(row=row_idx, column=3, value=client.dba)
+            ws_clients.cell(row=row_idx, column=4, value=client.status)
+            ws_clients.cell(row=row_idx, column=5, value=float(client.gross_revenue) if client.gross_revenue else None)
+            ws_clients.cell(row=row_idx, column=6, value=client.total_ees)
+            ws_clients.cell(row=row_idx, column=7, value=client.contact_person)
+            ws_clients.cell(row=row_idx, column=8, value=client.email)
+            ws_clients.cell(row=row_idx, column=9, value=client.phone_number)
+            ws_clients.cell(row=row_idx, column=10, value=client.address_line_1)
+            ws_clients.cell(row=row_idx, column=11, value=client.address_line_2)
+            ws_clients.cell(row=row_idx, column=12, value=client.city)
+            ws_clients.cell(row=row_idx, column=13, value=client.state)
+            zip_cell = ws_clients.cell(row=row_idx, column=14, value=client.zip_code)
             zip_cell.number_format = '@'
 
         # ========== EMPLOYEE BENEFITS SHEET ==========
@@ -2662,7 +2857,7 @@ def export_to_excel():
         # Then 1095 (2 cols)
 
         benefit_headers = ['Tax ID', 'Client Name ', 'Parent Client',
-                           'Form Fire Code', 'Enrollment POC', 'Other Broker', 'Funding',
+                           'Form Fire Code', 'Assigned To', 'Other Broker', 'Funding',
                            '# of Emp at renewal', 'Enrolled EEs', 'Waiting Period', 'Deductible Accumulation',
                            'Previous Carrier', 'Cobra Administrator']
         # Track col position (1-based) — after fixed cols
@@ -2807,29 +3002,43 @@ def export_to_excel():
             comm_max_plans[plan_type] = max_count
 
         # Build headers dynamically
-        commercial_headers = ['Tax ID', 'Client Name ', 'Parent Client']
-        commercial_sections = [(1, 3, '')]
-        col_pos = 4
+        commercial_headers = ['Tax ID', 'Client Name ', 'Parent Client', 'Assigned To']
+        commercial_sections = [(1, 4, '')]
+        col_pos = 5
 
-        # Single-plan type columns (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+        # Single-plan type columns
+        GL_ENDORSEMENT_COLS = ['Endorsement BOP', 'Endorsement Marine', 'Endorsement Foreign', 'Endorsement Molestation', 'Endorsement Staffing']
         comm_single_col_start = col_pos
+        comm_single_col_sizes = {}  # prefix -> number of cols
         for prefix, label in commercial_single_plan_defs:
-            commercial_headers.extend(['Carrier', 'Agency', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item'])
-            commercial_sections.append((col_pos, col_pos + 7, label))
-            col_pos += 8
+            base_cols = ['Carrier', 'Agency', 'Policy Number', 'Occ Limit (M)', 'Agg Limit (M)', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
+            if prefix == 'general_liability':
+                base_cols.extend(GL_ENDORSEMENT_COLS)
+            commercial_headers.extend(base_cols)
+            ncols = len(base_cols)
+            commercial_sections.append((col_pos, col_pos + ncols - 1, label))
+            comm_single_col_sizes[prefix] = ncols
+            col_pos += ncols
 
-        # Multi-plan type columns (8 cols per plan: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+        # Multi-plan type columns
+        EO_ENDORSEMENT_COLS = ['Endorsement Tech E&O', 'Endorsement Staffing', 'Endorsement Allied Healthcare', 'Endorsement Medical Malpractice']
         comm_multi_col_map = {}
+        comm_multi_plan_col_size = {}  # plan_type -> cols per plan
         for plan_type, label in commercial_multi_plan_defs:
             n = comm_max_plans[plan_type]
             start = col_pos
+            base_plan_cols = ['Carrier', 'Agency', 'Policy Number', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
+            if plan_type == 'professional_eo':
+                base_plan_cols.extend(EO_ENDORSEMENT_COLS)
+            cols_per_plan = len(base_plan_cols)
+            comm_multi_plan_col_size[plan_type] = cols_per_plan
             for i in range(1, n + 1):
                 suffix = f' {i}' if n > 1 else ''
-                commercial_headers.extend([f'Carrier{suffix}', f'Agency{suffix}', f'Occ Limit{suffix}', f'Agg Limit{suffix}', f'Premium{suffix}', f'Renewal Date{suffix}', f'Remarks{suffix}', f'Outstanding Item{suffix}'])
+                commercial_headers.extend([f'{h}{suffix}' for h in base_plan_cols])
             comm_multi_col_map[plan_type] = start
-            end = col_pos + n * 8 - 1
+            end = col_pos + n * cols_per_plan - 1
             commercial_sections.append((start, end, label))
-            col_pos += n * 8
+            col_pos += n * cols_per_plan
 
         # Write section headers (Row 1)
         for start_col, end_col, title in commercial_sections:
@@ -2851,38 +3060,55 @@ def export_to_excel():
             ws_commercial.cell(row=row_idx, column=1, value=comm.tax_id)
             ws_commercial.cell(row=row_idx, column=2, value=client_name)
             ws_commercial.cell(row=row_idx, column=3, value=comm.parent_client)
+            ws_commercial.cell(row=row_idx, column=4, value=comm.assigned_to)
 
-            # Single-plan types (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+            # Single-plan types
             sc = comm_single_col_start
             for prefix, label in commercial_single_plan_defs:
                 ws_commercial.cell(row=row_idx, column=sc, value=getattr(comm, f'{prefix}_carrier', None) or 'None')
                 ws_commercial.cell(row=row_idx, column=sc + 1, value=getattr(comm, f'{prefix}_agency', None))
-                ws_commercial.cell(row=row_idx, column=sc + 2, value=getattr(comm, f'{prefix}_occ_limit', None) or 'N/A')
-                ws_commercial.cell(row=row_idx, column=sc + 3, value=getattr(comm, f'{prefix}_agg_limit', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 2, value=getattr(comm, f'{prefix}_policy_number', None))
+                ws_commercial.cell(row=row_idx, column=sc + 3, value=getattr(comm, f'{prefix}_occ_limit', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 4, value=getattr(comm, f'{prefix}_agg_limit', None) or 'N/A')
                 premium = getattr(comm, f'{prefix}_premium', None)
-                ws_commercial.cell(row=row_idx, column=sc + 4, value=float(premium) if premium else 0)
-                ws_commercial.cell(row=row_idx, column=sc + 5, value=getattr(comm, f'{prefix}_renewal_date', None) or 'N/A')
-                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_remarks', None))
-                ws_commercial.cell(row=row_idx, column=sc + 7, value=getattr(comm, f'{prefix}_outstanding_item', None))
-                sc += 8
+                ws_commercial.cell(row=row_idx, column=sc + 5, value=float(premium) if premium else 0)
+                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_renewal_date', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 7, value=getattr(comm, f'{prefix}_remarks', None))
+                ws_commercial.cell(row=row_idx, column=sc + 8, value=getattr(comm, f'{prefix}_outstanding_item', None))
+                if prefix == 'general_liability':
+                    ws_commercial.cell(row=row_idx, column=sc + 9, value='Yes' if getattr(comm, 'general_liability_endorsement_bop', False) else '')
+                    ws_commercial.cell(row=row_idx, column=sc + 10, value='Yes' if getattr(comm, 'general_liability_endorsement_marine', False) else '')
+                    ws_commercial.cell(row=row_idx, column=sc + 11, value='Yes' if getattr(comm, 'general_liability_endorsement_foreign', False) else '')
+                    ws_commercial.cell(row=row_idx, column=sc + 12, value='Yes' if getattr(comm, 'general_liability_endorsement_molestation', False) else '')
+                    ws_commercial.cell(row=row_idx, column=sc + 13, value='Yes' if getattr(comm, 'general_liability_endorsement_staffing', False) else '')
+                sc += comm_single_col_sizes[prefix]
 
-            # Multi-plan types (8 cols per plan: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+            # Multi-plan types
             plans_by_type = {}
             for plan in comm.commercial_plans:
                 plans_by_type.setdefault(plan.plan_type, []).append(plan)
             for plan_type, _ in commercial_multi_plan_defs:
                 type_plans = sorted(plans_by_type.get(plan_type, []), key=lambda p: p.plan_number)
                 start = comm_multi_col_map[plan_type]
+                cps = comm_multi_plan_col_size[plan_type]
                 for i in range(comm_max_plans[plan_type]):
+                    base = start + i * cps
                     if i < len(type_plans):
-                        ws_commercial.cell(row=row_idx, column=start + i * 8, value=type_plans[i].carrier)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 1, value=type_plans[i].agency)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 2, value=type_plans[i].coverage_occ_limit)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 3, value=type_plans[i].coverage_agg_limit)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 4, value=float(type_plans[i].premium) if type_plans[i].premium else 0)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 5, value=type_plans[i].renewal_date)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 6, value=type_plans[i].remarks)
-                        ws_commercial.cell(row=row_idx, column=start + i * 8 + 7, value=type_plans[i].outstanding_item)
+                        p = type_plans[i]
+                        ws_commercial.cell(row=row_idx, column=base, value=p.carrier)
+                        ws_commercial.cell(row=row_idx, column=base + 1, value=p.agency)
+                        ws_commercial.cell(row=row_idx, column=base + 2, value=p.policy_number)
+                        ws_commercial.cell(row=row_idx, column=base + 3, value=p.coverage_occ_limit)
+                        ws_commercial.cell(row=row_idx, column=base + 4, value=p.coverage_agg_limit)
+                        ws_commercial.cell(row=row_idx, column=base + 5, value=float(p.premium) if p.premium else 0)
+                        ws_commercial.cell(row=row_idx, column=base + 6, value=p.renewal_date)
+                        ws_commercial.cell(row=row_idx, column=base + 7, value=p.remarks)
+                        ws_commercial.cell(row=row_idx, column=base + 8, value=p.outstanding_item)
+                        if plan_type == 'professional_eo':
+                            ws_commercial.cell(row=row_idx, column=base + 9, value='Yes' if p.endorsement_tech_eo else '')
+                            ws_commercial.cell(row=row_idx, column=base + 10, value='Yes' if p.endorsement_staffing else '')
+                            ws_commercial.cell(row=row_idx, column=base + 11, value='Yes' if p.endorsement_allied_healthcare else '')
+                            ws_commercial.cell(row=row_idx, column=base + 12, value='Yes' if p.endorsement_medical_malpractice else '')
 
         # ========== PERSONAL INSURANCE SHEET ==========
         ws_personal = wb.create_sheet("Personal")
@@ -3018,34 +3244,36 @@ def import_from_excel():
                     if existing:
                         # Update existing client
                         existing.client_name = row[1] if len(row) > 1 else existing.client_name
-                        existing.status = row[2] if len(row) > 2 and row[2] else existing.status
-                        existing.gross_revenue = float(row[3]) if len(row) > 3 and row[3] else existing.gross_revenue
-                        existing.total_ees = int(row[4]) if len(row) > 4 and row[4] else existing.total_ees
-                        existing.contact_person = row[5] if len(row) > 5 else existing.contact_person
-                        existing.email = row[6] if len(row) > 6 else existing.email
-                        existing.phone_number = str(row[7]) if len(row) > 7 and row[7] else existing.phone_number
-                        existing.address_line_1 = row[8] if len(row) > 8 else existing.address_line_1
-                        existing.address_line_2 = row[9] if len(row) > 9 else existing.address_line_2
-                        existing.city = row[10] if len(row) > 10 else existing.city
-                        existing.state = row[11] if len(row) > 11 else existing.state
-                        existing.zip_code = str(int(row[12])).zfill(5) if len(row) > 12 and row[12] else existing.zip_code
+                        existing.dba = row[2] if len(row) > 2 else existing.dba
+                        existing.status = row[3] if len(row) > 3 and row[3] else existing.status
+                        existing.gross_revenue = float(row[4]) if len(row) > 4 and row[4] else existing.gross_revenue
+                        existing.total_ees = int(row[5]) if len(row) > 5 and row[5] else existing.total_ees
+                        existing.contact_person = row[6] if len(row) > 6 else existing.contact_person
+                        existing.email = row[7] if len(row) > 7 else existing.email
+                        existing.phone_number = str(row[8]) if len(row) > 8 and row[8] else existing.phone_number
+                        existing.address_line_1 = row[9] if len(row) > 9 else existing.address_line_1
+                        existing.address_line_2 = row[10] if len(row) > 10 else existing.address_line_2
+                        existing.city = row[11] if len(row) > 11 else existing.city
+                        existing.state = row[12] if len(row) > 12 else existing.state
+                        existing.zip_code = str(int(row[13])).zfill(5) if len(row) > 13 and row[13] else existing.zip_code
                         stats['clients_updated'] += 1
                     else:
                         # Create new client
                         client = Client(
                             tax_id=tax_id,
                             client_name=row[1] if len(row) > 1 else None,
-                            status=row[2] if len(row) > 2 and row[2] else 'Active',
-                            gross_revenue=float(row[3]) if len(row) > 3 and row[3] else None,
-                            total_ees=int(row[4]) if len(row) > 4 and row[4] else None,
-                            contact_person=row[5] if len(row) > 5 else None,
-                            email=row[6] if len(row) > 6 else None,
-                            phone_number=str(row[7]) if len(row) > 7 and row[7] else None,
-                            address_line_1=row[8] if len(row) > 8 else None,
-                            address_line_2=row[9] if len(row) > 9 else None,
-                            city=row[10] if len(row) > 10 else None,
-                            state=row[11] if len(row) > 11 else None,
-                            zip_code=str(int(row[12])).zfill(5) if len(row) > 12 and row[12] else None
+                            dba=row[2] if len(row) > 2 else None,
+                            status=row[3] if len(row) > 3 and row[3] else 'Active',
+                            gross_revenue=float(row[4]) if len(row) > 4 and row[4] else None,
+                            total_ees=int(row[5]) if len(row) > 5 and row[5] else None,
+                            contact_person=row[6] if len(row) > 6 else None,
+                            email=row[7] if len(row) > 7 else None,
+                            phone_number=str(row[8]) if len(row) > 8 and row[8] else None,
+                            address_line_1=row[9] if len(row) > 9 else None,
+                            address_line_2=row[10] if len(row) > 10 else None,
+                            city=row[11] if len(row) > 11 else None,
+                            state=row[12] if len(row) > 12 else None,
+                            zip_code=str(int(row[13])).zfill(5) if len(row) > 13 and row[13] else None
                         )
                         session.add(client)
                         stats['clients_created'] += 1
@@ -3341,7 +3569,8 @@ def import_from_excel():
 
                     commercial_data = {
                         'tax_id': tax_id,
-                        'parent_client': row[2] if len(row) > 2 else None
+                        'parent_client': row[2] if len(row) > 2 else None,
+                        'assigned_to': row[3] if len(row) > 3 else None
                     }
 
                     # Single-plan types (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
@@ -3354,13 +3583,13 @@ def import_from_excel():
                             commercial_data[f'{prefix}_carrier'] = carrier
                             commercial_data[f'{prefix}_agency'] = safe_val(sc + 1)
                             occ_limit_val = safe_val(sc + 2)
-                            if occ_limit_val and occ_limit_val == 'N/A':
+                            if occ_limit_val and str(occ_limit_val) == 'N/A':
                                 occ_limit_val = None
-                            commercial_data[f'{prefix}_occ_limit'] = occ_limit_val
+                            commercial_data[f'{prefix}_occ_limit'] = format_limit(occ_limit_val)
                             agg_limit_val = safe_val(sc + 3)
-                            if agg_limit_val and agg_limit_val == 'N/A':
+                            if agg_limit_val and str(agg_limit_val) == 'N/A':
                                 agg_limit_val = None
-                            commercial_data[f'{prefix}_agg_limit'] = agg_limit_val
+                            commercial_data[f'{prefix}_agg_limit'] = format_limit(agg_limit_val)
                             commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 4))
                             commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 5))
                             commercial_data[f'{prefix}_remarks'] = safe_val(sc + 6)
@@ -3384,8 +3613,8 @@ def import_from_excel():
                         for plan_num, (carrier_col, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             agency = safe_val(agency_col) if agency_col is not None else None
-                            occ_limit_val = safe_val(occ_limit_col) if occ_limit_col is not None else None
-                            agg_limit_val = safe_val(agg_limit_col) if agg_limit_col is not None else None
+                            occ_limit_val = format_limit(safe_val(occ_limit_col)) if occ_limit_col is not None else None
+                            agg_limit_val = format_limit(safe_val(agg_limit_col)) if agg_limit_col is not None else None
                             premium = safe_decimal(safe_val(premium_col)) if premium_col is not None else None
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
                             remarks_val = safe_val(remarks_col) if remarks_col is not None else None
@@ -3397,8 +3626,8 @@ def import_from_excel():
                                     plan_number=plan_num,
                                     carrier=carrier,
                                     agency=agency,
-                                    coverage_occ_limit=occ_limit_val if occ_limit_val and occ_limit_val != 'N/A' else None,
-                                    coverage_agg_limit=agg_limit_val if agg_limit_val and agg_limit_val != 'N/A' else None,
+                                    coverage_occ_limit=occ_limit_val if occ_limit_val and str(occ_limit_val) != 'N/A' else None,
+                                    coverage_agg_limit=agg_limit_val if agg_limit_val and str(agg_limit_val) != 'N/A' else None,
                                     premium=premium,
                                     renewal_date=renewal,
                                     remarks=remarks_val,

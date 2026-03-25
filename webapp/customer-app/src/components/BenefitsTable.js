@@ -356,7 +356,7 @@ const getBenefitsColumns = (onEdit) => [
   },
   {
     id: 'enrollment_poc',
-    label: 'Enrollment POC',
+    label: 'Assigned To',
     sortable: true,
     minWidth: 140
   },

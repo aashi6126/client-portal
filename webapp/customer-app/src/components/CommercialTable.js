@@ -24,8 +24,7 @@ const SINGLE_PLAN_PRODUCTS = {
   product_liability: 'Product',
   flood: 'Flood',
   directors_officers: 'D&O',
-  fiduciary: 'Fiduciary',
-  inland_marine: 'Marine'
+  fiduciary: 'Fiduciary'
 };
 
 // Color mapping for outstanding item values
@@ -254,6 +253,12 @@ const getCommercialColumns = (onEdit) => [
     label: 'Parent Client',
     sortable: true,
     minWidth: 140
+  },
+  {
+    id: 'assigned_to',
+    label: 'Assigned To',
+    sortable: true,
+    minWidth: 130
   },
   {
     id: 'active_products',

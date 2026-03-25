@@ -64,6 +64,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
   const getInitialFormData = () => ({
     tax_id: '',
     parent_client: '',
+    assigned_to: '',
     // Single-plan types (flat fields)
     general_liability_carrier: '', general_liability_agency: '', general_liability_policy_number: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '', general_liability_endorsement_bop: false, general_liability_endorsement_marine: false, general_liability_endorsement_foreign: false, general_liability_endorsement_molestation: false, general_liability_endorsement_staffing: false,
     property_carrier: '', property_agency: '', property_policy_number: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
@@ -115,8 +116,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     { name: 'Flood', tabLabel: 'Flood', prefix: 'flood' },
     { name: 'Crime or Fidelity Bond', tabLabel: 'Crime', prefix: 'crime', multiPlan: true },
     { name: 'Directors & Officers', tabLabel: 'D&O', prefix: 'directors_officers' },
-    { name: 'Fiduciary Bond', tabLabel: 'Fiduciary', prefix: 'fiduciary' },
-    { name: 'Inland Marine', tabLabel: 'Marine', prefix: 'inland_marine' }
+    { name: 'Fiduciary Bond', tabLabel: 'Fiduciary', prefix: 'fiduciary' }
   ];
 
   // Initialize form data when modal opens or commercial changes
@@ -438,25 +438,24 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               <Grid item xs={12} sm={6}>
                 <TextField
                   label="Outstanding Item"
-                  select
                   value={plan.outstanding_item || ''}
                   onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
+                  fullWidth
                   size="small"
-                  sx={{
-                    minWidth: 180,
-                    '& .MuiSelect-select': {
-                      color: OUTSTANDING_ITEM_COLORS[plan.outstanding_item] || 'inherit',
-                      fontWeight: plan.outstanding_item ? 600 : 400
-                    }
-                  }}
-                >
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
-                  <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
-                  <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
-                  <MenuItem value="Add Line" sx={{ color: OUTSTANDING_ITEM_COLORS['Add Line'], fontWeight: 600 }}>Add Line</MenuItem>
-                  <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
-                </TextField>
+                  multiline
+                  minRows={1}
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  label="Due Date"
+                  type="date"
+                  value={plan.outstanding_item_due_date || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item_due_date', e.target.value)}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
               </Grid>
               <Grid item xs={12}>
                 <TextField
@@ -558,6 +557,14 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               renderInput={(params) => (
                 <TextField {...params} label="Parent Client" size="small" fullWidth />
               )}
+            />
+            <TextField
+              label="Assigned To"
+              value={formData.assigned_to || ''}
+              onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
+              fullWidth
+              size="small"
+              sx={{ mt: 2 }}
             />
           </Box>
 
@@ -749,25 +756,24 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                           <Grid item xs={12} sm={6}>
                             <TextField
                               label="Outstanding Item"
-                              select
                               value={formData[`${prefix}_outstanding_item`] || ''}
                               onChange={handleChange(`${prefix}_outstanding_item`)}
+                              fullWidth
                               size="small"
-                              sx={{
-                                minWidth: 180,
-                                '& .MuiSelect-select': {
-                                  color: OUTSTANDING_ITEM_COLORS[formData[`${prefix}_outstanding_item`]] || 'inherit',
-                                  fontWeight: formData[`${prefix}_outstanding_item`] ? 600 : 400
-                                }
-                              }}
-                            >
-                              <MenuItem value="">None</MenuItem>
-                              <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
-                              <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
-                              <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
-                              <MenuItem value="Add Line" sx={{ color: OUTSTANDING_ITEM_COLORS['Add Line'], fontWeight: 600 }}>Add Line</MenuItem>
-                              <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
-                            </TextField>
+                              multiline
+                              minRows={1}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <TextField
+                              label="Due Date"
+                              type="date"
+                              value={formData[`${prefix}_outstanding_item_due_date`] || ''}
+                              onChange={handleChange(`${prefix}_outstanding_item_due_date`)}
+                              fullWidth
+                              size="small"
+                              InputLabelProps={{ shrink: true }}
+                            />
                           </Grid>
                           <Grid item xs={12}>
                             <TextField

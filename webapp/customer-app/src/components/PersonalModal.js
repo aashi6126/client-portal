@@ -17,10 +17,14 @@ import {
   Tooltip,
   InputAdornment,
   Tabs,
-  Tab
+  Tab,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
+import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 
 // Color mapping for outstanding item values
 const OUTSTANDING_ITEM_COLORS = {
@@ -73,15 +77,34 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
   const [activeCoverages, setActiveCoverages] = useState([]);
   const [selectedTab, setSelectedTab] = useState(0);
 
+  // Homeowners multi-policy state
+  const [homeownersPolicies, setHomeownersPolicies] = useState([]);
+  const emptyHomeownersPolicy = { carrier: '', dwelling_limit: '', liability_limit: '', premium: '', renewal_date: '', remarks: '', outstanding_item: '', outstanding_item_due_date: '', property_address_line_1: '', property_address_line_2: '', property_city: '', property_state: '', property_zip: '', is_primary_residence: false };
+
   // Initialize form data when modal opens or personal changes
   useEffect(() => {
     if (personal) {
       setFormData({ ...getInitialFormData(), ...personal });
 
+      // Load homeowners policies
+      const hpList = personal.homeowners_policies_list || [];
+      setHomeownersPolicies(hpList.length > 0 ? hpList.map(p => ({
+        carrier: p.carrier || '', dwelling_limit: p.dwelling_limit || '', liability_limit: p.liability_limit || '',
+        premium: p.premium || '', renewal_date: p.renewal_date || '', remarks: p.remarks || '',
+        outstanding_item: p.outstanding_item || '', outstanding_item_due_date: p.outstanding_item_due_date || '',
+        property_address_line_1: p.property_address_line_1 || '', property_address_line_2: p.property_address_line_2 || '',
+        property_city: p.property_city || '', property_state: p.property_state || '', property_zip: p.property_zip || '',
+        is_primary_residence: p.is_primary_residence || false
+      })) : []);
+
       // Determine which coverages have data
       const active = [];
       insuranceProducts.forEach(p => {
         const prefix = p.prefix;
+        if (prefix === 'homeowners') {
+          if (hpList.length > 0 || personal.homeowners_carrier) active.push(prefix);
+          return;
+        }
         const keys = Object.keys(getInitialFormData()).filter(k => k.startsWith(prefix + '_'));
         const hasData = keys.some(k => personal[k]);
         if (hasData) {
@@ -98,6 +121,7 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
       }
     } else {
       setFormData(getInitialFormData());
+      setHomeownersPolicies([]);
       setActiveCoverages([]);
       setSelectedTab(0);
     }
@@ -143,7 +167,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
     if (validate()) {
       onSave({
         ...personal,
-        ...formData
+        ...formData,
+        homeowners_policies_list: homeownersPolicies
       });
     }
   };
@@ -324,74 +349,73 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
 
       case 'homeowners':
         return (
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Carrier"
-                value={formData[`${prefix}_carrier`] || ''}
-                onChange={handleChange(`${prefix}_carrier`)}
-                fullWidth
-                size="small"
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Dwelling Limit"
-                type="number"
-                value={formData[`${prefix}_dwelling_limit`] || ''}
-                onChange={handleChange(`${prefix}_dwelling_limit`)}
-                fullWidth
-                size="small"
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  inputProps: { min: 0, step: 0.01 }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Liability Limit"
-                type="number"
-                value={formData[`${prefix}_liability_limit`] || ''}
-                onChange={handleChange(`${prefix}_liability_limit`)}
-                fullWidth
-                size="small"
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  inputProps: { min: 0, step: 0.01 }
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Renewal Date"
-                type="date"
-                value={formData[`${prefix}_renewal_date`] ? formData[`${prefix}_renewal_date`].split('T')[0] : ''}
-                onChange={handleChange(`${prefix}_renewal_date`)}
-                fullWidth
-                size="small"
-                InputLabelProps={{ shrink: true }}
-                helperText={isPastDate(formData[`${prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
-                slotProps={{ formHelperText: isPastDate(formData[`${prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6}>
-              <TextField
-                label="Premium"
-                type="number"
-                value={formData[`${prefix}_premium`] || ''}
-                onChange={handleChange(`${prefix}_premium`)}
-                fullWidth
-                size="small"
-                InputProps={{
-                  startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                  inputProps: { min: 0, step: 0.01 }
-                }}
-              />
-            </Grid>
-            {renderOutstandingItem(prefix)}
-            {renderRemarks(prefix)}
-          </Grid>
+          <Box>
+            {homeownersPolicies.map((policy, idx) => (
+              <Box key={idx} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, position: 'relative' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                  <Typography variant="subtitle2">Property {idx + 1}</Typography>
+                  {homeownersPolicies.length > 1 && (
+                    <IconButton size="small" color="error" onClick={() => setHomeownersPolicies(prev => prev.filter((_, i) => i !== idx))}>
+                      <DeleteOutlineIcon fontSize="small" />
+                    </IconButton>
+                  )}
+                </Box>
+                <Grid container spacing={2}>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Carrier" value={policy.carrier || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], carrier: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Dwelling Limit" type="number" value={policy.dwelling_limit || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], dwelling_limit: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Liability Limit" type="number" value={policy.liability_limit || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], liability_limit: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Premium" type="number" value={policy.premium || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], premium: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" InputProps={{ startAdornment: <InputAdornment position="start">$</InputAdornment> }} />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Renewal Date" type="date" value={policy.renewal_date ? policy.renewal_date.split('T')[0] : ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], renewal_date: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" InputLabelProps={{ shrink: true }} />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Outstanding Item" value={policy.outstanding_item || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], outstanding_item: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12} sm={3}>
+                    <TextField label="Due Date" type="date" value={policy.outstanding_item_due_date || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], outstanding_item_due_date: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" InputLabelProps={{ shrink: true }} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <TextField label="Remarks" value={policy.remarks || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], remarks: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" multiline minRows={1} />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>Property Address</Typography>
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Address Line 1" value={policy.property_address_line_1 || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_address_line_1: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12} sm={6}>
+                    <TextField label="Address Line 2" value={policy.property_address_line_2 || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_address_line_2: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField label="City" value={policy.property_city || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_city: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField label="State" value={policy.property_state || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_state: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12} sm={4}>
+                    <TextField label="Zip" value={policy.property_zip || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_zip: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
+                  </Grid>
+                  <Grid item xs={12}>
+                    <FormControlLabel
+                      control={<Checkbox checked={policy.is_primary_residence || false} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], is_primary_residence: e.target.checked }; setHomeownersPolicies(u); }} size="small" />}
+                      label={policy.is_primary_residence ? 'Primary Residence' : 'Rental Property'}
+                    />
+                  </Grid>
+                </Grid>
+              </Box>
+            ))}
+            <Button size="small" startIcon={<AddCircleOutlineIcon />} onClick={() => setHomeownersPolicies(prev => [...prev, { ...emptyHomeownersPolicy }])} sx={{ mt: 1 }}>
+              Add Property
+            </Button>
+          </Box>
         );
 
       case 'personal_umbrella':

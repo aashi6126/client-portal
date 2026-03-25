@@ -400,27 +400,27 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                   <MenuItem value="90 Days">90 Days</MenuItem>
                 </TextField>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <TextField
                   label="Outstanding Item"
-                  select
                   value={plan.outstanding_item || ''}
                   onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
+                  fullWidth
                   size="small"
-                  sx={{
-                    minWidth: 180,
-                    '& .MuiSelect-select': {
-                      color: OUTSTANDING_ITEM_COLORS[plan.outstanding_item] || 'inherit',
-                      fontWeight: plan.outstanding_item ? 600 : 400
-                    }
-                  }}
-                >
-                  <MenuItem value="">None</MenuItem>
-                  <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
-                  <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
-                  <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
-                  <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
-                </TextField>
+                  multiline
+                  minRows={1}
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  label="Due Date"
+                  type="date"
+                  value={plan.outstanding_item_due_date || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item_due_date', e.target.value)}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
@@ -516,7 +516,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                 </Grid>
                 <Grid item xs={12} sm={4}>
                   <TextField
-                    label="Enrollment POC"
+                    label="Assigned To"
                     value={formData.enrollment_poc || ''}
                     onChange={handleChange('enrollment_poc')}
                     fullWidth
@@ -754,27 +754,27 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                               slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
                             />
                           </Grid>
-                          <Grid item xs={12} sm={6}>
+                          <Grid item xs={12} sm={4}>
                             <TextField
                               label="Outstanding Item"
-                              select
                               value={formData[`${prefix}_outstanding_item`] || ''}
                               onChange={handleChange(`${prefix}_outstanding_item`)}
+                              fullWidth
                               size="small"
-                              sx={{
-                                minWidth: 180,
-                                '& .MuiSelect-select': {
-                                  color: OUTSTANDING_ITEM_COLORS[formData[`${prefix}_outstanding_item`]] || 'inherit',
-                                  fontWeight: formData[`${prefix}_outstanding_item`] ? 600 : 400
-                                }
-                              }}
-                            >
-                              <MenuItem value="">None</MenuItem>
-                              <MenuItem value="Premium Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Premium Due'], fontWeight: 600 }}>Premium Due</MenuItem>
-                              <MenuItem value="In Audit" sx={{ color: OUTSTANDING_ITEM_COLORS['In Audit'], fontWeight: 600 }}>In Audit</MenuItem>
-                              <MenuItem value="Cancel Due" sx={{ color: OUTSTANDING_ITEM_COLORS['Cancel Due'], fontWeight: 600 }}>Cancel Due</MenuItem>
-                              <MenuItem value="Complete" sx={{ color: OUTSTANDING_ITEM_COLORS['Complete'], fontWeight: 600 }}>Complete</MenuItem>
-                            </TextField>
+                              multiline
+                              minRows={1}
+                            />
+                          </Grid>
+                          <Grid item xs={12} sm={3}>
+                            <TextField
+                              label="Due Date"
+                              type="date"
+                              value={formData[`${prefix}_outstanding_item_due_date`] || ''}
+                              onChange={handleChange(`${prefix}_outstanding_item_due_date`)}
+                              fullWidth
+                              size="small"
+                              InputLabelProps={{ shrink: true }}
+                            />
                           </Grid>
                           <Grid item xs={12} sm={6}>
                             <TextField

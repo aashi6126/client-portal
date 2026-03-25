@@ -25,7 +25,7 @@ const dateFieldIds = [
 const fields = [
   { id: 'Tax_ID', label: 'Tax ID' },
   { id: 'Form_Fire_Code', label: 'Form Fire Code' },
-  { id: 'Enrollment_POC', label: 'Enrollment POC' },
+  { id: 'Enrollment_POC', label: 'Assigned To' },
   { id: 'Renewal_Date', label: 'Renewal Date' },
   { id: 'Other_Broker', label: 'Other Broker' },
   { id: 'Group_Name', label: 'Group Name' },

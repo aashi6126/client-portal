@@ -123,13 +123,13 @@ const PocManagement = ({ dataVersion }) => {
           <Chip label={`${pocList.length} unique`} size="small" sx={{ ml: 1, verticalAlign: 'middle' }} />
         </Typography>
         <Typography variant="body2" color="text.secondary">
-          View and bulk-reassign Enrollment PoCs across Employee Benefits records
+          View and bulk-reassign Assigned Tos across Employee Benefits records
         </Typography>
       </Paper>
 
       {unassignedCount > 0 && (
         <Alert severity="info" sx={{ mb: 2 }}>
-          {unassignedCount} benefit record{unassignedCount !== 1 ? 's have' : ' has'} no Enrollment PoC assigned.
+          {unassignedCount} benefit record{unassignedCount !== 1 ? 's have' : ' has'} no Assigned To assigned.
         </Alert>
       )}
 
@@ -137,14 +137,14 @@ const PocManagement = ({ dataVersion }) => {
         <Typography sx={{ textAlign: 'center', py: 4 }}>Loading...</Typography>
       ) : pocList.length === 0 ? (
         <Paper sx={{ p: 4, textAlign: 'center' }}>
-          <Typography color="text.secondary">No Enrollment PoCs found in benefits records.</Typography>
+          <Typography color="text.secondary">No Assigned Tos found in benefits records.</Typography>
         </Paper>
       ) : (
         <TableContainer component={Paper} sx={{ maxHeight: 'calc(100vh - 300px)' }}>
           <Table stickyHeader size="small">
             <TableHead>
               <TableRow>
-                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Enrollment PoC</TableCell>
+                <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Assigned To</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', width: 100 }}>Records</TableCell>
                 <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5', width: 140 }}>Action</TableCell>
               </TableRow>
@@ -175,7 +175,7 @@ const PocManagement = ({ dataVersion }) => {
 
       {/* Reassign Dialog */}
       <Dialog open={!!selectedItem} onClose={closeReassignDialog} maxWidth="md" fullWidth>
-        <DialogTitle>Reassign Enrollment PoC</DialogTitle>
+        <DialogTitle>Reassign Assigned To</DialogTitle>
         <DialogContent>
           <DialogContentText sx={{ mb: 2 }}>
             Select records to reassign from <strong>"{selectedItem?.poc}"</strong>:
