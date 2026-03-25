@@ -18,8 +18,10 @@ import {
   InputAdornment,
   Tabs,
   Tab,
-  Checkbox,
-  FormControlLabel
+  Radio,
+  RadioGroup,
+  FormControlLabel,
+  FormLabel
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -405,10 +407,15 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
                     <TextField label="Zip" value={policy.property_zip || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_zip: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
                   </Grid>
                   <Grid item xs={12}>
-                    <FormControlLabel
-                      control={<Checkbox checked={policy.is_primary_residence || false} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], is_primary_residence: e.target.checked }; setHomeownersPolicies(u); }} size="small" />}
-                      label={policy.is_primary_residence ? 'Primary Residence' : 'Rental Property'}
-                    />
+                    <FormLabel component="legend" sx={{ fontSize: '0.85rem', fontWeight: 500 }}>Property Type</FormLabel>
+                    <RadioGroup
+                      row
+                      value={policy.is_primary_residence ? 'primary' : 'rental'}
+                      onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], is_primary_residence: e.target.value === 'primary' }; setHomeownersPolicies(u); }}
+                    >
+                      <FormControlLabel value="primary" control={<Radio size="small" />} label="Primary Residence" />
+                      <FormControlLabel value="rental" control={<Radio size="small" />} label="Rental" />
+                    </RadioGroup>
                   </Grid>
                 </Grid>
               </Box>
