@@ -169,6 +169,9 @@ function NewApp() {
         .then(() => {
           setClientModalOpen(false);
           fetchClients();
+          fetchBenefits();
+          fetchCommercial();
+          fetchPersonal();
           setDataVersion(v => v + 1);
         })
         .catch(error => {
