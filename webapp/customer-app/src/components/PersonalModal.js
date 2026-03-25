@@ -386,7 +386,8 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
                     <TextField label="Remarks" value={policy.remarks || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], remarks: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" multiline minRows={1} />
                   </Grid>
                   <Grid item xs={12}>
-                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>Property Address</Typography>
+                    <Divider sx={{ mt: 1 }} />
+                    <Typography variant="subtitle2" sx={{ fontWeight: 600, mt: 1.5 }}>Property Address</Typography>
                   </Grid>
                   <Grid item xs={12} sm={6}>
                     <TextField label="Address Line 1" value={policy.property_address_line_1 || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], property_address_line_1: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" />
