@@ -361,7 +361,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
               client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
               prefix: pt,
               policy: typePlans.length > 1 ? `${BENEFIT_MULTI_LABELS[pt]} ${idx + 1}` : BENEFIT_MULTI_LABELS[pt],
-              carrier: plan.carrier, renewal_date: plan.renewal_date,
+              assigned_to: b.enrollment_poc, renewal_date: plan.renewal_date,
               outstanding_item: plan.outstanding_item,
               due_date: plan.outstanding_item_due_date
             });
@@ -375,7 +375,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
           result.push({
             client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
             prefix,
-            policy: name, carrier: b[`${prefix}_carrier`], renewal_date: b[`${prefix}_renewal_date`],
+            policy: name, assigned_to: b.enrollment_poc, renewal_date: b[`${prefix}_renewal_date`],
             outstanding_item: item,
             due_date: b[`${prefix}_outstanding_item_due_date`]
           });
@@ -394,7 +394,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
               client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
               prefix: pt,
               policy: typePlans.length > 1 ? `${COMMERCIAL_MULTI_LABELS[pt]} ${idx + 1}` : COMMERCIAL_MULTI_LABELS[pt],
-              carrier: plan.carrier, renewal_date: plan.renewal_date,
+              assigned_to: c.assigned_to, renewal_date: plan.renewal_date,
               outstanding_item: plan.outstanding_item,
               due_date: plan.outstanding_item_due_date
             });
@@ -408,7 +408,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
           result.push({
             client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
             prefix,
-            policy: name, carrier: c[`${prefix}_carrier`], renewal_date: c[`${prefix}_renewal_date`],
+            policy: name, assigned_to: c.assigned_to, renewal_date: c[`${prefix}_renewal_date`],
             outstanding_item: item,
             due_date: c[`${prefix}_outstanding_item_due_date`]
           });
@@ -432,7 +432,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
           result.push({
             client_name: p.client_name, tax_id: p.tax_id, source: 'Personal',
             prefix,
-            policy: name, carrier: p[`${prefix}_carrier`], renewal_date: p[renewalField],
+            policy: name, assigned_to: '', renewal_date: p[renewalField],
             outstanding_item: item,
             due_date: p[`${prefix}_outstanding_item_due_date`]
           });
@@ -746,7 +746,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
                     <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Outstanding Item</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Carrier</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Assigned To</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
                   </TableRow>
                 </TableHead>
@@ -768,7 +768,7 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
                       <TableCell sx={{ color: isOverdue ? '#d32f2f' : 'inherit', fontWeight: isOverdue ? 700 : 400 }}>
                         {item.due_date ? formatDate(item.due_date) : '—'}
                       </TableCell>
-                      <TableCell>{item.carrier || '—'}</TableCell>
+                      <TableCell>{item.assigned_to || '—'}</TableCell>
                       <TableCell>
                         <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
                           Edit
