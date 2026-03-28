@@ -19,11 +19,34 @@ CREATE TABLE IF NOT EXISTS clients (
     status VARCHAR(50) DEFAULT 'Active',
     gross_revenue DECIMAL(15, 2),
     total_ees INTEGER,
+    industry VARCHAR(200),
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE INDEX idx_clients_tax_id ON clients(tax_id);
+
+-- ============================================================================
+-- CLIENT CONTACTS TABLE
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS client_contacts (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    contact_person VARCHAR(200),
+    email VARCHAR(200),
+    phone_number VARCHAR(50),
+    phone_extension VARCHAR(20),
+    address_line_1 VARCHAR(200),
+    address_line_2 VARCHAR(200),
+    city VARCHAR(100),
+    state VARCHAR(50),
+    zip_code VARCHAR(20),
+    sort_order INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (client_id) REFERENCES clients(id) ON DELETE CASCADE
+);
+
+CREATE INDEX idx_client_contacts_client_id ON client_contacts(client_id);
 
 -- ============================================================================
 -- EMPLOYEE BENEFITS TABLE

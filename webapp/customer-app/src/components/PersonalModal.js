@@ -353,9 +353,9 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
         return (
           <Box>
             {homeownersPolicies.map((policy, idx) => (
-              <Box key={idx} sx={{ mb: 2, p: 2, border: '1px solid #e0e0e0', borderRadius: 1, position: 'relative' }}>
+              <Box key={idx} sx={{ mb: 1.5, p: 1.5, backgroundColor: '#fafafa', border: '1px solid #e0e0e0', borderRadius: 1, position: 'relative' }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                  <Typography variant="subtitle2">Property {idx + 1}</Typography>
+                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#666' }}>Property {idx + 1}</Typography>
                   {homeownersPolicies.length > 1 && (
                     <IconButton size="small" color="error" onClick={() => setHomeownersPolicies(prev => prev.filter((_, i) => i !== idx))}>
                       <DeleteOutlineIcon fontSize="small" />
@@ -385,7 +385,7 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
                     <TextField label="Due Date" type="date" value={policy.outstanding_item_due_date || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], outstanding_item_due_date: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" InputLabelProps={{ shrink: true }} />
                   </Grid>
                   <Grid item xs={12}>
-                    <TextField label="Remarks" value={policy.remarks || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], remarks: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" multiline minRows={1} />
+                    <TextField label="Remarks" value={policy.remarks || ''} onChange={(e) => { const u = [...homeownersPolicies]; u[idx] = { ...u[idx], remarks: e.target.value }; setHomeownersPolicies(u); }} fullWidth size="small" multiline minRows={2} />
                   </Grid>
                 </Grid>
                 <Divider sx={{ my: 1.5 }} />

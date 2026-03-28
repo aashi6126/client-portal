@@ -66,7 +66,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     parent_client: '',
     assigned_to: '',
     // Single-plan types (flat fields)
-    general_liability_carrier: '', general_liability_agency: '', general_liability_policy_number: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '', general_liability_endorsement_bop: false, general_liability_endorsement_marine: false, general_liability_endorsement_foreign: false, general_liability_endorsement_molestation: false, general_liability_endorsement_staffing: false,
+    general_liability_carrier: '', general_liability_agency: '', general_liability_policy_number: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '', general_liability_endorsement_bop: false, general_liability_endorsement_marine: false, general_liability_endorsement_foreign: false, general_liability_endorsement_molestation: false, general_liability_endorsement_staffing: false, general_liability_endorsement_accidental_medical: false, general_liability_endorsement_liquor_liability: false,
     property_carrier: '', property_agency: '', property_policy_number: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
     bop_carrier: '', bop_agency: '', bop_policy_number: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '',
     workers_comp_carrier: '', workers_comp_agency: '', workers_comp_policy_number: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_remarks: '', workers_comp_outstanding_item: '',
@@ -220,11 +220,39 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     }
   };
 
+  // Get GL field values to clone into new coverages
+  const getGLCloneFields = () => {
+    const glCarrier = formData.general_liability_carrier || '';
+    const glAgency = formData.general_liability_agency || '';
+    const glPolicyNumber = formData.general_liability_policy_number || '';
+    const glOccLimit = formData.general_liability_occ_limit || '';
+    const glAggLimit = formData.general_liability_agg_limit || '';
+    // Also check GL multi-plan if it exists
+    if (!glCarrier && plans.general_liability && plans.general_liability.length > 0) {
+      const glPlan = plans.general_liability[0];
+      return {
+        carrier: glPlan.carrier || '',
+        agency: glPlan.agency || '',
+        policy_number: glPlan.policy_number || '',
+        occ_limit: glPlan.occ_limit || '',
+        agg_limit: glPlan.agg_limit || ''
+      };
+    }
+    return {
+      carrier: glCarrier,
+      agency: glAgency,
+      policy_number: glPolicyNumber,
+      occ_limit: glOccLimit,
+      agg_limit: glAggLimit
+    };
+  };
+
   // Multi-plan helpers
   const addPlan = (planType) => {
+    const gl = activeCoverages.includes('general_liability') ? getGLCloneFields() : { carrier: '', agency: '', policy_number: '', occ_limit: '', agg_limit: '' };
     setPlans(prev => ({
       ...prev,
-      [planType]: [...prev[planType], { carrier: '', agency: '', policy_number: '', occ_limit: '', agg_limit: '', premium: '', renewal_date: '', remarks: '', outstanding_item: '' }]
+      [planType]: [...prev[planType], { carrier: gl.carrier, agency: gl.agency, policy_number: gl.policy_number, occ_limit: gl.occ_limit, agg_limit: gl.agg_limit, premium: '0', renewal_date: '', remarks: '', outstanding_item: '' }]
     }));
   };
 
@@ -281,14 +309,29 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     p => !activeCoverages.includes(p.prefix)
   );
 
-  // Add a new coverage type
+  // Add a new coverage type, cloning common fields from GL
   const handleAddCoverage = (prefix) => {
     if (prefix && !activeCoverages.includes(prefix)) {
       const newActive = [...activeCoverages, prefix];
       setActiveCoverages(newActive);
-      // For multi-plan types, add one empty plan
+      const gl = activeCoverages.includes('general_liability') ? getGLCloneFields() : { carrier: '', agency: '', policy_number: '', occ_limit: '', agg_limit: '' };
+      // For multi-plan types, add one plan with GL fields cloned
       if (MULTI_PLAN_TYPES.includes(prefix)) {
-        addPlan(prefix);
+        setPlans(prev => ({
+          ...prev,
+          [prefix]: [...prev[prefix], { carrier: gl.carrier, agency: gl.agency, policy_number: gl.policy_number, occ_limit: gl.occ_limit, agg_limit: gl.agg_limit, premium: '0', renewal_date: '', remarks: '', outstanding_item: '' }]
+        }));
+      } else {
+        // For single-plan types, set flat fields from GL
+        setFormData(prev => ({
+          ...prev,
+          [`${prefix}_carrier`]: gl.carrier,
+          [`${prefix}_agency`]: gl.agency,
+          [`${prefix}_policy_number`]: gl.policy_number,
+          [`${prefix}_occ_limit`]: gl.occ_limit,
+          [`${prefix}_agg_limit`]: gl.agg_limit,
+          [`${prefix}_premium`]: '0'
+        }));
       }
       // Switch to the newly added tab
       setSelectedTab(newActive.length - 1);
@@ -321,6 +364,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
         cleared.general_liability_endorsement_foreign = false;
         cleared.general_liability_endorsement_molestation = false;
         cleared.general_liability_endorsement_staffing = false;
+        cleared.general_liability_endorsement_accidental_medical = false;
+        cleared.general_liability_endorsement_liquor_liability = false;
       }
       setFormData(cleared);
     }
@@ -352,7 +397,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               </Tooltip>
             </Box>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              {/* Row 1: Carrier, Agency, Policy Number, Occ Limit, Agg Limit */}
+              <Grid item xs={12} sm={3}>
                 <TextField
                   label="Carrier"
                   value={plan.carrier || ''}
@@ -361,7 +407,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={3}>
                 <TextField
                   label="Agency"
                   value={plan.agency || ''}
@@ -370,7 +416,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={2}>
                 <TextField
                   label="Policy Number"
                   value={plan.policy_number || ''}
@@ -379,7 +425,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   size="small"
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={2}>
                 <TextField
                   label="Occ Limit"
                   type="number"
@@ -394,7 +440,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={3}>
+              <Grid item xs={12} sm={2}>
                 <TextField
                   label="Agg Limit"
                   type="number"
@@ -409,7 +455,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              {/* Row 2: Premium, Renewal Date */}
+              <Grid item xs={12} sm={4}>
                 <TextField
                   label="Premium ($)"
                   type="number"
@@ -422,7 +469,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={3}>
                 <TextField
                   label="Renewal Date"
                   type="date"
@@ -433,37 +480,6 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   InputLabelProps={{ shrink: true }}
                   helperText={isPastDate(plan.renewal_date?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
                   slotProps={{ formHelperText: isPastDate(plan.renewal_date?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Outstanding Item"
-                  value={plan.outstanding_item || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
-                  fullWidth
-                  size="small"
-                  multiline
-                  minRows={1}
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  label="Due Date"
-                  type="date"
-                  value={plan.outstanding_item_due_date || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item_due_date', e.target.value)}
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  label="Remarks"
-                  value={plan.remarks || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
-                  fullWidth
-                  size="small"
                 />
               </Grid>
               {planType === 'professional_eo' && (
@@ -494,6 +510,40 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   </FormGroup>
                 </Grid>
               )}
+              {/* Row 4: Outstanding Item, Due Date, Remarks */}
+              <Grid item xs={12} sm={5}>
+                <TextField
+                  label="Outstanding Item"
+                  value={plan.outstanding_item || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
+                  fullWidth
+                  size="small"
+                  multiline
+                  minRows={1}
+                />
+              </Grid>
+              <Grid item xs={12} sm={3}>
+                <TextField
+                  label="Due Date"
+                  type="date"
+                  value={plan.outstanding_item_due_date || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item_due_date', e.target.value)}
+                  fullWidth
+                  size="small"
+                  InputLabelProps={{ shrink: true }}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  label="Remarks"
+                  value={plan.remarks || ''}
+                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
+                  fullWidth
+                  size="small"
+                  multiline
+                  minRows={2}
+                />
+              </Grid>
             </Grid>
           </Box>
         ))}
@@ -670,7 +720,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                           {product.name} Plan 1
                         </Typography>
                         <Grid container spacing={2}>
-                          <Grid item xs={12} sm={6}>
+                          {/* Row 1: Carrier, Agency, Policy Number, Occ Limit, Agg Limit */}
+                          <Grid item xs={12} sm={3}>
                             <TextField
                               label="Carrier"
                               value={formData[`${product.prefix}_carrier`] || ''}
@@ -679,7 +730,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               size="small"
                             />
                           </Grid>
-                          <Grid item xs={12} sm={6}>
+                          <Grid item xs={12} sm={3}>
                             <TextField
                               label="Agency"
                               value={formData[`${product.prefix}_agency`] || ''}
@@ -688,7 +739,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               size="small"
                             />
                           </Grid>
-                          <Grid item xs={12} sm={6}>
+                          <Grid item xs={12} sm={2}>
                             <TextField
                               label="Policy Number"
                               value={formData[`${product.prefix}_policy_number`] || ''}
@@ -697,7 +748,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               size="small"
                             />
                           </Grid>
-                          <Grid item xs={12} sm={3}>
+                          <Grid item xs={12} sm={2}>
                             <TextField
                               label="Occ Limit"
                               type="number"
@@ -712,7 +763,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               }}
                             />
                           </Grid>
-                          <Grid item xs={12} sm={3}>
+                          <Grid item xs={12} sm={2}>
                             <TextField
                               label="Agg Limit"
                               type="number"
@@ -727,7 +778,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               }}
                             />
                           </Grid>
-                          <Grid item xs={12} sm={6}>
+                          {/* Row 2: Premium, Renewal Date */}
+                          <Grid item xs={12} sm={4}>
                             <TextField
                               label="Premium ($)"
                               type="number"
@@ -740,7 +792,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               }}
                             />
                           </Grid>
-                          <Grid item xs={12} sm={6}>
+                          <Grid item xs={12} sm={3}>
                             <TextField
                               label="Renewal Date"
                               type="date"
@@ -753,7 +805,40 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
                             />
                           </Grid>
-                          <Grid item xs={12} sm={6}>
+                          {/* Row 3: Endorsements (GL only) */}
+                          {prefix === 'general_liability' && (
+                            <Grid item xs={12}>
+                              <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>
+                                Endorsements
+                              </Typography>
+                              <FormGroup row>
+                                {[
+                                  { key: 'general_liability_endorsement_bop', label: 'BOP' },
+                                  { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
+                                  { key: 'general_liability_endorsement_foreign', label: 'Foreign' },
+                                  { key: 'general_liability_endorsement_molestation', label: 'Molestation' },
+                                  { key: 'general_liability_endorsement_marine', label: 'Marine' },
+                                  { key: 'general_liability_endorsement_accidental_medical', label: 'Accidental & Medical Expenses' },
+                                  { key: 'general_liability_endorsement_liquor_liability', label: 'Liquor Liability' }
+                                ].map(({ key, label }) => (
+                                  <FormControlLabel
+                                    key={key}
+                                    control={
+                                      <Checkbox
+                                        checked={!!formData[key]}
+                                        onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                                        size="small"
+                                      />
+                                    }
+                                    label={label}
+                                    sx={{ mr: 2 }}
+                                  />
+                                ))}
+                              </FormGroup>
+                            </Grid>
+                          )}
+                          {/* Row 4: Outstanding Item, Due Date, Remarks */}
+                          <Grid item xs={12} sm={5}>
                             <TextField
                               label="Outstanding Item"
                               value={formData[`${prefix}_outstanding_item`] || ''}
@@ -786,35 +871,6 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               minRows={2}
                             />
                           </Grid>
-                          {prefix === 'general_liability' && (
-                            <Grid item xs={12}>
-                              <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>
-                                Endorsements
-                              </Typography>
-                              <FormGroup row>
-                                {[
-                                  { key: 'general_liability_endorsement_bop', label: 'BOP' },
-                                  { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
-                                  { key: 'general_liability_endorsement_foreign', label: 'Foreign' },
-                                  { key: 'general_liability_endorsement_molestation', label: 'Molestation' },
-                                  { key: 'general_liability_endorsement_marine', label: 'Marine' }
-                                ].map(({ key, label }) => (
-                                  <FormControlLabel
-                                    key={key}
-                                    control={
-                                      <Checkbox
-                                        checked={!!formData[key]}
-                                        onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                                        size="small"
-                                      />
-                                    }
-                                    label={label}
-                                    sx={{ mr: 2 }}
-                                  />
-                                ))}
-                              </FormGroup>
-                            </Grid>
-                          )}
                         </Grid>
                       </Box>
                     )}

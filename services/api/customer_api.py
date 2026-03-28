@@ -156,30 +156,75 @@ class Client(db.Model):
     status = db.Column(db.String(50), default='Active')
     gross_revenue = db.Column(db.Numeric(15, 2))
     total_ees = db.Column(db.Integer)
+    industry = db.Column(db.String(200))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
     # Relationships
     employee_benefits = db.relationship('EmployeeBenefit', back_populates='client', cascade='all, delete-orphan')
     commercial_insurance = db.relationship('CommercialInsurance', back_populates='client', cascade='all, delete-orphan')
+    contacts = db.relationship('ClientContact', back_populates='client', cascade='all, delete-orphan', order_by='ClientContact.sort_order')
 
     def to_dict(self):
+        contacts_list = [c.to_dict() for c in self.contacts] if self.contacts else []
+        # For backward compatibility, populate flat contact fields from first contact
+        first_contact = contacts_list[0] if contacts_list else {}
         return {
             'id': self.id,
             'tax_id': self.tax_id,
             'client_name': self.client_name,
             'dba': self.dba,
-            'contact_person': self.contact_person,
-            'email': self.email,
-            'phone_number': self.phone_number,
-            'address_line_1': self.address_line_1,
-            'address_line_2': self.address_line_2,
-            'city': self.city,
-            'state': self.state,
-            'zip_code': self.zip_code,
+            'industry': self.industry,
+            'contact_person': first_contact.get('contact_person', self.contact_person or ''),
+            'email': first_contact.get('email', self.email or ''),
+            'phone_number': first_contact.get('phone_number', self.phone_number or ''),
+            'phone_extension': first_contact.get('phone_extension', ''),
+            'address_line_1': first_contact.get('address_line_1', self.address_line_1 or ''),
+            'address_line_2': first_contact.get('address_line_2', self.address_line_2 or ''),
+            'city': first_contact.get('city', self.city or ''),
+            'state': first_contact.get('state', self.state or ''),
+            'zip_code': first_contact.get('zip_code', self.zip_code or ''),
             'status': self.status,
             'gross_revenue': float(self.gross_revenue) if self.gross_revenue else None,
-            'total_ees': self.total_ees
+            'total_ees': self.total_ees,
+            'has_employee_benefits': len(self.employee_benefits) > 0,
+            'has_commercial_insurance': len(self.commercial_insurance) > 0,
+            'contacts': contacts_list
+        }
+
+
+class ClientContact(db.Model):
+    __tablename__ = 'client_contacts'
+
+    id = db.Column(db.Integer, primary_key=True)
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id'), nullable=False)
+    contact_person = db.Column(db.String(200))
+    email = db.Column(db.String(200))
+    phone_number = db.Column(db.String(50))
+    phone_extension = db.Column(db.String(20))
+    address_line_1 = db.Column(db.String(200))
+    address_line_2 = db.Column(db.String(200))
+    city = db.Column(db.String(100))
+    state = db.Column(db.String(50))
+    zip_code = db.Column(db.String(20))
+    sort_order = db.Column(db.Integer, default=0)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    client = db.relationship('Client', back_populates='contacts')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'contact_person': self.contact_person or '',
+            'email': self.email or '',
+            'phone_number': self.phone_number or '',
+            'phone_extension': self.phone_extension or '',
+            'address_line_1': self.address_line_1 or '',
+            'address_line_2': self.address_line_2 or '',
+            'city': self.city or '',
+            'state': self.state or '',
+            'zip_code': self.zip_code or '',
+            'sort_order': self.sort_order
         }
 
 
@@ -464,6 +509,8 @@ class CommercialInsurance(db.Model):
     general_liability_endorsement_foreign = db.Column(db.Boolean, default=False)
     general_liability_endorsement_molestation = db.Column(db.Boolean, default=False)
     general_liability_endorsement_staffing = db.Column(db.Boolean, default=False)
+    general_liability_endorsement_accidental_medical = db.Column(db.Boolean, default=False)
+    general_liability_endorsement_liquor_liability = db.Column(db.Boolean, default=False)
 
     # 2. Commercial Property
     property_carrier = db.Column(db.String(200))
@@ -702,6 +749,8 @@ class CommercialInsurance(db.Model):
             'general_liability_endorsement_foreign': self.general_liability_endorsement_foreign or False,
             'general_liability_endorsement_molestation': self.general_liability_endorsement_molestation or False,
             'general_liability_endorsement_staffing': self.general_liability_endorsement_staffing or False,
+            'general_liability_endorsement_accidental_medical': self.general_liability_endorsement_accidental_medical or False,
+            'general_liability_endorsement_liquor_liability': self.general_liability_endorsement_liquor_liability or False,
             'property_carrier': self.property_carrier,
             'property_agency': self.property_agency,
             'property_policy_number': self.property_policy_number,
@@ -1328,6 +1377,7 @@ def create_client():
             tax_id=data.get('tax_id'),
             client_name=data.get('client_name'),
             dba=data.get('dba'),
+            industry=data.get('industry'),
             contact_person=data.get('contact_person'),
             email=data.get('email'),
             phone_number=data.get('phone_number'),
@@ -1342,6 +1392,27 @@ def create_client():
         )
 
         session.add(client)
+        session.flush()
+
+        # Save contacts
+        contacts = data.get('contacts', [])
+        for i, c in enumerate(contacts):
+            if c.get('contact_person') or c.get('email') or c.get('phone_number') or c.get('address_line_1'):
+                contact = ClientContact(
+                    client_id=client.id,
+                    contact_person=c.get('contact_person', ''),
+                    email=c.get('email', ''),
+                    phone_number=c.get('phone_number', ''),
+                    phone_extension=c.get('phone_extension', ''),
+                    address_line_1=c.get('address_line_1', ''),
+                    address_line_2=c.get('address_line_2', ''),
+                    city=c.get('city', ''),
+                    state=c.get('state', ''),
+                    zip_code=c.get('zip_code', ''),
+                    sort_order=i
+                )
+                session.add(contact)
+
         session.commit()
 
         return jsonify({
@@ -1412,6 +1483,24 @@ def update_client(client_id):
         client.status = data.get('status', client.status)
         client.gross_revenue = data.get('gross_revenue', client.gross_revenue)
         client.total_ees = data.get('total_ees', client.total_ees)
+        client.industry = data.get('industry', client.industry)
+
+        # Update contacts if provided
+        if 'contacts' in data:
+            # Remove existing contacts
+            session.query(ClientContact).filter_by(client_id=client.id).delete()
+            # Add new contacts
+            for i, c in enumerate(data['contacts']):
+                if c.get('contact_person') or c.get('email') or c.get('phone_number'):
+                    contact = ClientContact(
+                        client_id=client.id,
+                        contact_person=c.get('contact_person', ''),
+                        email=c.get('email', ''),
+                        phone_number=c.get('phone_number', ''),
+                        phone_extension=c.get('phone_extension', ''),
+                        sort_order=i
+                    )
+                    session.add(contact)
 
         session.commit()
 
@@ -2792,38 +2881,70 @@ def export_to_excel():
         ws_clients = wb.active
         ws_clients.title = "Clients"
 
-        # Row 1: Section header
-        ws_clients.merge_cells('C1:J1')
-        ws_clients['C1'] = 'Contact Info'
-        ws_clients['C1'].font = section_font
-        ws_clients['C1'].fill = section_fill
+        # Determine max number of contacts across all clients
+        clients = session.query(Client).all()
+        max_contacts = 1
+        for client in clients:
+            count = len(client.contacts) if client.contacts else 0
+            if count > max_contacts:
+                max_contacts = count
+        # Fall back to legacy flat fields if no contacts exist
+        if max_contacts == 0:
+            max_contacts = 1
+
+        # Row 1: Section headers
+        client_fixed_cols = 7  # Tax ID, Client Name, DBA, Industry, Status, Gross Revenue, Total EEs
+        contact_cols_per = 9   # Contact Person, Email, Phone, Ext, Addr1, Addr2, City, State, Zip
+        contact_start = client_fixed_cols + 1
+        for i in range(max_contacts):
+            start_col = contact_start + i * contact_cols_per
+            end_col = start_col + contact_cols_per - 1
+            ws_clients.merge_cells(start_row=1, start_column=start_col, end_row=1, end_column=end_col)
+            cell = ws_clients.cell(row=1, column=start_col, value=f'Contact {i + 1}' if max_contacts > 1 else 'Contact Info')
+            cell.font = section_font
+            cell.fill = section_fill
 
         # Row 2: Column headers
-        client_headers = ['Tax ID', 'Client Name ', 'DBA', 'Status', 'Gross Revenue', 'Total EEs',
-                         'Contact Person', 'Email', ' Phone Number',
-                         'Address Line 1', 'Address Line 2', 'City', 'State', 'Zip Code']
+        client_headers = ['Tax ID', 'Client Name', 'DBA', 'Industry', 'Status', 'Gross Revenue', 'Total EEs']
+        contact_headers = ['Contact Person', 'Email', 'Phone Number', 'Ext', 'Address Line 1', 'Address Line 2', 'City', 'State', 'Zip Code']
+        for i in range(max_contacts):
+            client_headers.extend(contact_headers)
         for col, header in enumerate(client_headers, 1):
             cell = ws_clients.cell(row=2, column=col, value=header)
             cell.font = header_font
 
         # Client data
-        clients = session.query(Client).all()
         for row_idx, client in enumerate(clients, 3):
             ws_clients.cell(row=row_idx, column=1, value=client.tax_id)
             ws_clients.cell(row=row_idx, column=2, value=client.client_name)
             ws_clients.cell(row=row_idx, column=3, value=client.dba)
-            ws_clients.cell(row=row_idx, column=4, value=client.status)
-            ws_clients.cell(row=row_idx, column=5, value=float(client.gross_revenue) if client.gross_revenue else None)
-            ws_clients.cell(row=row_idx, column=6, value=client.total_ees)
-            ws_clients.cell(row=row_idx, column=7, value=client.contact_person)
-            ws_clients.cell(row=row_idx, column=8, value=client.email)
-            ws_clients.cell(row=row_idx, column=9, value=client.phone_number)
-            ws_clients.cell(row=row_idx, column=10, value=client.address_line_1)
-            ws_clients.cell(row=row_idx, column=11, value=client.address_line_2)
-            ws_clients.cell(row=row_idx, column=12, value=client.city)
-            ws_clients.cell(row=row_idx, column=13, value=client.state)
-            zip_cell = ws_clients.cell(row=row_idx, column=14, value=client.zip_code)
-            zip_cell.number_format = '@'
+            ws_clients.cell(row=row_idx, column=4, value=client.industry)
+            ws_clients.cell(row=row_idx, column=5, value=client.status)
+            ws_clients.cell(row=row_idx, column=6, value=float(client.gross_revenue) if client.gross_revenue else None)
+            ws_clients.cell(row=row_idx, column=7, value=client.total_ees)
+
+            # Write contacts
+            contact_list = list(client.contacts) if client.contacts else []
+            # Backward compat: if no contacts, use flat fields
+            if not contact_list and (client.contact_person or client.email or client.phone_number):
+                contact_list = [type('obj', (object,), {
+                    'contact_person': client.contact_person, 'email': client.email,
+                    'phone_number': client.phone_number, 'phone_extension': None,
+                    'address_line_1': client.address_line_1, 'address_line_2': client.address_line_2,
+                    'city': client.city, 'state': client.state, 'zip_code': client.zip_code
+                })()]
+            for ci, contact in enumerate(contact_list):
+                base = contact_start + ci * contact_cols_per
+                ws_clients.cell(row=row_idx, column=base, value=getattr(contact, 'contact_person', None))
+                ws_clients.cell(row=row_idx, column=base + 1, value=getattr(contact, 'email', None))
+                ws_clients.cell(row=row_idx, column=base + 2, value=getattr(contact, 'phone_number', None))
+                ws_clients.cell(row=row_idx, column=base + 3, value=getattr(contact, 'phone_extension', None))
+                ws_clients.cell(row=row_idx, column=base + 4, value=getattr(contact, 'address_line_1', None))
+                ws_clients.cell(row=row_idx, column=base + 5, value=getattr(contact, 'address_line_2', None))
+                ws_clients.cell(row=row_idx, column=base + 6, value=getattr(contact, 'city', None))
+                ws_clients.cell(row=row_idx, column=base + 7, value=getattr(contact, 'state', None))
+                zip_cell = ws_clients.cell(row=row_idx, column=base + 8, value=getattr(contact, 'zip_code', None))
+                zip_cell.number_format = '@'
 
         # ========== EMPLOYEE BENEFITS SHEET ==========
         ws_benefits = wb.create_sheet("Employee Benefits")
@@ -2924,7 +3045,7 @@ def export_to_excel():
             ws_benefits.cell(row=row_idx, column=c, value=benefit.parent_client); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.form_fire_code); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.enrollment_poc); c += 1
-            ws_benefits.cell(row=row_idx, column=c, value='None'); c += 1  # Other Broker
+            ws_benefits.cell(row=row_idx, column=c, value=None); c += 1  # Other Broker
             ws_benefits.cell(row=row_idx, column=c, value=benefit.funding); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.num_employees_at_renewal); c += 1
             ws_benefits.cell(row=row_idx, column=c, value=benefit.enrolled_ees); c += 1
@@ -2959,7 +3080,8 @@ def export_to_excel():
                 sc += 4
 
             # 1095
-            ws_benefits.cell(row=row_idx, column=sc, value=benefit.employee_contribution)
+            ws_benefits.cell(row=row_idx, column=sc, value=benefit.employer_contribution)
+            ws_benefits.cell(row=row_idx, column=sc + 1, value=benefit.employee_contribution)
 
         # ========== COMMERCIAL SHEET ==========
         ws_commercial = wb.create_sheet("Commercial")
@@ -3007,7 +3129,7 @@ def export_to_excel():
         col_pos = 5
 
         # Single-plan type columns
-        GL_ENDORSEMENT_COLS = ['Endorsement BOP', 'Endorsement Marine', 'Endorsement Foreign', 'Endorsement Molestation', 'Endorsement Staffing']
+        GL_ENDORSEMENT_COLS = ['Endorsement BOP', 'Endorsement Marine', 'Endorsement Foreign', 'Endorsement Molestation', 'Endorsement Staffing', 'Endorsement Accidental & Medical', 'Endorsement Liquor Liability']
         comm_single_col_start = col_pos
         comm_single_col_sizes = {}  # prefix -> number of cols
         for prefix, label in commercial_single_plan_defs:
@@ -3081,6 +3203,8 @@ def export_to_excel():
                     ws_commercial.cell(row=row_idx, column=sc + 11, value='Yes' if getattr(comm, 'general_liability_endorsement_foreign', False) else '')
                     ws_commercial.cell(row=row_idx, column=sc + 12, value='Yes' if getattr(comm, 'general_liability_endorsement_molestation', False) else '')
                     ws_commercial.cell(row=row_idx, column=sc + 13, value='Yes' if getattr(comm, 'general_liability_endorsement_staffing', False) else '')
+                    ws_commercial.cell(row=row_idx, column=sc + 14, value='Yes' if getattr(comm, 'general_liability_endorsement_accidental_medical', False) else '')
+                    ws_commercial.cell(row=row_idx, column=sc + 15, value='Yes' if getattr(comm, 'general_liability_endorsement_liquor_liability', False) else '')
                 sc += comm_single_col_sizes[prefix]
 
             # Multi-plan types
@@ -3241,41 +3365,81 @@ def import_from_excel():
                     # Check if client exists
                     existing = session.query(Client).filter_by(tax_id=tax_id).first()
 
+                    # New column order: Tax ID(0), Client Name(1), DBA(2), Industry(3), Status(4), Gross Revenue(5), Total EEs(6)
+                    # Then contacts starting at col 7, each contact has 9 columns
+                    contact_cols_per = 9
+                    contact_start_col = 7
+
+                    def parse_contacts_from_row(r):
+                        contacts_list = []
+                        ci = contact_start_col
+                        sort = 0
+                        while ci + contact_cols_per - 1 < len(r):
+                            cp = r[ci] if r[ci] else None
+                            em = r[ci+1] if len(r) > ci+1 and r[ci+1] else None
+                            ph = str(r[ci+2]) if len(r) > ci+2 and r[ci+2] else None
+                            ext = str(r[ci+3]) if len(r) > ci+3 and r[ci+3] else None
+                            a1 = r[ci+4] if len(r) > ci+4 else None
+                            a2 = r[ci+5] if len(r) > ci+5 else None
+                            ct = r[ci+6] if len(r) > ci+6 else None
+                            st = r[ci+7] if len(r) > ci+7 else None
+                            zp = str(int(r[ci+8])).zfill(5) if len(r) > ci+8 and r[ci+8] else None
+                            if cp or em or ph or a1:
+                                contacts_list.append({'contact_person': cp, 'email': em, 'phone_number': ph, 'phone_extension': ext, 'address_line_1': a1, 'address_line_2': a2, 'city': ct, 'state': st, 'zip_code': zp, 'sort_order': sort})
+                                sort += 1
+                            ci += contact_cols_per
+                        return contacts_list
+
                     if existing:
                         # Update existing client
                         existing.client_name = row[1] if len(row) > 1 else existing.client_name
                         existing.dba = row[2] if len(row) > 2 else existing.dba
-                        existing.status = row[3] if len(row) > 3 and row[3] else existing.status
-                        existing.gross_revenue = float(row[4]) if len(row) > 4 and row[4] else existing.gross_revenue
-                        existing.total_ees = int(row[5]) if len(row) > 5 and row[5] else existing.total_ees
-                        existing.contact_person = row[6] if len(row) > 6 else existing.contact_person
-                        existing.email = row[7] if len(row) > 7 else existing.email
-                        existing.phone_number = str(row[8]) if len(row) > 8 and row[8] else existing.phone_number
-                        existing.address_line_1 = row[9] if len(row) > 9 else existing.address_line_1
-                        existing.address_line_2 = row[10] if len(row) > 10 else existing.address_line_2
-                        existing.city = row[11] if len(row) > 11 else existing.city
-                        existing.state = row[12] if len(row) > 12 else existing.state
-                        existing.zip_code = str(int(row[13])).zfill(5) if len(row) > 13 and row[13] else existing.zip_code
+                        existing.industry = row[3] if len(row) > 3 else existing.industry
+                        existing.status = row[4] if len(row) > 4 and row[4] else existing.status
+                        existing.gross_revenue = float(row[5]) if len(row) > 5 and row[5] else existing.gross_revenue
+                        existing.total_ees = int(row[6]) if len(row) > 6 and row[6] else existing.total_ees
+                        # Update contacts
+                        parsed_contacts = parse_contacts_from_row(row)
+                        if parsed_contacts:
+                            session.query(ClientContact).filter_by(client_id=existing.id).delete()
+                            for cd in parsed_contacts:
+                                session.add(ClientContact(client_id=existing.id, **cd))
+                            # Also update flat fields from first contact
+                            fc = parsed_contacts[0]
+                            existing.contact_person = fc.get('contact_person')
+                            existing.email = fc.get('email')
+                            existing.phone_number = fc.get('phone_number')
+                            existing.address_line_1 = fc.get('address_line_1')
+                            existing.address_line_2 = fc.get('address_line_2')
+                            existing.city = fc.get('city')
+                            existing.state = fc.get('state')
+                            existing.zip_code = fc.get('zip_code')
                         stats['clients_updated'] += 1
                     else:
                         # Create new client
+                        parsed_contacts = parse_contacts_from_row(row)
+                        fc = parsed_contacts[0] if parsed_contacts else {}
                         client = Client(
                             tax_id=tax_id,
                             client_name=row[1] if len(row) > 1 else None,
                             dba=row[2] if len(row) > 2 else None,
-                            status=row[3] if len(row) > 3 and row[3] else 'Active',
-                            gross_revenue=float(row[4]) if len(row) > 4 and row[4] else None,
-                            total_ees=int(row[5]) if len(row) > 5 and row[5] else None,
-                            contact_person=row[6] if len(row) > 6 else None,
-                            email=row[7] if len(row) > 7 else None,
-                            phone_number=str(row[8]) if len(row) > 8 and row[8] else None,
-                            address_line_1=row[9] if len(row) > 9 else None,
-                            address_line_2=row[10] if len(row) > 10 else None,
-                            city=row[11] if len(row) > 11 else None,
-                            state=row[12] if len(row) > 12 else None,
-                            zip_code=str(int(row[13])).zfill(5) if len(row) > 13 and row[13] else None
+                            industry=row[3] if len(row) > 3 else None,
+                            status=row[4] if len(row) > 4 and row[4] else 'Active',
+                            gross_revenue=float(row[5]) if len(row) > 5 and row[5] else None,
+                            total_ees=int(row[6]) if len(row) > 6 and row[6] else None,
+                            contact_person=fc.get('contact_person'),
+                            email=fc.get('email'),
+                            phone_number=fc.get('phone_number'),
+                            address_line_1=fc.get('address_line_1'),
+                            address_line_2=fc.get('address_line_2'),
+                            city=fc.get('city'),
+                            state=fc.get('state'),
+                            zip_code=fc.get('zip_code')
                         )
                         session.add(client)
+                        session.flush()
+                        for cd in parsed_contacts:
+                            session.add(ClientContact(client_id=client.id, **cd))
                         stats['clients_created'] += 1
                 except Exception as e:
                     error_rows_clients.append((row, str(e)))
@@ -3339,11 +3503,13 @@ def import_from_excel():
                         return i
                 return None
 
+            col_employer_contribution = None
             col_employee_contribution = None
             for i, h in enumerate(headers):
-                if h and ('EMPLOYEE CONTRIBUTION' in h.upper() or 'EMPLOYER CONTRIBUTION' in h.upper()):
+                if h and 'EMPLOYER CONTRIBUTION' in h.upper():
+                    col_employer_contribution = i
+                elif h and 'EMPLOYEE CONTRIBUTION' in h.upper():
                     col_employee_contribution = i
-                    break
 
             for row_idx, row in enumerate(ws_benefits.iter_rows(min_row=3, values_only=True), start=3):
                 if not row[0]:
@@ -3394,7 +3560,8 @@ def import_from_excel():
                         'deductible_accumulation': safe_val(10),
                         'previous_carrier': safe_val(11),
                         'cobra_carrier': safe_val(12),
-                        'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution and len(row) > col_employee_contribution and row[col_employee_contribution] else None
+                        'employer_contribution': str(row[col_employer_contribution]) if col_employer_contribution is not None and len(row) > col_employer_contribution and row[col_employer_contribution] else None,
+                        'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution is not None and len(row) > col_employee_contribution and row[col_employee_contribution] else None
                     }
 
                     # Single-plan types
@@ -3506,7 +3673,7 @@ def import_from_excel():
                     comm_single_col_map[prefix] = section_col_map[label]
 
             # Build column maps for multi-plan types — detect how many plans per type
-            comm_multi_col_map = {}  # plan_type -> [(carrier_col, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col), ...]
+            comm_multi_col_map = {}  # plan_type -> [(carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols), ...]
             for plan_type, label in commercial_multi_import_defs:
                 if label in section_col_map:
                     start = section_col_map[label]
@@ -3516,16 +3683,40 @@ def import_from_excel():
                     while i < len(comm_headers):
                         h = comm_headers[i].upper()
                         if 'CARRIER' in h:
-                            agency_col = i + 1 if i + 1 < len(comm_headers) and 'AGENCY' in comm_headers[i + 1].upper() else None
-                            offset = 2 if agency_col is not None else 1
-                            occ_limit_col = i + offset if i + offset < len(comm_headers) and 'OCC' in comm_headers[i + offset].upper() else None
-                            agg_limit_col = i + offset + 1 if i + offset + 1 < len(comm_headers) and 'AGG' in comm_headers[i + offset + 1].upper() else None
-                            premium_col = i + offset + 2 if i + offset + 2 < len(comm_headers) and 'PREMIUM' in comm_headers[i + offset + 2].upper() else None
-                            renewal_col = i + offset + 3 if i + offset + 3 < len(comm_headers) and 'RENEWAL' in comm_headers[i + offset + 3].upper() else None
-                            remarks_col = i + offset + 4 if i + offset + 4 < len(comm_headers) and 'REMARKS' in comm_headers[i + offset + 4].upper() else None
-                            oi_col = i + offset + 5 if i + offset + 5 < len(comm_headers) and 'OUTSTANDING' in comm_headers[i + offset + 5].upper() else None
-                            plans.append((i, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col))
-                            i += offset + 6
+                            j = i + 1
+                            agency_col = j if j < len(comm_headers) and 'AGENCY' in comm_headers[j].upper() else None
+                            if agency_col is not None:
+                                j += 1
+                            policy_col = j if j < len(comm_headers) and 'POLICY' in comm_headers[j].upper() else None
+                            if policy_col is not None:
+                                j += 1
+                            occ_limit_col = j if j < len(comm_headers) and 'OCC' in comm_headers[j].upper() else None
+                            if occ_limit_col is not None:
+                                j += 1
+                            agg_limit_col = j if j < len(comm_headers) and 'AGG' in comm_headers[j].upper() else None
+                            if agg_limit_col is not None:
+                                j += 1
+                            premium_col = j if j < len(comm_headers) and 'PREMIUM' in comm_headers[j].upper() else None
+                            if premium_col is not None:
+                                j += 1
+                            renewal_col = j if j < len(comm_headers) and 'RENEWAL' in comm_headers[j].upper() else None
+                            if renewal_col is not None:
+                                j += 1
+                            remarks_col = j if j < len(comm_headers) and 'REMARKS' in comm_headers[j].upper() else None
+                            if remarks_col is not None:
+                                j += 1
+                            oi_col = j if j < len(comm_headers) and 'OUTSTANDING' in comm_headers[j].upper() else None
+                            if oi_col is not None:
+                                j += 1
+                            # Detect endorsement columns for professional_eo
+                            endorsement_cols = {}
+                            if plan_type == 'professional_eo':
+                                for ek, ekey in [('TECH', 'endorsement_tech_eo'), ('STAFFING', 'endorsement_staffing'), ('ALLIED', 'endorsement_allied_healthcare'), ('MEDICAL MALPRACTICE', 'endorsement_medical_malpractice')]:
+                                    if j < len(comm_headers) and 'ENDORSEMENT' in comm_headers[j].upper() and ek in comm_headers[j].upper():
+                                        endorsement_cols[ekey] = j
+                                        j += 1
+                            plans.append((i, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols))
+                            i = j
                         else:
                             break
                     comm_multi_col_map[plan_type] = plans
@@ -3573,7 +3764,7 @@ def import_from_excel():
                         'assigned_to': row[3] if len(row) > 3 else None
                     }
 
-                    # Single-plan types (8 cols each: carrier, agency, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item)
+                    # Single-plan types (9 cols each: carrier, agency, policy_number, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item + endorsements for GL)
                     for prefix, label in commercial_single_import_defs:
                         if prefix in comm_single_col_map:
                             sc = comm_single_col_map[prefix]
@@ -3582,18 +3773,28 @@ def import_from_excel():
                                 carrier = None
                             commercial_data[f'{prefix}_carrier'] = carrier
                             commercial_data[f'{prefix}_agency'] = safe_val(sc + 1)
-                            occ_limit_val = safe_val(sc + 2)
+                            commercial_data[f'{prefix}_policy_number'] = safe_val(sc + 2)
+                            occ_limit_val = safe_val(sc + 3)
                             if occ_limit_val and str(occ_limit_val) == 'N/A':
                                 occ_limit_val = None
                             commercial_data[f'{prefix}_occ_limit'] = format_limit(occ_limit_val)
-                            agg_limit_val = safe_val(sc + 3)
+                            agg_limit_val = safe_val(sc + 4)
                             if agg_limit_val and str(agg_limit_val) == 'N/A':
                                 agg_limit_val = None
                             commercial_data[f'{prefix}_agg_limit'] = format_limit(agg_limit_val)
-                            commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 4))
-                            commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 5))
-                            commercial_data[f'{prefix}_remarks'] = safe_val(sc + 6)
-                            commercial_data[f'{prefix}_outstanding_item'] = safe_val(sc + 7)
+                            commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 5))
+                            commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 6))
+                            commercial_data[f'{prefix}_remarks'] = safe_val(sc + 7)
+                            commercial_data[f'{prefix}_outstanding_item'] = safe_val(sc + 8)
+                            # GL endorsements (7 extra columns after the base 9)
+                            if prefix == 'general_liability':
+                                commercial_data['general_liability_endorsement_bop'] = str(safe_val(sc + 9)).strip().upper() == 'YES' if safe_val(sc + 9) else False
+                                commercial_data['general_liability_endorsement_marine'] = str(safe_val(sc + 10)).strip().upper() == 'YES' if safe_val(sc + 10) else False
+                                commercial_data['general_liability_endorsement_foreign'] = str(safe_val(sc + 11)).strip().upper() == 'YES' if safe_val(sc + 11) else False
+                                commercial_data['general_liability_endorsement_molestation'] = str(safe_val(sc + 12)).strip().upper() == 'YES' if safe_val(sc + 12) else False
+                                commercial_data['general_liability_endorsement_staffing'] = str(safe_val(sc + 13)).strip().upper() == 'YES' if safe_val(sc + 13) else False
+                                commercial_data['general_liability_endorsement_accidental_medical'] = str(safe_val(sc + 14)).strip().upper() == 'YES' if safe_val(sc + 14) else False
+                                commercial_data['general_liability_endorsement_liquor_liability'] = str(safe_val(sc + 15)).strip().upper() == 'YES' if safe_val(sc + 15) else False
 
                     if existing:
                         for key, val in commercial_data.items():
@@ -3610,9 +3811,10 @@ def import_from_excel():
                     # Multi-plan types: create CommercialPlan child records
                     session.query(CommercialPlan).filter_by(commercial_insurance_id=comm_obj.id).delete()
                     for plan_type, cols_list in comm_multi_col_map.items():
-                        for plan_num, (carrier_col, agency_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col) in enumerate(cols_list, 1):
+                        for plan_num, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             agency = safe_val(agency_col) if agency_col is not None else None
+                            policy_number = safe_val(policy_col) if policy_col is not None else None
                             occ_limit_val = format_limit(safe_val(occ_limit_col)) if occ_limit_col is not None else None
                             agg_limit_val = format_limit(safe_val(agg_limit_col)) if agg_limit_col is not None else None
                             premium = safe_decimal(safe_val(premium_col)) if premium_col is not None else None
@@ -3626,6 +3828,7 @@ def import_from_excel():
                                     plan_number=plan_num,
                                     carrier=carrier,
                                     agency=agency,
+                                    policy_number=policy_number,
                                     coverage_occ_limit=occ_limit_val if occ_limit_val and str(occ_limit_val) != 'N/A' else None,
                                     coverage_agg_limit=agg_limit_val if agg_limit_val and str(agg_limit_val) != 'N/A' else None,
                                     premium=premium,
@@ -3633,11 +3836,16 @@ def import_from_excel():
                                     remarks=remarks_val,
                                     outstanding_item=oi_val
                                 )
+                                # Professional E&O endorsements
+                                if plan_type == 'professional_eo' and endorsement_cols:
+                                    for ekey, ecol in endorsement_cols.items():
+                                        setattr(plan, ekey, str(safe_val(ecol)).strip().upper() == 'YES' if safe_val(ecol) else False)
                                 session.add(plan)
                                 # Set flat fields from first plan for backward compat
                                 if plan_num == 1:
                                     setattr(comm_obj, f'{plan_type}_carrier', carrier)
                                     setattr(comm_obj, f'{plan_type}_agency', agency)
+                                    setattr(comm_obj, f'{plan_type}_policy_number', policy_number)
                                     setattr(comm_obj, f'{plan_type}_occ_limit', occ_limit_val if occ_limit_val and occ_limit_val != 'N/A' else None)
                                     setattr(comm_obj, f'{plan_type}_agg_limit', agg_limit_val if agg_limit_val and agg_limit_val != 'N/A' else None)
                                     setattr(comm_obj, f'{plan_type}_premium', premium)
