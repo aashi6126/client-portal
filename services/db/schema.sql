@@ -1,11 +1,11 @@
 -- Client Portal Database Schema
--- Three tables: Clients (master), Employee Benefits, Commercial Insurance
+-- PostgreSQL: Clients (master), Employee Benefits, Commercial Insurance
 
 -- ============================================================================
 -- CLIENTS TABLE (Master Table)
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS clients (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     tax_id VARCHAR(50) NOT NULL UNIQUE,
     client_name VARCHAR(200),
     contact_person VARCHAR(200),
@@ -30,7 +30,7 @@ CREATE INDEX idx_clients_tax_id ON clients(tax_id);
 -- CLIENT CONTACTS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS client_contacts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     client_id INTEGER NOT NULL,
     contact_person VARCHAR(200),
     email VARCHAR(200),
@@ -52,7 +52,7 @@ CREATE INDEX idx_client_contacts_client_id ON client_contacts(client_id);
 -- EMPLOYEE BENEFITS TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS employee_benefits (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     tax_id VARCHAR(50) NOT NULL,
 
     -- Core fields
@@ -109,13 +109,13 @@ CREATE TABLE IF NOT EXISTS employee_benefits (
     voluntary_life_carrier VARCHAR(200),
 
     -- Flag columns for single-plan types
-    ltd_flag BOOLEAN DEFAULT 0,
-    std_flag BOOLEAN DEFAULT 0,
-    k401_flag BOOLEAN DEFAULT 0,
-    critical_illness_flag BOOLEAN DEFAULT 0,
-    accident_flag BOOLEAN DEFAULT 0,
-    hospital_flag BOOLEAN DEFAULT 0,
-    voluntary_life_flag BOOLEAN DEFAULT 0,
+    ltd_flag BOOLEAN DEFAULT FALSE,
+    std_flag BOOLEAN DEFAULT FALSE,
+    k401_flag BOOLEAN DEFAULT FALSE,
+    critical_illness_flag BOOLEAN DEFAULT FALSE,
+    accident_flag BOOLEAN DEFAULT FALSE,
+    hospital_flag BOOLEAN DEFAULT FALSE,
+    voluntary_life_flag BOOLEAN DEFAULT FALSE,
 
     -- Remarks columns for single-plan types
     ltd_remarks TEXT,
@@ -149,13 +149,13 @@ CREATE INDEX idx_employee_benefits_renewal_date ON employee_benefits(renewal_dat
 -- Covers: Medical, Dental, Vision, Life & AD&D
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS benefit_plans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     employee_benefit_id INTEGER NOT NULL,
     plan_type VARCHAR(50) NOT NULL,   -- medical, dental, vision, life_adnd
     plan_number INTEGER NOT NULL DEFAULT 1,
     carrier VARCHAR(200),
     renewal_date DATE,
-    flag BOOLEAN DEFAULT 0,
+    flag BOOLEAN DEFAULT FALSE,
     waiting_period VARCHAR(100),
 
     FOREIGN KEY (employee_benefit_id) REFERENCES employee_benefits(id) ON DELETE CASCADE
@@ -168,7 +168,7 @@ CREATE INDEX idx_benefit_plans_plan_type ON benefit_plans(plan_type);
 -- COMMERCIAL INSURANCE TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS commercial_insurance (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     tax_id VARCHAR(50) NOT NULL,
 
     -- Core fields
@@ -292,7 +292,7 @@ CREATE INDEX idx_commercial_insurance_status ON commercial_insurance(status);
 -- Covers: Umbrella, Professional E&O, Cyber, Crime
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS commercial_plans (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     commercial_insurance_id INTEGER NOT NULL,
     plan_type VARCHAR(50) NOT NULL,   -- umbrella, professional_eo, cyber, crime
     plan_number INTEGER NOT NULL DEFAULT 1,
@@ -300,7 +300,7 @@ CREATE TABLE IF NOT EXISTS commercial_plans (
     coverage_limit VARCHAR(100),
     premium DECIMAL(12, 2),
     renewal_date DATE,
-    flag BOOLEAN DEFAULT 0,
+    flag BOOLEAN DEFAULT FALSE,
 
     FOREIGN KEY (commercial_insurance_id) REFERENCES commercial_insurance(id) ON DELETE CASCADE
 );
@@ -312,7 +312,7 @@ CREATE INDEX idx_commercial_plans_plan_type ON commercial_plans(plan_type);
 -- FEEDBACK TABLE
 -- ============================================================================
 CREATE TABLE IF NOT EXISTS feedback (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    id SERIAL PRIMARY KEY,
     type VARCHAR(50) NOT NULL DEFAULT 'Bug',
     subject VARCHAR(200) NOT NULL,
     description TEXT,
