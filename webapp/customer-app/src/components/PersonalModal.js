@@ -86,7 +86,11 @@ const PersonalModal = ({ open, onClose, personal, onSave, individuals = [], init
   // Initialize form data when modal opens or personal changes
   useEffect(() => {
     if (personal) {
-      setFormData({ ...getInitialFormData(), ...personal });
+      // Merge API data, converting null values to empty strings
+      const sanitized = Object.fromEntries(
+        Object.entries(personal).map(([k, v]) => [k, v ?? ''])
+      );
+      setFormData({ ...getInitialFormData(), ...sanitized });
 
       // Load homeowners policies
       const hpList = personal.homeowners_policies_list || [];

@@ -127,9 +127,13 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
         }
       }
 
+      // Merge API data, converting null values to empty strings
+      const sanitized = Object.fromEntries(
+        Object.entries(benefit).map(([k, v]) => [k, v ?? ''])
+      );
       setFormData({
         ...getInitialFormData(),
-        ...benefit,
+        ...sanitized,
         employee_contribution: contributionValue,
         contribution_type: contributionType
       });

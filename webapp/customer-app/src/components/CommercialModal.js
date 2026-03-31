@@ -122,7 +122,11 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
   // Initialize form data when modal opens or commercial changes
   useEffect(() => {
     if (commercial) {
-      setFormData({ ...getInitialFormData(), ...commercial });
+      // Merge API data, converting null values to empty strings
+      const sanitized = Object.fromEntries(
+        Object.entries(commercial).map(([k, v]) => [k, v ?? ''])
+      );
+      setFormData({ ...getInitialFormData(), ...sanitized });
 
       // Initialize multi-plan state from commercial.plans
       const newPlans = { umbrella: [], professional_eo: [], cyber: [], crime: [] };
