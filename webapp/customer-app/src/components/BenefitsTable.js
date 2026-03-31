@@ -209,7 +209,7 @@ const getBenefitsColumns = (onEdit) => [
       }
 
       const formatDate = (d) => {
-        if (!d) return 'N/A';
+        if (!d) return '';
         try {
           return parseDate(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
         } catch { return d; }
@@ -238,7 +238,7 @@ const getBenefitsColumns = (onEdit) => [
             title={
               <Box>
                 <div><strong>{plan.shortName}</strong></div>
-                <div>Carrier: {plan.carrier || 'N/A'}</div>
+                <div>Carrier: {plan.carrier || ''}</div>
                 <div>Renewal: {formatDate(plan.renewalDate)}</div>
                 {hasRemarks && <div>Remarks: {plan.remarks}</div>}
                 {plan.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[plan.outstandingItem] || 'inherit', fontWeight: 600 }}>{plan.outstandingItem}</span></div>}
@@ -280,7 +280,7 @@ const getBenefitsColumns = (onEdit) => [
                   {plans.slice(5).map((plan, idx) => (
                     <Box key={idx} sx={{ mb: idx < plans.length - 6 ? 1 : 0 }}>
                       <div><strong>{plan.shortName}</strong></div>
-                      <div>Carrier: {plan.carrier || 'N/A'}</div>
+                      <div>Carrier: {plan.carrier || ''}</div>
                       <div>Renewal: {formatDate(plan.renewalDate)}</div>
                       {plan.remarks && <div>Remarks: {plan.remarks}</div>}
                       {plan.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[plan.outstandingItem] || 'inherit', fontWeight: 600 }}>{plan.outstandingItem}</span></div>}

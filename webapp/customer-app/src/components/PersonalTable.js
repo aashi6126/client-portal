@@ -146,10 +146,10 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
     return (
       <Box>
         <div><strong>{product.shortName}</strong></div>
-        <div>Carrier: {product.carrier || 'N/A'}</div>
-        <div>BI Occ Limit: {product.bi_occ_limit ? `$${product.bi_occ_limit}` : 'N/A'}</div>
-        <div>BI Agg Limit: {product.bi_agg_limit ? `$${product.bi_agg_limit}` : 'N/A'}</div>
-        <div>PD Limit: {product.pd_limit ? `$${product.pd_limit}` : 'N/A'}</div>
+        <div>Carrier: {product.carrier || ''}</div>
+        <div>BI Occ Limit: {product.bi_occ_limit ? `$${product.bi_occ_limit}` : ''}</div>
+        <div>BI Agg Limit: {product.bi_agg_limit ? `$${product.bi_agg_limit}` : ''}</div>
+        <div>PD Limit: {product.pd_limit ? `$${product.pd_limit}` : ''}</div>
         <div>Premium: {formatPremium(product.premium)}</div>
         <div>Renewal: {formatDate(product.renewalDate)}</div>
         {product.remarks && <div>Remarks: {product.remarks}</div>}
@@ -162,9 +162,9 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
     return (
       <Box>
         <div><strong>{product.shortName}</strong></div>
-        <div>Carrier: {product.carrier || 'N/A'}</div>
-        <div>Dwelling Limit: {product.dwelling_limit ? `$${product.dwelling_limit}` : 'N/A'}</div>
-        <div>Liability Limit: {product.liability_limit ? `$${product.liability_limit}` : 'N/A'}</div>
+        <div>Carrier: {product.carrier || ''}</div>
+        <div>Dwelling Limit: {product.dwelling_limit ? `$${product.dwelling_limit}` : ''}</div>
+        <div>Liability Limit: {product.liability_limit ? `$${product.liability_limit}` : ''}</div>
         <div>Premium: {formatPremium(product.premium)}</div>
         <div>Renewal: {formatDate(product.renewalDate)}</div>
         {product.remarks && <div>Remarks: {product.remarks}</div>}
@@ -177,9 +177,9 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
     return (
       <Box>
         <div><strong>{product.shortName}</strong></div>
-        <div>Carrier: {product.carrier || 'N/A'}</div>
-        <div>Liability Limit: {product.liability_limit ? `$${product.liability_limit}` : 'N/A'}</div>
-        <div>Deductible: {product.deductible ? `$${product.deductible}` : 'N/A'}</div>
+        <div>Carrier: {product.carrier || ''}</div>
+        <div>Liability Limit: {product.liability_limit ? `$${product.liability_limit}` : ''}</div>
+        <div>Deductible: {product.deductible ? `$${product.deductible}` : ''}</div>
         <div>Premium: {formatPremium(product.premium)}</div>
         <div>Renewal: {formatDate(product.renewalDate)}</div>
         {product.remarks && <div>Remarks: {product.remarks}</div>}
@@ -192,9 +192,9 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
     return (
       <Box>
         <div><strong>{product.shortName}</strong></div>
-        <div>Carrier: {product.carrier || 'N/A'}</div>
-        <div>Event Type: {product.event_type || 'N/A'}</div>
-        <div>Location: {product.event_location || 'N/A'}</div>
+        <div>Carrier: {product.carrier || ''}</div>
+        <div>Event Type: {product.event_type || ''}</div>
+        <div>Location: {product.event_location || ''}</div>
         <div>Start Date: {formatDate(product.event_start_date)}</div>
         <div>End Date: {formatDate(product.event_end_date)}</div>
         <div>Premium: {formatPremium(product.premium)}</div>
@@ -208,10 +208,10 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
     return (
       <Box>
         <div><strong>{product.shortName}</strong></div>
-        <div>Carrier: {product.carrier || 'N/A'}</div>
+        <div>Carrier: {product.carrier || ''}</div>
         <div>Start Date: {formatDate(product.start_date)}</div>
         <div>End Date: {formatDate(product.end_date)}</div>
-        <div>Destination: {product.destination_country || 'N/A'}</div>
+        <div>Destination: {product.destination_country || ''}</div>
         <div>Premium: {formatPremium(product.premium)}</div>
         {product.remarks && <div>Remarks: {product.remarks}</div>}
         {product.outstandingItem && <div>Outstanding: <span style={{ color: OUTSTANDING_ITEM_COLORS[product.outstandingItem] || 'inherit', fontWeight: 600 }}>{product.outstandingItem}</span></div>}
@@ -223,7 +223,7 @@ const renderTooltipContent = (product, formatDate, formatPremium) => {
   return (
     <Box>
       <div><strong>{product.shortName}</strong></div>
-      <div>Carrier: {product.carrier || 'N/A'}</div>
+      <div>Carrier: {product.carrier || ''}</div>
       <div>Premium: {formatPremium(product.premium)}</div>
       <div>Renewal: {formatDate(product.renewalDate)}</div>
       {product.remarks && <div>Remarks: {product.remarks}</div>}
@@ -280,14 +280,14 @@ const getPersonalColumns = (onEdit) => [
       }
 
       const formatDate = (d) => {
-        if (!d) return 'N/A';
+        if (!d) return '';
         try {
           return parseDate(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
         } catch { return d; }
       };
 
       const formatPremium = (p) => {
-        if (!p) return 'N/A';
+        if (!p) return '';
         return `$${parseFloat(p).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
       };
 

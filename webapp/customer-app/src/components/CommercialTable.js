@@ -272,14 +272,14 @@ const getCommercialColumns = (onEdit) => [
       }
 
       const formatDate = (d) => {
-        if (!d) return 'N/A';
+        if (!d) return '';
         try {
           return parseDate(d).toLocaleDateString('en-US', { month: '2-digit', day: '2-digit', year: 'numeric' });
         } catch { return d; }
       };
 
       const formatPremium = (p) => {
-        if (!p) return 'N/A';
+        if (!p) return '';
         return `$${parseFloat(p).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
       };
 
@@ -306,10 +306,10 @@ const getCommercialColumns = (onEdit) => [
             title={
               <Box>
                 <div><strong>{product.shortName}</strong></div>
-                <div>Carrier: {product.carrier || 'N/A'}</div>
+                <div>Carrier: {product.carrier || ''}</div>
                 {product.policyNumber && <div>Policy #: {product.policyNumber}</div>}
-                <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : 'N/A'}</div>
-                <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
+                <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : ''}</div>
+                <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : ''}</div>
                 <div>Premium: {formatPremium(product.premium)}</div>
                 <div>Renewal: {formatDate(product.renewalDate)}</div>
                 {product.endorsements && product.endorsements.length > 0 && <div>Endorsements: {product.endorsements.join(', ')}</div>}
@@ -353,10 +353,10 @@ const getCommercialColumns = (onEdit) => [
                   {products.slice(5).map((product, idx) => (
                     <Box key={idx} sx={{ mb: idx < products.length - 6 ? 1 : 0 }}>
                       <div><strong>{product.shortName}</strong></div>
-                      <div>Carrier: {product.carrier || 'N/A'}</div>
+                      <div>Carrier: {product.carrier || ''}</div>
                       {product.policyNumber && <div>Policy #: {product.policyNumber}</div>}
-                      <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : 'N/A'}</div>
-                      <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : 'N/A'}</div>
+                      <div>Occ Limit: {product.occ_limit ? `$${product.occ_limit}M` : ''}</div>
+                      <div>Agg Limit: {product.agg_limit ? `$${product.agg_limit}M` : ''}</div>
                       <div>Premium: {formatPremium(product.premium)}</div>
                       <div>Renewal: {formatDate(product.renewalDate)}</div>
                       {product.endorsements && product.endorsements.length > 0 && <div>Endorsements: {product.endorsements.join(', ')}</div>}
