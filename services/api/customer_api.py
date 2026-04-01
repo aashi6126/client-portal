@@ -3177,14 +3177,14 @@ def export_to_excel():
             # Single-plan types
             sc = comm_single_col_start
             for prefix, label in commercial_single_plan_defs:
-                ws_commercial.cell(row=row_idx, column=sc, value=getattr(comm, f'{prefix}_carrier', None) or 'None')
+                ws_commercial.cell(row=row_idx, column=sc, value=getattr(comm, f'{prefix}_carrier', None) or '')
                 ws_commercial.cell(row=row_idx, column=sc + 1, value=getattr(comm, f'{prefix}_agency', None))
                 ws_commercial.cell(row=row_idx, column=sc + 2, value=getattr(comm, f'{prefix}_policy_number', None))
-                ws_commercial.cell(row=row_idx, column=sc + 3, value=getattr(comm, f'{prefix}_occ_limit', None) or 'N/A')
-                ws_commercial.cell(row=row_idx, column=sc + 4, value=getattr(comm, f'{prefix}_agg_limit', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 3, value=getattr(comm, f'{prefix}_occ_limit', None) or '')
+                ws_commercial.cell(row=row_idx, column=sc + 4, value=getattr(comm, f'{prefix}_agg_limit', None) or '')
                 premium = getattr(comm, f'{prefix}_premium', None)
                 ws_commercial.cell(row=row_idx, column=sc + 5, value=float(premium) if premium else 0)
-                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_renewal_date', None) or 'N/A')
+                ws_commercial.cell(row=row_idx, column=sc + 6, value=getattr(comm, f'{prefix}_renewal_date', None) or '')
                 ws_commercial.cell(row=row_idx, column=sc + 7, value=getattr(comm, f'{prefix}_remarks', None))
                 ws_commercial.cell(row=row_idx, column=sc + 8, value=getattr(comm, f'{prefix}_outstanding_item', None))
                 if prefix == 'general_liability':
