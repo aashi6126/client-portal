@@ -724,6 +724,10 @@ function NewApp() {
         {/* Tab 0: Dashboard */}
         {activeTab === 0 && (
           <Dashboard
+            clients={clients}
+            benefits={benefits}
+            commercial={commercial}
+            personal={personal}
             onOpenBenefitsModal={openBenefitsModal}
             onOpenCommercialModal={openCommercialModal}
             onOpenPersonalModal={openPersonalModal}

@@ -35,10 +35,6 @@ import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EditIcon from '@mui/icons-material/Edit';
 import axios from 'axios';
 
-const API_CLIENTS = '/api/clients';
-const API_BENEFITS = '/api/benefits';
-const API_COMMERCIAL = '/api/commercial';
-const API_PERSONAL = '/api/personal';
 const API_DASHBOARD_RENEWALS = '/api/dashboard/renewals';
 const API_DASHBOARD_CROSS_SELL = '/api/dashboard/cross-sell';
 
@@ -59,11 +55,7 @@ const parseDate = (d) => {
  * 3. Next Month Focus
  * 4. Cross-Sell Opportunities
  */
-const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion }) => {
-  const [clients, setClients] = useState([]);
-  const [benefits, setBenefits] = useState([]);
-  const [commercial, setCommercial] = useState([]);
-  const [personal, setPersonal] = useState([]);
+const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal = [], onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion }) => {
   const [renewals, setRenewals] = useState([]);
   const [crossSell, setCrossSell] = useState({ benefits_only: [], commercial_only: [] });
   const [loading, setLoading] = useState(true);
@@ -73,24 +65,16 @@ const NewDashboard = ({ onOpenBenefitsModal, onOpenCommercialModal, onOpenPerson
   const [outstandingTab, setOutstandingTab] = useState(0);
   const [crossSellTab, setCrossSellTab] = useState(0);
 
-  // Fetch all dashboard data
+  // Fetch dashboard-specific data (renewals and cross-sell only)
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        const [clientsRes, benefitsRes, commercialRes, personalRes, renewalsRes, crossSellRes] = await Promise.all([
-          axios.get(API_CLIENTS),
-          axios.get(API_BENEFITS),
-          axios.get(API_COMMERCIAL),
-          axios.get(API_PERSONAL),
+        const [renewalsRes, crossSellRes] = await Promise.all([
           axios.get(API_DASHBOARD_RENEWALS),
           axios.get(API_DASHBOARD_CROSS_SELL)
         ]);
 
-        setClients(clientsRes.data.clients || []);
-        setBenefits(benefitsRes.data.benefits || []);
-        setCommercial(commercialRes.data.commercial || []);
-        setPersonal(personalRes.data.personal || []);
         setRenewals(renewalsRes.data.renewals || []);
         setCrossSell(crossSellRes.data);
         setLoading(false);
