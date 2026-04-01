@@ -514,39 +514,45 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                   </FormGroup>
                 </Grid>
               )}
-              {/* Row 4: Outstanding Item, Due Date, Remarks */}
-              <Grid item xs={12} sm={5}>
-                <TextField
-                  label="Outstanding Item"
-                  value={plan.outstanding_item || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
-                  fullWidth
-                  size="small"
-                  multiline
-                  minRows={1}
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  label="Due Date"
-                  type="date"
-                  value={plan.outstanding_item_due_date || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'outstanding_item_due_date', e.target.value)}
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                />
-              </Grid>
+              {/* Outstanding Item, Due Date, Remarks */}
               <Grid item xs={12}>
-                <TextField
-                  label="Remarks"
-                  value={plan.remarks || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
-                  fullWidth
-                  size="small"
-                  multiline
-                  minRows={2}
-                />
+                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={5}>
+                      <TextField
+                        label="Outstanding Item"
+                        value={plan.outstanding_item || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'outstanding_item', e.target.value)}
+                        fullWidth
+                        size="small"
+                        multiline
+                        minRows={1}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        label="Due Date"
+                        type="date"
+                        value={plan.outstanding_item_due_date || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'outstanding_item_due_date', e.target.value)}
+                        fullWidth
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Remarks"
+                        value={plan.remarks || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'remarks', e.target.value)}
+                        fullWidth
+                        size="small"
+                        multiline
+                        minRows={1}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
               </Grid>
             </Grid>
           </Box>
@@ -841,39 +847,45 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               </FormGroup>
                             </Grid>
                           )}
-                          {/* Row 4: Outstanding Item, Due Date, Remarks */}
-                          <Grid item xs={12} sm={5}>
-                            <TextField
-                              label="Outstanding Item"
-                              value={formData[`${prefix}_outstanding_item`] || ''}
-                              onChange={handleChange(`${prefix}_outstanding_item`)}
-                              fullWidth
-                              size="small"
-                              multiline
-                              minRows={1}
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={3}>
-                            <TextField
-                              label="Due Date"
-                              type="date"
-                              value={formData[`${prefix}_outstanding_item_due_date`] || ''}
-                              onChange={handleChange(`${prefix}_outstanding_item_due_date`)}
-                              fullWidth
-                              size="small"
-                              InputLabelProps={{ shrink: true }}
-                            />
-                          </Grid>
+                          {/* Outstanding Item, Due Date, Remarks */}
                           <Grid item xs={12}>
-                            <TextField
-                              label="Remarks"
-                              value={formData[`${prefix}_remarks`] || ''}
-                              onChange={handleChange(`${prefix}_remarks`)}
-                              fullWidth
-                              size="small"
-                              multiline
-                              minRows={2}
-                            />
+                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={5}>
+                                  <TextField
+                                    label="Outstanding Item"
+                                    value={formData[`${prefix}_outstanding_item`] || ''}
+                                    onChange={handleChange(`${prefix}_outstanding_item`)}
+                                    fullWidth
+                                    size="small"
+                                    multiline
+                                    minRows={1}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={3}>
+                                  <TextField
+                                    label="Due Date"
+                                    type="date"
+                                    value={formData[`${prefix}_outstanding_item_due_date`] || ''}
+                                    onChange={handleChange(`${prefix}_outstanding_item_due_date`)}
+                                    fullWidth
+                                    size="small"
+                                    InputLabelProps={{ shrink: true }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={4}>
+                                  <TextField
+                                    label="Remarks"
+                                    value={formData[`${prefix}_remarks`] || ''}
+                                    onChange={handleChange(`${prefix}_remarks`)}
+                                    fullWidth
+                                    size="small"
+                                    multiline
+                                    minRows={1}
+                                  />
+                                </Grid>
+                              </Grid>
+                            </Box>
                           </Grid>
                         </Grid>
                       </Box>
