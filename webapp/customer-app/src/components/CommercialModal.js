@@ -500,30 +500,32 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               </Grid>
               {planType === 'professional_eo' && (
                 <Grid item xs={12}>
-                  <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>
-                    Endorsements
-                  </Typography>
-                  <FormGroup row>
-                    {[
-                      { key: 'endorsement_tech_eo', label: 'Tech E&O' },
-                      { key: 'endorsement_staffing', label: 'Staffing' },
-                      { key: 'endorsement_allied_healthcare', label: 'Allied Healthcare' },
-                      { key: 'endorsement_medical_malpractice', label: 'Medical Malpractice' }
-                    ].map(({ key, label }) => (
-                      <FormControlLabel
-                        key={key}
-                        control={
-                          <Checkbox
-                            checked={!!plan[key]}
-                            onChange={(e) => updatePlan(planType, idx, key, e.target.checked)}
-                            size="small"
-                          />
-                        }
-                        label={label}
-                        sx={{ mr: 2 }}
-                      />
-                    ))}
-                  </FormGroup>
+                  <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                    <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>
+                      Endorsements
+                    </Typography>
+                    <FormGroup row>
+                      {[
+                        { key: 'endorsement_tech_eo', label: 'Tech E&O' },
+                        { key: 'endorsement_staffing', label: 'Staffing' },
+                        { key: 'endorsement_allied_healthcare', label: 'Allied Healthcare' },
+                        { key: 'endorsement_medical_malpractice', label: 'Medical Malpractice' }
+                      ].map(({ key, label }) => (
+                        <FormControlLabel
+                          key={key}
+                          control={
+                            <Checkbox
+                              checked={!!plan[key]}
+                              onChange={(e) => updatePlan(planType, idx, key, e.target.checked)}
+                              size="small"
+                            />
+                          }
+                          label={label}
+                          sx={{ mr: 2 }}
+                        />
+                      ))}
+                    </FormGroup>
+                  </Box>
                 </Grid>
               )}
               {/* Outstanding Item, Due Date, Remarks */}
@@ -839,36 +841,38 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               </Grid>
                             </Box>
                           </Grid>
-                          {/* Row 3: Endorsements (GL only) */}
+                          {/* Endorsements (GL only) */}
                           {prefix === 'general_liability' && (
                             <Grid item xs={12}>
-                              <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>
-                                Endorsements
-                              </Typography>
-                              <FormGroup row>
-                                {[
-                                  { key: 'general_liability_endorsement_bop', label: 'BOP' },
-                                  { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
-                                  { key: 'general_liability_endorsement_foreign', label: 'Foreign' },
-                                  { key: 'general_liability_endorsement_molestation', label: 'Molestation' },
-                                  { key: 'general_liability_endorsement_marine', label: 'Marine' },
-                                  { key: 'general_liability_endorsement_accidental_medical', label: 'Accidental & Medical Expenses' },
-                                  { key: 'general_liability_endorsement_liquor_liability', label: 'Liquor Liability' }
-                                ].map(({ key, label }) => (
-                                  <FormControlLabel
-                                    key={key}
-                                    control={
-                                      <Checkbox
-                                        checked={!!formData[key]}
-                                        onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
-                                        size="small"
-                                      />
-                                    }
-                                    label={label}
-                                    sx={{ mr: 2 }}
-                                  />
-                                ))}
-                              </FormGroup>
+                              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                                <Typography variant="body2" sx={{ fontWeight: 500, color: '#666', mb: 0.5 }}>
+                                  Endorsements
+                                </Typography>
+                                <FormGroup row>
+                                  {[
+                                    { key: 'general_liability_endorsement_bop', label: 'BOP' },
+                                    { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
+                                    { key: 'general_liability_endorsement_foreign', label: 'Foreign' },
+                                    { key: 'general_liability_endorsement_molestation', label: 'Molestation' },
+                                    { key: 'general_liability_endorsement_marine', label: 'Marine' },
+                                    { key: 'general_liability_endorsement_accidental_medical', label: 'Accidental & Medical Expenses' },
+                                    { key: 'general_liability_endorsement_liquor_liability', label: 'Liquor Liability' }
+                                  ].map(({ key, label }) => (
+                                    <FormControlLabel
+                                      key={key}
+                                      control={
+                                        <Checkbox
+                                          checked={!!formData[key]}
+                                          onChange={(e) => setFormData({ ...formData, [key]: e.target.checked })}
+                                          size="small"
+                                        />
+                                      }
+                                      label={label}
+                                      sx={{ mr: 2 }}
+                                    />
+                                  ))}
+                                </FormGroup>
+                              </Box>
                             </Grid>
                           )}
                           {/* Outstanding Item, Due Date, Remarks */}
