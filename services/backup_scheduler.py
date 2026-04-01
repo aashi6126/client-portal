@@ -69,12 +69,13 @@ def run_backup():
 
 
 def get_next_run_time():
-    """Calculate seconds until the next 12:00 AM or 12:00 PM."""
+    """Calculate seconds until the next 12:00 AM, 12:00 PM, or 6:00 PM."""
     now = datetime.now()
     today_midnight = now.replace(hour=0, minute=0, second=0, microsecond=0)
     today_noon = now.replace(hour=12, minute=0, second=0, microsecond=0)
+    today_evening = now.replace(hour=18, minute=0, second=0, microsecond=0)
 
-    candidates = [today_midnight, today_noon]
+    candidates = [today_midnight, today_noon, today_evening]
     # Also consider tomorrow's midnight
     tomorrow_midnight = today_midnight + timedelta(days=1)
     candidates.append(tomorrow_midnight)
@@ -88,7 +89,7 @@ def get_next_run_time():
 def main():
     logging.info("Backup scheduler started")
     logging.info(f"Backups will be saved to: {os.path.abspath(BACKUP_DIR)}")
-    logging.info(f"Schedule: 12:00 AM and 12:00 PM daily")
+    logging.info(f"Schedule: 12:00 AM, 12:00 PM, and 6:00 PM daily")
 
     while True:
         next_time, wait_seconds = get_next_run_time()
