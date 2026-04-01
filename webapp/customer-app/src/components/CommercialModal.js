@@ -401,90 +401,102 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               </Tooltip>
             </Box>
             <Grid container spacing={2}>
-              {/* Row 1: Carrier, Agency, Policy Number, Occ Limit, Agg Limit */}
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  label="Carrier"
-                  value={plan.carrier || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'carrier', e.target.value)}
-                  fullWidth
-                  size="small"
-                />
+              {/* Row 1: Carrier, Agency, Policy Number, Renewal Date */}
+              <Grid item xs={12}>
+                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        label="Carrier"
+                        value={plan.carrier || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'carrier', e.target.value)}
+                        fullWidth
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        label="Agency"
+                        value={plan.agency || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'agency', e.target.value)}
+                        fullWidth
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        label="Policy Number"
+                        value={plan.policy_number || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'policy_number', e.target.value)}
+                        fullWidth
+                        size="small"
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={3}>
+                      <TextField
+                        label="Renewal Date"
+                        type="date"
+                        value={plan.renewal_date ? plan.renewal_date.split('T')[0] : ''}
+                        onChange={(e) => updatePlan(planType, idx, 'renewal_date', e.target.value)}
+                        fullWidth
+                        size="small"
+                        InputLabelProps={{ shrink: true }}
+                        helperText={isPastDate(plan.renewal_date?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
+                        slotProps={{ formHelperText: isPastDate(plan.renewal_date?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
               </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  label="Agency"
-                  value={plan.agency || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'agency', e.target.value)}
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <TextField
-                  label="Policy Number"
-                  value={plan.policy_number || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'policy_number', e.target.value)}
-                  fullWidth
-                  size="small"
-                />
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <TextField
-                  label="Occ Limit"
-                  type="number"
-                  value={plan.occ_limit || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'occ_limit', e.target.value)}
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                    endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                    inputProps: { min: 0, step: 0.01 }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={2}>
-                <TextField
-                  label="Agg Limit"
-                  type="number"
-                  value={plan.agg_limit || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'agg_limit', e.target.value)}
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                    endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                    inputProps: { min: 0, step: 0.01 }
-                  }}
-                />
-              </Grid>
-              {/* Row 2: Premium, Renewal Date */}
-              <Grid item xs={12} sm={4}>
-                <TextField
-                  label="Premium ($)"
-                  type="number"
-                  value={plan.premium || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'premium', e.target.value)}
-                  fullWidth
-                  size="small"
-                  InputProps={{
-                    inputProps: { min: 0, step: 0.01 }
-                  }}
-                />
-              </Grid>
-              <Grid item xs={12} sm={3}>
-                <TextField
-                  label="Renewal Date"
-                  type="date"
-                  value={plan.renewal_date ? plan.renewal_date.split('T')[0] : ''}
-                  onChange={(e) => updatePlan(planType, idx, 'renewal_date', e.target.value)}
-                  fullWidth
-                  size="small"
-                  InputLabelProps={{ shrink: true }}
-                  helperText={isPastDate(plan.renewal_date?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
-                  slotProps={{ formHelperText: isPastDate(plan.renewal_date?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
-                />
+              {/* Row 2: Occ Limit, Agg Limit, Premium */}
+              <Grid item xs={12}>
+                <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                  <Grid container spacing={2}>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Occ Limit"
+                        type="number"
+                        value={plan.occ_limit || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'occ_limit', e.target.value)}
+                        fullWidth
+                        size="small"
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                          inputProps: { min: 0, step: 0.01 }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Agg Limit"
+                        type="number"
+                        value={plan.agg_limit || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'agg_limit', e.target.value)}
+                        fullWidth
+                        size="small"
+                        InputProps={{
+                          startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                          endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                          inputProps: { min: 0, step: 0.01 }
+                        }}
+                      />
+                    </Grid>
+                    <Grid item xs={12} sm={4}>
+                      <TextField
+                        label="Premium ($)"
+                        type="number"
+                        value={plan.premium || ''}
+                        onChange={(e) => updatePlan(planType, idx, 'premium', e.target.value)}
+                        fullWidth
+                        size="small"
+                        InputProps={{
+                          inputProps: { min: 0, step: 0.01 }
+                        }}
+                      />
+                    </Grid>
+                  </Grid>
+                </Box>
               </Grid>
               {planType === 'professional_eo' && (
                 <Grid item xs={12}>
@@ -730,90 +742,102 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                           {product.name} Plan 1
                         </Typography>
                         <Grid container spacing={2}>
-                          {/* Row 1: Carrier, Agency, Policy Number, Occ Limit, Agg Limit */}
-                          <Grid item xs={12} sm={3}>
-                            <TextField
-                              label="Carrier"
-                              value={formData[`${product.prefix}_carrier`] || ''}
-                              onChange={handleChange(`${product.prefix}_carrier`)}
-                              fullWidth
-                              size="small"
-                            />
+                          {/* Row 1: Carrier, Agency, Policy Number, Renewal Date */}
+                          <Grid item xs={12}>
+                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={3}>
+                                  <TextField
+                                    label="Carrier"
+                                    value={formData[`${product.prefix}_carrier`] || ''}
+                                    onChange={handleChange(`${product.prefix}_carrier`)}
+                                    fullWidth
+                                    size="small"
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={3}>
+                                  <TextField
+                                    label="Agency"
+                                    value={formData[`${product.prefix}_agency`] || ''}
+                                    onChange={handleChange(`${product.prefix}_agency`)}
+                                    fullWidth
+                                    size="small"
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={3}>
+                                  <TextField
+                                    label="Policy Number"
+                                    value={formData[`${product.prefix}_policy_number`] || ''}
+                                    onChange={handleChange(`${product.prefix}_policy_number`)}
+                                    fullWidth
+                                    size="small"
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={3}>
+                                  <TextField
+                                    label="Renewal Date"
+                                    type="date"
+                                    value={formData[`${product.prefix}_renewal_date`] ? formData[`${product.prefix}_renewal_date`].split('T')[0] : ''}
+                                    onChange={handleChange(`${product.prefix}_renewal_date`)}
+                                    fullWidth
+                                    size="small"
+                                    InputLabelProps={{ shrink: true }}
+                                    helperText={isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
+                                    slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
+                                  />
+                                </Grid>
+                              </Grid>
+                            </Box>
                           </Grid>
-                          <Grid item xs={12} sm={3}>
-                            <TextField
-                              label="Agency"
-                              value={formData[`${product.prefix}_agency`] || ''}
-                              onChange={handleChange(`${product.prefix}_agency`)}
-                              fullWidth
-                              size="small"
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={2}>
-                            <TextField
-                              label="Policy Number"
-                              value={formData[`${product.prefix}_policy_number`] || ''}
-                              onChange={handleChange(`${product.prefix}_policy_number`)}
-                              fullWidth
-                              size="small"
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={2}>
-                            <TextField
-                              label="Occ Limit"
-                              type="number"
-                              value={formData[`${product.prefix}_occ_limit`] || ''}
-                              onChange={handleChange(`${product.prefix}_occ_limit`)}
-                              fullWidth
-                              size="small"
-                              InputProps={{
-                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                                inputProps: { min: 0, step: 0.01 }
-                              }}
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={2}>
-                            <TextField
-                              label="Agg Limit"
-                              type="number"
-                              value={formData[`${product.prefix}_agg_limit`] || ''}
-                              onChange={handleChange(`${product.prefix}_agg_limit`)}
-                              fullWidth
-                              size="small"
-                              InputProps={{
-                                startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                                inputProps: { min: 0, step: 0.01 }
-                              }}
-                            />
-                          </Grid>
-                          {/* Row 2: Premium, Renewal Date */}
-                          <Grid item xs={12} sm={4}>
-                            <TextField
-                              label="Premium ($)"
-                              type="number"
-                              value={formData[`${product.prefix}_premium`] || ''}
-                              onChange={handleChange(`${product.prefix}_premium`)}
-                              fullWidth
-                              size="small"
-                              InputProps={{
-                                inputProps: { min: 0, step: 0.01 }
-                              }}
-                            />
-                          </Grid>
-                          <Grid item xs={12} sm={3}>
-                            <TextField
-                              label="Renewal Date"
-                              type="date"
-                              value={formData[`${product.prefix}_renewal_date`] ? formData[`${product.prefix}_renewal_date`].split('T')[0] : ''}
-                              onChange={handleChange(`${product.prefix}_renewal_date`)}
-                              fullWidth
-                              size="small"
-                              InputLabelProps={{ shrink: true }}
-                              helperText={isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? 'Date is in the past — no reminder will be generated' : ''}
-                              slotProps={{ formHelperText: isPastDate(formData[`${product.prefix}_renewal_date`]?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
-                            />
+                          {/* Row 2: Occ Limit, Agg Limit, Premium */}
+                          <Grid item xs={12}>
+                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
+                              <Grid container spacing={2}>
+                                <Grid item xs={12} sm={4}>
+                                  <TextField
+                                    label="Occ Limit"
+                                    type="number"
+                                    value={formData[`${product.prefix}_occ_limit`] || ''}
+                                    onChange={handleChange(`${product.prefix}_occ_limit`)}
+                                    fullWidth
+                                    size="small"
+                                    InputProps={{
+                                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                      endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                                      inputProps: { min: 0, step: 0.01 }
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={4}>
+                                  <TextField
+                                    label="Agg Limit"
+                                    type="number"
+                                    value={formData[`${product.prefix}_agg_limit`] || ''}
+                                    onChange={handleChange(`${product.prefix}_agg_limit`)}
+                                    fullWidth
+                                    size="small"
+                                    InputProps={{
+                                      startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                      endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                                      inputProps: { min: 0, step: 0.01 }
+                                    }}
+                                  />
+                                </Grid>
+                                <Grid item xs={12} sm={4}>
+                                  <TextField
+                                    label="Premium ($)"
+                                    type="number"
+                                    value={formData[`${product.prefix}_premium`] || ''}
+                                    onChange={handleChange(`${product.prefix}_premium`)}
+                                    fullWidth
+                                    size="small"
+                                    InputProps={{
+                                      inputProps: { min: 0, step: 0.01 }
+                                    }}
+                                  />
+                                </Grid>
+                              </Grid>
+                            </Box>
                           </Grid>
                           {/* Row 3: Endorsements (GL only) */}
                           {prefix === 'general_liability' && (
