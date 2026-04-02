@@ -67,6 +67,7 @@ SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
 SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
 SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
 SMTP_FROM = os.environ.get('SMTP_FROM', 'clientsupport@njgroups.com')
+SMTP_USE_TLS = os.environ.get('SMTP_USE_TLS', 'true').lower() != 'false'
 
 
 def is_local_ip(ip_str):
@@ -2445,7 +2446,7 @@ def invoice_send():
         )
 
         # Send email
-        if not SMTP_USERNAME or not SMTP_PASSWORD:
+        if SMTP_USE_TLS and (not SMTP_USERNAME or not SMTP_PASSWORD):
             return jsonify({'error': 'SMTP credentials not configured. Set SMTP_USERNAME and SMTP_PASSWORD environment variables.'}), 500
 
         client_name_clean = (client.client_name or 'Client').replace(' ', '_')
@@ -2485,8 +2486,10 @@ def invoice_send():
             recipients.append(cc_email)
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            server.starttls()
-            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            if SMTP_USE_TLS:
+                server.starttls()
+            if SMTP_USERNAME and SMTP_PASSWORD:
+                server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.sendmail(SMTP_FROM, recipients, msg.as_string())
 
         session.commit()
