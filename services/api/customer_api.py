@@ -3612,6 +3612,7 @@ def import_from_excel():
         session.flush()
 
         # ========== IMPORT CLIENTS ==========
+        seen_tax_ids = set()
         if 'Clients' in wb.sheetnames:
             ws_clients = wb['Clients']
             for row_idx, row in enumerate(ws_clients.iter_rows(min_row=3, values_only=True), start=3):
@@ -3621,6 +3622,9 @@ def import_from_excel():
                     tax_id = str(row[0]).strip() if row[0] else None
                     if not tax_id:
                         continue
+                    if tax_id in seen_tax_ids:
+                        continue
+                    seen_tax_ids.add(tax_id)
 
                     # New column order: Tax ID(0), Client Name(1), DBA(2), Industry(3), Status(4), Gross Revenue(5), Total EEs(6)
                     # Then contacts starting at col 7, each contact has 9 columns
