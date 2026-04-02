@@ -1147,6 +1147,25 @@ class Feedback(db.Model):
         }
 
 
+class InvoiceSequence(db.Model):
+    __tablename__ = 'invoice_sequence'
+
+    id = db.Column(db.Integer, primary_key=True)
+    last_number = db.Column(db.Integer, nullable=False, default=536658)
+
+    @staticmethod
+    def next_number(session):
+        """Get and increment the next invoice number. Thread-safe via DB."""
+        seq = session.query(InvoiceSequence).first()
+        if not seq:
+            seq = InvoiceSequence(last_number=536658)
+            session.add(seq)
+            session.flush()
+        seq.last_number += 1
+        session.flush()
+        return seq.last_number
+
+
 # ===========================================================================
 # UTILITY FUNCTIONS
 # ===========================================================================
