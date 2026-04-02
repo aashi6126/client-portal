@@ -742,15 +742,15 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                       renderMultiPlanRows(prefix)
                     ) : (
                       <Box sx={{ p: 1.5, backgroundColor: '#fafafa', borderRadius: 1, border: '1px solid #e0e0e0' }}>
-                        <Grid container spacing={2}>
+                        <Grid container spacing={2.5}>
                           {/* Policy Details */}
                           <Grid item xs={12}>
-                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5, position: 'relative' }}>
+                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, position: 'relative' }}>
                               <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 12, bgcolor: '#fafafa', px: 0.75, color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
                                 Policy Details
                               </Typography>
                               <Grid container spacing={2}>
-                                <Grid item xs={12} sm={4}>
+                                <Grid item xs={12} sm={8}>
                                   <TextField
                                     label="Carrier"
                                     value={formData[`${product.prefix}_carrier`] || ''}
@@ -759,25 +759,27 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     size="small"
                                   />
                                 </Grid>
-                                <Grid item xs={12} sm={3}>
+                                <Grid item xs={12} sm={4}>
                                   <TextField
                                     label="Agency"
                                     value={formData[`${product.prefix}_agency`] || ''}
                                     onChange={handleChange(`${product.prefix}_agency`)}
                                     fullWidth
                                     size="small"
+                                    placeholder="Enter agency"
                                   />
                                 </Grid>
-                                <Grid item xs={12} sm={2.5}>
+                                <Grid item xs={12} sm={6}>
                                   <TextField
                                     label="Policy Number"
                                     value={formData[`${product.prefix}_policy_number`] || ''}
                                     onChange={handleChange(`${product.prefix}_policy_number`)}
                                     fullWidth
                                     size="small"
+                                    placeholder="e.g. GL-2025-001"
                                   />
                                 </Grid>
-                                <Grid item xs={12} sm={2.5}>
+                                <Grid item xs={12} sm={6}>
                                   <TextField
                                     label="Renewal Date"
                                     type="date"
@@ -795,7 +797,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                           </Grid>
                           {/* Limits & Premium */}
                           <Grid item xs={12}>
-                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5, position: 'relative' }}>
+                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, position: 'relative' }}>
                               <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 12, bgcolor: '#fafafa', px: 0.75, color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
                                 Limits & Premium
                               </Typography>
@@ -812,7 +814,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     InputProps={{
                                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
                                       endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                                      inputProps: { min: 0, step: 0.01 }
+                                      inputProps: { min: 0, step: 0.01, style: { textAlign: 'right' } }
                                     }}
                                   />
                                 </Grid>
@@ -828,7 +830,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     InputProps={{
                                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
                                       endAdornment: <InputAdornment position="end">M</InputAdornment>,
-                                      inputProps: { min: 0, step: 0.01 }
+                                      inputProps: { min: 0, step: 0.01, style: { textAlign: 'right' } }
                                     }}
                                   />
                                 </Grid>
@@ -843,7 +845,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     placeholder="0.00"
                                     InputProps={{
                                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                      inputProps: { min: 0, step: 0.01 }
+                                      inputProps: { min: 0, step: 0.01, style: { textAlign: 'right' } }
                                     }}
                                   />
                                 </Grid>
@@ -853,11 +855,11 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                           {/* Endorsements (GL only) */}
                           {prefix === 'general_liability' && (
                             <Grid item xs={12}>
-                              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5, position: 'relative' }}>
+                              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, position: 'relative' }}>
                                 <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 12, bgcolor: '#fafafa', px: 0.75, color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
                                   Endorsements
                                 </Typography>
-                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 0.75 }}>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1 }}>
                                   {[
                                     { key: 'general_liability_endorsement_bop', label: 'BOP' },
                                     { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
@@ -870,9 +872,9 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     <Box
                                       key={key}
                                       sx={{
-                                        display: 'flex', alignItems: 'center', gap: 0.5,
+                                        display: 'flex', alignItems: 'center', gap: 0.75,
                                         border: '1px solid', borderColor: formData[key] ? 'primary.main' : '#e0e0e0',
-                                        borderRadius: 1, px: 1, py: 0.5, cursor: 'pointer',
+                                        borderRadius: 1, px: 1.5, py: 1, cursor: 'pointer',
                                         bgcolor: formData[key] ? 'primary.50' : 'transparent',
                                         transition: 'all 0.15s',
                                         '&:hover': { borderColor: '#bbb', bgcolor: formData[key] ? 'primary.50' : '#f5f5f5' },
@@ -884,7 +886,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                         size="small"
                                         sx={{ p: 0.25 }}
                                       />
-                                      <Typography variant="caption" sx={{ fontSize: '0.75rem' }}>{label}</Typography>
+                                      <Typography variant="body2" sx={{ fontSize: '0.85rem' }}>{label}</Typography>
                                     </Box>
                                   ))}
                                 </Box>
@@ -893,23 +895,24 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                           )}
                           {/* Status & Notes */}
                           <Grid item xs={12}>
-                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5, position: 'relative' }}>
+                            <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, position: 'relative' }}>
                               <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 12, bgcolor: '#fafafa', px: 0.75, color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
                                 Status & Notes
                               </Typography>
                               <Grid container spacing={2}>
-                                <Grid item xs={12} sm={5}>
+                                <Grid item xs={12} sm={8}>
                                   <TextField
                                     label="Outstanding Item"
                                     value={formData[`${prefix}_outstanding_item`] || ''}
                                     onChange={handleChange(`${prefix}_outstanding_item`)}
                                     fullWidth
                                     size="small"
+                                    placeholder="Enter item"
                                     multiline
                                     minRows={1}
                                   />
                                 </Grid>
-                                <Grid item xs={12} sm={2.5}>
+                                <Grid item xs={12} sm={4}>
                                   <TextField
                                     label="Due Date"
                                     type="date"
@@ -920,13 +923,14 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     InputLabelProps={{ shrink: true }}
                                   />
                                 </Grid>
-                                <Grid item xs={12} sm={4.5}>
+                                <Grid item xs={12}>
                                   <TextField
                                     label="Remarks"
                                     value={formData[`${prefix}_remarks`] || ''}
                                     onChange={handleChange(`${prefix}_remarks`)}
                                     fullWidth
                                     size="small"
+                                    placeholder="Additional notes"
                                     multiline
                                     minRows={1}
                                   />
