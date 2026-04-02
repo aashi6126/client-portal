@@ -27,6 +27,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import InvoiceDialog from './InvoiceDialog';
 
 // Multi-plan types: support multiple carrier/limit/premium/renewal per type
 const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
@@ -98,6 +99,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     cyber: [],
     crime: []
   });
+  const [invoiceOpen, setInvoiceOpen] = useState(false);
 
   // Insurance product types configuration
   const insuranceProducts = [
@@ -926,14 +928,30 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
         </Box>
       </DialogContent>
 
-      <DialogActions sx={{ p: 2 }}>
-        <Button onClick={onClose} color="inherit">
-          Cancel
+      <DialogActions sx={{ p: 2, justifyContent: 'space-between' }}>
+        <Button
+          onClick={() => setInvoiceOpen(true)}
+          disabled={!commercial}
+          variant="outlined"
+          size="small"
+        >
+          Generate Invoice
         </Button>
-        <Button onClick={handleSave} variant="contained" color="primary">
-          Save
-        </Button>
+        <Box sx={{ display: 'flex', gap: 1 }}>
+          <Button onClick={onClose} color="inherit">
+            Cancel
+          </Button>
+          <Button onClick={handleSave} variant="contained" color="primary">
+            Save
+          </Button>
+        </Box>
       </DialogActions>
+      <InvoiceDialog
+        open={invoiceOpen}
+        onClose={() => setInvoiceOpen(false)}
+        commercial={commercial}
+        clientEmail={selectedClient?.email || selectedClient?.contacts?.[0]?.email || ''}
+      />
     </Dialog>
   );
 };
