@@ -63,6 +63,11 @@ REM --- Method 3: Find by process command line (final fallback) ---
 for /f "tokens=2" %%p in ('wmic process where "commandline like '%%customer_api%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do taskkill /pid %%p /f >nul 2>&1
 for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_scheduler%%' and name='python.exe'" get processid /format:value 2^>nul ^| findstr "="') do taskkill /pid %%p /f >nul 2>&1
 
+REM --- Method 4: Kill anything on ports 3000 and 5001 (nuclear fallback) ---
+echo [..] Clearing ports 3000 and 5001...
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :3000 2^>nul') do taskkill /PID %%a /F >nul 2>&1
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr :5001 2^>nul') do taskkill /PID %%a /F >nul 2>&1
+
 REM --- Clean up PID file (fallback) ---
 if exist "%~dp0.pids" del /f /q "%~dp0.pids" >nul 2>&1
 
