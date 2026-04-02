@@ -123,7 +123,7 @@ for /f "tokens=2" %%p in ('wmic process where "commandline like '%%backup_schedu
     set "BACKUP_PYTHON_PID=%%p"
 )
 
-echo [OK] Backup scheduler started (12 AM and 12 PM daily)
+echo [OK] Backup scheduler started (12 AM, 12 PM, and 6 PM daily)
 :skip_backup
 
 REM --- Start Web App (React dev server) ---
