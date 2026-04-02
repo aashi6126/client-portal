@@ -3612,7 +3612,7 @@ def import_from_excel():
         session.flush()
 
         # ========== IMPORT CLIENTS ==========
-        seen_tax_ids = set()
+        imported_clients = {}  # tax_id -> Client object (for handling duplicates in xlsx)
         if 'Clients' in wb.sheetnames:
             ws_clients = wb['Clients']
             for row_idx, row in enumerate(ws_clients.iter_rows(min_row=3, values_only=True), start=3):
@@ -3622,9 +3622,6 @@ def import_from_excel():
                     tax_id = str(row[0]).strip() if row[0] else None
                     if not tax_id:
                         continue
-                    if tax_id in seen_tax_ids:
-                        continue
-                    seen_tax_ids.add(tax_id)
 
                     # New column order: Tax ID(0), Client Name(1), DBA(2), Industry(3), Status(4), Gross Revenue(5), Total EEs(6)
                     # Then contacts starting at col 7, each contact has 9 columns
@@ -3653,6 +3650,31 @@ def import_from_excel():
 
                     parsed_contacts = parse_contacts_from_row(row)
                     fc = parsed_contacts[0] if parsed_contacts else {}
+
+                    if tax_id in imported_clients:
+                        # Duplicate tax_id in xlsx — update the existing record
+                        existing = imported_clients[tax_id]
+                        existing.client_name = row[1] if len(row) > 1 else existing.client_name
+                        existing.dba = row[2] if len(row) > 2 else existing.dba
+                        existing.industry = row[3] if len(row) > 3 else existing.industry
+                        existing.status = row[4] if len(row) > 4 and row[4] else existing.status
+                        existing.gross_revenue = float(row[5]) if len(row) > 5 and row[5] else existing.gross_revenue
+                        existing.total_ees = int(row[6]) if len(row) > 6 and row[6] else existing.total_ees
+                        if parsed_contacts:
+                            existing.contact_person = fc.get('contact_person')
+                            existing.email = fc.get('email')
+                            existing.phone_number = fc.get('phone_number')
+                            existing.address_line_1 = fc.get('address_line_1')
+                            existing.address_line_2 = fc.get('address_line_2')
+                            existing.city = fc.get('city')
+                            existing.state = fc.get('state')
+                            existing.zip_code = fc.get('zip_code')
+                            # Add new contacts (append to existing)
+                            for cd in parsed_contacts:
+                                session.add(ClientContact(client_id=existing.id, **cd))
+                        stats['clients_created'] += 1
+                        continue
+
                     client = Client(
                         tax_id=tax_id,
                         client_name=row[1] if len(row) > 1 else None,
@@ -3672,6 +3694,7 @@ def import_from_excel():
                     )
                     session.add(client)
                     session.flush()
+                    imported_clients[tax_id] = client
                     for cd in parsed_contacts:
                         session.add(ClientContact(client_id=client.id, **cd))
                     stats['clients_created'] += 1
