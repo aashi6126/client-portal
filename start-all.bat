@@ -73,7 +73,13 @@ if not exist "%~dp0webapp\customer-app\build\index.html" echo [!!] WARNING: Reac
 echo [DEBUG] Step 7: Starting services...
 
 REM --- Default port if not set ---
-if not defined API_PORT set "API_PORT=5000"
+if not defined API_PORT set "API_PORT=5001"
+if not defined DATABASE_URI set "DATABASE_URI=postgresql://postgres:pswd@localhost/client_portal"
+if not defined OLLAMA_URL set "OLLAMA_URL=http://localhost:11434"
+if not defined OLLAMA_MODEL set "OLLAMA_MODEL=qwen3:8b"
+if not defined SMTP_HOST set "SMTP_HOST=smtp.office365.com"
+if not defined SMTP_PORT set "SMTP_PORT=587"
+if not defined SMTP_FROM set "SMTP_FROM=clientsupport@njgroups.com"
 
 REM --- Start API server (window stays open on crash so you can see errors) ---
 echo [..] Starting API server...
