@@ -46,6 +46,7 @@ import PersonalModal from './components/PersonalModal';
 import IndividualTable from './components/IndividualTable';
 import IndividualModal from './components/IndividualModal';
 import PocManagement from './components/PocManagement';
+import ChatBubble from './components/ChatBubble';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
@@ -1148,6 +1149,7 @@ function NewApp() {
           </Button>
         </DialogActions>
       </Dialog>
+      <ChatBubble />
     </Box>
   );
 }
