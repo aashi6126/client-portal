@@ -21,6 +21,10 @@ try:
     from api.invoice import generate_invoice_pdf, _collect_line_items
 except ImportError:
     from invoice import generate_invoice_pdf, _collect_line_items
+try:
+    from api.chat import chat_with_ollama
+except ImportError:
+    from chat import chat_with_ollama
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -4477,6 +4481,40 @@ def reassign_poc():
     except Exception as e:
         session.rollback()
         logging.error(f"Error reassigning PoC: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+# ===========================================================================
+# CHAT ENDPOINT
+# ===========================================================================
+
+@app.route('/api/chat', methods=['POST'])
+def chat_endpoint():
+    """Handle AI chat messages with tool-calling support."""
+    session = Session()
+    try:
+        data = request.get_json()
+        if not data or 'message' not in data:
+            return jsonify({'error': 'message is required'}), 400
+
+        message = data['message']
+        history = data.get('history', [])
+
+        models = {
+            'Client': Client,
+            'EmployeeBenefit': EmployeeBenefit,
+            'CommercialInsurance': CommercialInsurance,
+            'PersonalInsurance': PersonalInsurance,
+            'Individual': Individual,
+        }
+
+        result = chat_with_ollama(message, history, session, models)
+        return jsonify(result), 200
+
+    except Exception as e:
+        logging.error(f"Chat endpoint error: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()
