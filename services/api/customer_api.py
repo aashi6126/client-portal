@@ -17,7 +17,10 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
-from invoice import generate_invoice_pdf, _collect_line_items
+try:
+    from api.invoice import generate_invoice_pdf, _collect_line_items
+except ImportError:
+    from invoice import generate_invoice_pdf, _collect_line_items
 
 logging.basicConfig(level=logging.DEBUG)
 
