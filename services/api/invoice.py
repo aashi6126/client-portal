@@ -90,7 +90,7 @@ def _format_date(date_str):
             dt = datetime.strptime(date_str[:10], '%Y-%m-%d')
         else:
             dt = date_str
-        return dt.strftime('%-m/%-d/%y')
+        return f'{dt.month}/{dt.day}/{dt.strftime("%y")}'
     except (ValueError, TypeError):
         return str(date_str)
 
@@ -162,11 +162,11 @@ def generate_invoice_pdf(
     if isinstance(invoice_date, str):
         try:
             dt = datetime.strptime(invoice_date[:10], '%Y-%m-%d')
-            display_date = dt.strftime('%B %-d, %Y')
+            display_date = f'{dt.strftime("%B")} {dt.day}, {dt.year}'
         except ValueError:
             display_date = invoice_date
     else:
-        display_date = invoice_date.strftime('%B %-d, %Y')
+        display_date = f'{invoice_date.strftime("%B")} {invoice_date.day}, {invoice_date.year}'
 
     left_text = f'<b>Named Insured:</b><br/>{client_name}<br/>{client_address}'
     right_text = (

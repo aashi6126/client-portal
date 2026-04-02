@@ -301,7 +301,8 @@ def chat_with_ollama(message, history, session, models):
     Returns:
         dict with 'response' key containing the assistant's reply
     """
-    today = datetime.now().strftime('%B %-d, %Y')
+    now = datetime.now()
+    today = f'{now.strftime("%B")} {now.day}, {now.year}'
     system_msg = SYSTEM_PROMPT.format(today=today)
 
     messages = [{"role": "system", "content": system_msg}]
