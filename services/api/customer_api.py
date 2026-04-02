@@ -82,8 +82,8 @@ def is_allowed_origin(origin):
     allowed_origins = [
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        "http://localhost:5000",
-        "http://127.0.0.1:5000"
+        "http://localhost:5001",
+        "http://127.0.0.1:5001"
     ]
     # Add origins from ALLOWED_ORIGINS env var (comma-separated)
     extra = os.environ.get('ALLOWED_ORIGINS', '')
@@ -2936,6 +2936,35 @@ def export_to_excel():
                 zip_cell = ws_clients.cell(row=row_idx, column=base + 8, value=getattr(contact, 'zip_code', None))
                 zip_cell.number_format = '@'
 
+        # ========== INDIVIDUALS SHEET ==========
+        ws_individuals = wb.create_sheet("Individuals")
+
+        individuals_list = session.query(Individual).all()
+
+        individual_headers = ['Individual ID', 'First Name', 'Last Name', 'Email',
+                              'Phone Number', 'Address Line 1', 'Address Line 2',
+                              'City', 'State', 'Zip Code', 'Status']
+
+        # Row 1: empty (consistent with other sheets that have section headers)
+        # Row 2: Column headers
+        for col, header in enumerate(individual_headers, 1):
+            cell = ws_individuals.cell(row=2, column=col, value=header)
+            cell.font = header_font
+
+        for row_idx, ind in enumerate(individuals_list, 3):
+            ws_individuals.cell(row=row_idx, column=1, value=ind.individual_id)
+            ws_individuals.cell(row=row_idx, column=2, value=ind.first_name)
+            ws_individuals.cell(row=row_idx, column=3, value=ind.last_name)
+            ws_individuals.cell(row=row_idx, column=4, value=ind.email)
+            ws_individuals.cell(row=row_idx, column=5, value=ind.phone_number)
+            ws_individuals.cell(row=row_idx, column=6, value=ind.address_line_1)
+            ws_individuals.cell(row=row_idx, column=7, value=ind.address_line_2)
+            ws_individuals.cell(row=row_idx, column=8, value=ind.city)
+            ws_individuals.cell(row=row_idx, column=9, value=ind.state)
+            zip_cell = ws_individuals.cell(row=row_idx, column=10, value=ind.zip_code)
+            zip_cell.number_format = '@'
+            ws_individuals.cell(row=row_idx, column=11, value=ind.status)
+
         # ========== EMPLOYEE BENEFITS SHEET ==========
         ws_benefits = wb.create_sheet("Employee Benefits")
 
@@ -3325,21 +3354,32 @@ def import_from_excel():
 
         stats = {
             'clients_created': 0,
-            'clients_updated': 0,
+            'individuals_created': 0,
             'benefits_created': 0,
-            'benefits_updated': 0,
             'commercial_created': 0,
-            'commercial_updated': 0,
             'personal_created': 0,
-            'personal_updated': 0,
             'errors': []
         }
 
         # Error row collectors for errors.xlsx generation
         error_rows_clients = []      # [(row_tuple, error_msg), ...]
+        error_rows_individuals = []
         error_rows_benefits = []
         error_rows_commercial = []
         error_rows_personal = []
+
+        # ========== DELETE ALL EXISTING DATA ==========
+        # Delete child records first to respect FK constraints
+        session.query(HomeownersPolicy).delete()
+        session.query(BenefitPlan).delete()
+        session.query(CommercialPlan).delete()
+        session.query(PersonalInsurance).delete()
+        session.query(EmployeeBenefit).delete()
+        session.query(CommercialInsurance).delete()
+        session.query(ClientContact).delete()
+        session.query(Individual).delete()
+        session.query(Client).delete()
+        session.flush()
 
         # ========== IMPORT CLIENTS ==========
         if 'Clients' in wb.sheetnames:
@@ -3351,9 +3391,6 @@ def import_from_excel():
                     tax_id = str(row[0]).strip() if row[0] else None
                     if not tax_id:
                         continue
-
-                    # Check if client exists
-                    existing = session.query(Client).filter_by(tax_id=tax_id).first()
 
                     # New column order: Tax ID(0), Client Name(1), DBA(2), Industry(3), Status(4), Gross Revenue(5), Total EEs(6)
                     # Then contacts starting at col 7, each contact has 9 columns
@@ -3380,62 +3417,69 @@ def import_from_excel():
                             ci += contact_cols_per
                         return contacts_list
 
-                    if existing:
-                        # Update existing client
-                        existing.client_name = row[1] if len(row) > 1 else existing.client_name
-                        existing.dba = row[2] if len(row) > 2 else existing.dba
-                        existing.industry = row[3] if len(row) > 3 else existing.industry
-                        existing.status = row[4] if len(row) > 4 and row[4] else existing.status
-                        existing.gross_revenue = float(row[5]) if len(row) > 5 and row[5] else existing.gross_revenue
-                        existing.total_ees = int(row[6]) if len(row) > 6 and row[6] else existing.total_ees
-                        # Update contacts
-                        parsed_contacts = parse_contacts_from_row(row)
-                        if parsed_contacts:
-                            session.query(ClientContact).filter_by(client_id=existing.id).delete()
-                            for cd in parsed_contacts:
-                                session.add(ClientContact(client_id=existing.id, **cd))
-                            # Also update flat fields from first contact
-                            fc = parsed_contacts[0]
-                            existing.contact_person = fc.get('contact_person')
-                            existing.email = fc.get('email')
-                            existing.phone_number = fc.get('phone_number')
-                            existing.address_line_1 = fc.get('address_line_1')
-                            existing.address_line_2 = fc.get('address_line_2')
-                            existing.city = fc.get('city')
-                            existing.state = fc.get('state')
-                            existing.zip_code = fc.get('zip_code')
-                        stats['clients_updated'] += 1
-                    else:
-                        # Create new client
-                        parsed_contacts = parse_contacts_from_row(row)
-                        fc = parsed_contacts[0] if parsed_contacts else {}
-                        client = Client(
-                            tax_id=tax_id,
-                            client_name=row[1] if len(row) > 1 else None,
-                            dba=row[2] if len(row) > 2 else None,
-                            industry=row[3] if len(row) > 3 else None,
-                            status=row[4] if len(row) > 4 and row[4] else 'Active',
-                            gross_revenue=float(row[5]) if len(row) > 5 and row[5] else None,
-                            total_ees=int(row[6]) if len(row) > 6 and row[6] else None,
-                            contact_person=fc.get('contact_person'),
-                            email=fc.get('email'),
-                            phone_number=fc.get('phone_number'),
-                            address_line_1=fc.get('address_line_1'),
-                            address_line_2=fc.get('address_line_2'),
-                            city=fc.get('city'),
-                            state=fc.get('state'),
-                            zip_code=fc.get('zip_code')
-                        )
-                        session.add(client)
-                        session.flush()
-                        for cd in parsed_contacts:
-                            session.add(ClientContact(client_id=client.id, **cd))
-                        stats['clients_created'] += 1
+                    parsed_contacts = parse_contacts_from_row(row)
+                    fc = parsed_contacts[0] if parsed_contacts else {}
+                    client = Client(
+                        tax_id=tax_id,
+                        client_name=row[1] if len(row) > 1 else None,
+                        dba=row[2] if len(row) > 2 else None,
+                        industry=row[3] if len(row) > 3 else None,
+                        status=row[4] if len(row) > 4 and row[4] else 'Active',
+                        gross_revenue=float(row[5]) if len(row) > 5 and row[5] else None,
+                        total_ees=int(row[6]) if len(row) > 6 and row[6] else None,
+                        contact_person=fc.get('contact_person'),
+                        email=fc.get('email'),
+                        phone_number=fc.get('phone_number'),
+                        address_line_1=fc.get('address_line_1'),
+                        address_line_2=fc.get('address_line_2'),
+                        city=fc.get('city'),
+                        state=fc.get('state'),
+                        zip_code=fc.get('zip_code')
+                    )
+                    session.add(client)
+                    session.flush()
+                    for cd in parsed_contacts:
+                        session.add(ClientContact(client_id=client.id, **cd))
+                    stats['clients_created'] += 1
                 except Exception as e:
                     error_rows_clients.append((row, str(e)))
                     stats['errors'].append(f"Clients row {row_idx}: {str(e)}")
 
         session.flush()  # Flush to ensure clients are available for FK references
+
+        # ========== IMPORT INDIVIDUALS ==========
+        if 'Individuals' in wb.sheetnames:
+            ws_individuals = wb['Individuals']
+            for row_idx, row in enumerate(ws_individuals.iter_rows(min_row=3, values_only=True), start=3):
+                if not row[0]:
+                    continue
+                try:
+                    individual_id = str(row[0]).strip() if row[0] else None
+                    if not individual_id:
+                        continue
+
+                    zip_code = str(int(row[9])).zfill(5) if row[9] else None
+
+                    individual = Individual(
+                        individual_id=individual_id,
+                        first_name=row[1] if len(row) > 1 else None,
+                        last_name=row[2] if len(row) > 2 else None,
+                        email=row[3] if len(row) > 3 else None,
+                        phone_number=str(row[4]) if len(row) > 4 and row[4] else None,
+                        address_line_1=row[5] if len(row) > 5 else None,
+                        address_line_2=row[6] if len(row) > 6 else None,
+                        city=row[7] if len(row) > 7 else None,
+                        state=row[8] if len(row) > 8 else None,
+                        zip_code=zip_code,
+                        status=row[10] if len(row) > 10 and row[10] else 'Active'
+                    )
+                    session.add(individual)
+                    stats['individuals_created'] += 1
+                except Exception as e:
+                    error_rows_individuals.append((row, str(e)))
+                    stats['errors'].append(f"Individuals row {row_idx}: {str(e)}")
+
+        session.flush()  # Flush to ensure individuals are available for FK references
 
         # ========== IMPORT EMPLOYEE BENEFITS ==========
         if 'Employee Benefits' in wb.sheetnames:
@@ -3536,8 +3580,6 @@ def import_from_excel():
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
 
-                    existing = session.query(EmployeeBenefit).filter_by(tax_id=tax_id).first()
-
                     benefit_data = {
                         'tax_id': tax_id,
                         'parent_client': safe_val(2),
@@ -3565,20 +3607,12 @@ def import_from_excel():
                         if oi_col is not None:
                             benefit_data[f'{prefix}_outstanding_item'] = safe_val(oi_col)
 
-                    if existing:
-                        for key, val in benefit_data.items():
-                            if val is not None:
-                                setattr(existing, key, val)
-                        benefit_obj = existing
-                        stats['benefits_updated'] += 1
-                    else:
-                        benefit_obj = EmployeeBenefit(**benefit_data)
-                        session.add(benefit_obj)
-                        session.flush()
-                        stats['benefits_created'] += 1
+                    benefit_obj = EmployeeBenefit(**benefit_data)
+                    session.add(benefit_obj)
+                    session.flush()
+                    stats['benefits_created'] += 1
 
                     # Multi-plan types: create BenefitPlan child records
-                    session.query(BenefitPlan).filter_by(employee_benefit_id=benefit_obj.id).delete()
                     for plan_type, cols_list in multi_plan_cols.items():
                         for plan_num, (carrier_col, renewal_col, wp_col, remarks_col, oi_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
@@ -3746,8 +3780,6 @@ def import_from_excel():
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
 
-                    existing = session.query(CommercialInsurance).filter_by(tax_id=tax_id).first()
-
                     commercial_data = {
                         'tax_id': tax_id,
                         'parent_client': row[2] if len(row) > 2 else None,
@@ -3786,20 +3818,12 @@ def import_from_excel():
                                 commercial_data['general_liability_endorsement_accidental_medical'] = str(safe_val(sc + 14)).strip().upper() == 'YES' if safe_val(sc + 14) else False
                                 commercial_data['general_liability_endorsement_liquor_liability'] = str(safe_val(sc + 15)).strip().upper() == 'YES' if safe_val(sc + 15) else False
 
-                    if existing:
-                        for key, val in commercial_data.items():
-                            if val is not None:
-                                setattr(existing, key, val)
-                        comm_obj = existing
-                        stats['commercial_updated'] += 1
-                    else:
-                        comm_obj = CommercialInsurance(**commercial_data)
-                        session.add(comm_obj)
-                        session.flush()
-                        stats['commercial_created'] += 1
+                    comm_obj = CommercialInsurance(**commercial_data)
+                    session.add(comm_obj)
+                    session.flush()
+                    stats['commercial_created'] += 1
 
                     # Multi-plan types: create CommercialPlan child records
-                    session.query(CommercialPlan).filter_by(commercial_insurance_id=comm_obj.id).delete()
                     for plan_type, cols_list in comm_multi_col_map.items():
                         for plan_num, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
@@ -3919,8 +3943,6 @@ def import_from_excel():
                     def safe_val_p(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
 
-                    existing = session.query(PersonalInsurance).filter_by(individual_id=ind_id).first()
-
                     personal_data = {
                         'individual_id': ind_id,
                     }
@@ -3940,15 +3962,9 @@ def import_from_excel():
                                 else:
                                     personal_data[key] = val
 
-                    if existing:
-                        for key, val in personal_data.items():
-                            if val is not None:
-                                setattr(existing, key, val)
-                        stats['personal_updated'] += 1
-                    else:
-                        pers_obj = PersonalInsurance(**personal_data)
-                        session.add(pers_obj)
-                        stats['personal_created'] += 1
+                    pers_obj = PersonalInsurance(**personal_data)
+                    session.add(pers_obj)
+                    stats['personal_created'] += 1
 
                 except Exception as e:
                     error_rows_personal.append((row, str(e)))
@@ -3962,7 +3978,7 @@ def import_from_excel():
             'stats': stats
         }
 
-        has_errors = error_rows_clients or error_rows_benefits or error_rows_commercial or error_rows_personal
+        has_errors = error_rows_clients or error_rows_individuals or error_rows_benefits or error_rows_commercial or error_rows_personal
         if has_errors:
             error_wb = Workbook()
             error_wb.remove(error_wb.active)  # Remove default sheet
@@ -4018,6 +4034,8 @@ def import_from_excel():
             # Build error sheets for each tab that has errors
             if 'Clients' in wb.sheetnames:
                 copy_headers_and_write_errors('Clients', error_rows_clients)
+            if 'Individuals' in wb.sheetnames:
+                copy_headers_and_write_errors('Individuals', error_rows_individuals)
             if 'Employee Benefits' in wb.sheetnames:
                 copy_headers_and_write_errors('Employee Benefits', error_rows_benefits)
             if 'Commercial' in wb.sheetnames:
@@ -4267,6 +4285,6 @@ with app.app_context():
 if __name__ == '__main__':
     # Run app (host/port configurable via env vars)
     host = os.environ.get('API_HOST', '127.0.0.1')
-    port = int(os.environ.get('API_PORT', '5000'))
+    port = int(os.environ.get('API_PORT', '5001'))
     debug = os.environ.get('API_DEBUG', 'true').lower() == 'true'
     app.run(debug=debug, host=host, port=port)

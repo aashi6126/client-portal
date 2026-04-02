@@ -565,6 +565,14 @@ function NewApp() {
     const file = event.target.files[0];
     if (!file) return;
 
+    const confirmed = window.confirm(
+      'Warning: Importing will replace ALL current data with the data from the spreadsheet. This action cannot be undone.\n\nDo you want to continue?'
+    );
+    if (!confirmed) {
+      event.target.value = '';
+      return;
+    }
+
     setImporting(true);
     const formData = new FormData();
     formData.append('file', file);
@@ -578,10 +586,11 @@ function NewApp() {
 
       const { stats, errors_file, errors_filename } = response.data;
       let message = 'Import completed!\n\n';
-      message += `Clients: ${stats.clients_created} created, ${stats.clients_updated} updated\n`;
-      message += `Benefits: ${stats.benefits_created} created, ${stats.benefits_updated} updated\n`;
-      message += `Commercial: ${stats.commercial_created} created, ${stats.commercial_updated} updated\n`;
-      message += `Personal: ${stats.personal_created} created, ${stats.personal_updated} updated`;
+      message += `Clients: ${stats.clients_created} created\n`;
+      message += `Individuals: ${stats.individuals_created} created\n`;
+      message += `Benefits: ${stats.benefits_created} created\n`;
+      message += `Commercial: ${stats.commercial_created} created\n`;
+      message += `Personal: ${stats.personal_created} created`;
 
       if (stats.errors && stats.errors.length > 0) {
         message += `\n\n${stats.errors.length} row(s) had errors.`;

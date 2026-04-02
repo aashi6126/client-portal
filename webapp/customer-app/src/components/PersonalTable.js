@@ -265,10 +265,6 @@ const getPersonalColumns = (onEdit) => [
     }
   },
   {
-    sortable: true,
-    minWidth: 140
-  },
-  {
     id: 'active_products',
     label: 'Coverage',
     sortable: false,

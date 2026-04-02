@@ -13,7 +13,7 @@ pkill -f "backup_scheduler.py" 2>/dev/null
 pkill -f "react-scripts start" 2>/dev/null
 # Kill anything on ports 3000 and 5000
 lsof -ti:3000 | xargs kill -9 2>/dev/null
-lsof -ti:5000 | xargs kill -9 2>/dev/null
+lsof -ti:5001 | xargs kill -9 2>/dev/null
 sleep 2
 echo "   Done."
 echo ""
@@ -25,8 +25,8 @@ if [ ! -d "webapp/customer-app" ]; then
 fi
 
 # Start API service in background
-echo "📡 Starting API service on http://127.0.0.1:5000..."
-/opt/anaconda3/bin/python services/api/customer_api.py &
+echo "📡 Starting API service on http://127.0.0.1:5001..."
+/usr/bin/python3 services/api/customer_api.py &
 API_PID=$!
 
 # Wait a moment for API to start
@@ -34,7 +34,7 @@ sleep 2
 
 # Start backup scheduler in background
 echo "💾 Starting backup scheduler (12 AM & 12 PM daily)..."
-/opt/anaconda3/bin/python services/backup_scheduler.py &
+/usr/bin/python3 services/backup_scheduler.py &
 BACKUP_PID=$!
 
 # Start web app
@@ -46,8 +46,8 @@ WEB_PID=$!
 # Store PIDs
 echo ""
 echo "✅ Services started successfully!"
-echo "   API Service: http://127.0.0.1:5000 (PID: $API_PID)"
-echo "   Backup Scheduler: PID $BACKUP_PID (12 AM & 12 PM)"
+echo "   API Service: http://127.0.0.1:5001 (PID: $API_PID)"
+echo "   Backup Scheduler: PID $BACKUP_PID (12 AM & 12 PM & 6 PM daily)"
 echo "   Web App: http://localhost:3000 (PID: $WEB_PID)"
 echo ""
 echo "📝 To stop services:"
