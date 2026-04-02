@@ -12,6 +12,12 @@ from sqlalchemy import create_engine, func, or_
 from dateutil.parser import parse
 from openpyxl import Workbook, load_workbook
 from openpyxl.styles import Font, Alignment, PatternFill, Border, Side
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+from invoice import generate_invoice_pdf, _collect_line_items
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -51,6 +57,13 @@ if extra_allowed:
 
 # LAN_ONLY can be set to "false" to disable the restriction (e.g. during development)
 LAN_ONLY = os.environ.get('LAN_ONLY', 'true').lower() != 'false'
+
+# SMTP Configuration
+SMTP_HOST = os.environ.get('SMTP_HOST', 'smtp.office365.com')
+SMTP_PORT = int(os.environ.get('SMTP_PORT', '587'))
+SMTP_USERNAME = os.environ.get('SMTP_USERNAME', '')
+SMTP_PASSWORD = os.environ.get('SMTP_PASSWORD', '')
+SMTP_FROM = os.environ.get('SMTP_FROM', 'clientsupport@njgroups.com')
 
 
 def is_local_ip(ip_str):
@@ -2299,6 +2312,194 @@ def clone_commercial(commercial_id):
     except Exception as e:
         session.rollback()
         logging.error(f"Error cloning commercial: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+# ===========================================================================
+# INVOICE ENDPOINTS
+# ===========================================================================
+
+@app.route('/api/invoice/preview', methods=['POST'])
+def invoice_preview():
+    """Generate an invoice PDF and return it for preview."""
+    session = Session()
+    try:
+        data = request.get_json()
+        commercial_id = data.get('commercial_id')
+        policy_types = data.get('policy_types', [])
+        invoice_date = data.get('invoice_date', datetime.now().strftime('%Y-%m-%d'))
+
+        if not commercial_id or not policy_types:
+            return jsonify({'error': 'commercial_id and policy_types are required'}), 400
+
+        commercial = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
+        if not commercial:
+            return jsonify({'error': 'Commercial record not found'}), 404
+
+        client = commercial.client
+        if not client:
+            return jsonify({'error': 'Client not found for this commercial record'}), 404
+
+        commercial_data = commercial.to_dict()
+        line_items = _collect_line_items(commercial_data, policy_types)
+
+        if not line_items:
+            return jsonify({'error': 'No active policies found for selected types'}), 400
+
+        invoice_number = InvoiceSequence.next_number(session)
+
+        # Build client address
+        addr_parts = [client.address_line_1 or '']
+        if client.address_line_2:
+            addr_parts.append(client.address_line_2)
+        city_state_zip = ', '.join(filter(None, [client.city, client.state]))
+        if client.zip_code:
+            city_state_zip += f' {client.zip_code}'
+        addr_parts.append(city_state_zip)
+        client_address = '\n'.join(filter(None, addr_parts))
+
+        pdf_buf = generate_invoice_pdf(
+            invoice_number=invoice_number,
+            invoice_date=invoice_date,
+            client_name=client.client_name or '',
+            client_address=client_address,
+            client_tax_id=client.tax_id or '',
+            line_items=line_items,
+        )
+
+        session.commit()
+
+        return send_file(
+            pdf_buf,
+            mimetype='application/pdf',
+            as_attachment=False,
+            download_name=f'Invoice_{invoice_number}_{(client.client_name or "Client").replace(" ", "_")}.pdf'
+        )
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error generating invoice preview: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/invoice/send', methods=['POST'])
+def invoice_send():
+    """Generate an invoice PDF and email it to the client."""
+    session = Session()
+    try:
+        data = request.get_json()
+        commercial_id = data.get('commercial_id')
+        policy_types = data.get('policy_types', [])
+        invoice_date = data.get('invoice_date', datetime.now().strftime('%Y-%m-%d'))
+        to_email = data.get('to_email')
+        cc_email = data.get('cc_email', '')
+        subject = data.get('subject', '')
+
+        if not commercial_id or not policy_types:
+            return jsonify({'error': 'commercial_id and policy_types are required'}), 400
+        if not to_email:
+            return jsonify({'error': 'to_email is required'}), 400
+
+        commercial = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
+        if not commercial:
+            return jsonify({'error': 'Commercial record not found'}), 404
+
+        client = commercial.client
+        if not client:
+            return jsonify({'error': 'Client not found for this commercial record'}), 404
+
+        commercial_data = commercial.to_dict()
+        line_items = _collect_line_items(commercial_data, policy_types)
+
+        if not line_items:
+            return jsonify({'error': 'No active policies found for selected types'}), 400
+
+        invoice_number = InvoiceSequence.next_number(session)
+
+        if not subject:
+            subject = f'Invoice #{invoice_number} — Edison General Insurance Service'
+
+        # Build client address
+        addr_parts = [client.address_line_1 or '']
+        if client.address_line_2:
+            addr_parts.append(client.address_line_2)
+        city_state_zip = ', '.join(filter(None, [client.city, client.state]))
+        if client.zip_code:
+            city_state_zip += f' {client.zip_code}'
+        addr_parts.append(city_state_zip)
+        client_address = '\n'.join(filter(None, addr_parts))
+
+        pdf_buf = generate_invoice_pdf(
+            invoice_number=invoice_number,
+            invoice_date=invoice_date,
+            client_name=client.client_name or '',
+            client_address=client_address,
+            client_tax_id=client.tax_id or '',
+            line_items=line_items,
+        )
+
+        # Send email
+        if not SMTP_USERNAME or not SMTP_PASSWORD:
+            return jsonify({'error': 'SMTP credentials not configured. Set SMTP_USERNAME and SMTP_PASSWORD environment variables.'}), 500
+
+        client_name_clean = (client.client_name or 'Client').replace(' ', '_')
+        filename = f'Invoice_{invoice_number}_{client_name_clean}.pdf'
+
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_FROM
+        msg['To'] = to_email
+        if cc_email:
+            msg['Cc'] = cc_email
+        msg['Subject'] = subject
+
+        body = (
+            f"Dear {client.client_name or 'Valued Client'},\n\n"
+            f"Please find attached your invoice #{invoice_number} from Edison General Insurance Service.\n\n"
+            f"If you have any questions regarding this invoice, please contact us at 732-548-8700 "
+            f"or email info@njgroups.com.\n\n"
+            f"Thank you for your business.\n\n"
+            f"Best regards,\n"
+            f"Edison General Insurance Service\n"
+            f"22 Meridian Road, Suite 16\n"
+            f"Edison, NJ 08820"
+        )
+        msg.attach(MIMEText(body, 'plain'))
+
+        # Attach PDF
+        pdf_data = pdf_buf.read()
+        attachment = MIMEBase('application', 'pdf')
+        attachment.set_payload(pdf_data)
+        encoders.encode_base64(attachment)
+        attachment.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+        msg.attach(attachment)
+
+        # Send via SMTP
+        recipients = [to_email]
+        if cc_email:
+            recipients.append(cc_email)
+
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, recipients, msg.as_string())
+
+        session.commit()
+
+        return jsonify({
+            'message': 'Invoice sent successfully',
+            'invoice_number': invoice_number
+        }), 200
+
+    except smtplib.SMTPException as e:
+        session.rollback()
+        logging.error(f"SMTP error sending invoice: {e}")
+        return jsonify({'error': f'Email sending failed: {str(e)}'}), 500
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error sending invoice: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()
