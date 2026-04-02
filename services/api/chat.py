@@ -153,6 +153,11 @@ def execute_tool(tool_name, arguments, session, models):
     Returns:
         JSON-serializable result
     """
+    valid_tools = {'search_clients', 'get_benefits', 'get_commercial', 'get_personal',
+                   'get_individuals', 'get_renewals', 'get_cross_sell'}
+    if tool_name not in valid_tools:
+        return {'error': f'Unknown tool: {tool_name}'}
+
     Client = models['Client']
     EmployeeBenefit = models['EmployeeBenefit']
     CommercialInsurance = models['CommercialInsurance']
