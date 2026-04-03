@@ -74,7 +74,6 @@ echo [DEBUG] Step 7: Starting services...
 
 REM --- Default port if not set ---
 if not defined API_PORT set "API_PORT=5001"
-if not defined DATABASE_URI set "DATABASE_URI=postgresql://postgres:pswd@localhost/client_portal"
 if not defined OLLAMA_URL set "OLLAMA_URL=http://localhost:11434"
 if not defined OLLAMA_MODEL set "OLLAMA_MODEL=qwen3:8b"
 if not defined SMTP_HOST set "SMTP_HOST=smtp.office365.com"
