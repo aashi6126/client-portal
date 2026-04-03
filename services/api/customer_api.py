@@ -3864,6 +3864,27 @@ def import_from_excel():
                         if oi_col is not None:
                             benefit_data[f'{prefix}_outstanding_item'] = safe_val(oi_col)
 
+                    # Check if any actual coverage data exists (skip empty rows)
+                    has_coverage = any(
+                        benefit_data.get(f'{prefix}_carrier') or benefit_data.get(f'{prefix}_renewal_date')
+                        for prefix in single_plan_labels.keys()
+                    )
+                    if not has_coverage:
+                        # Check multi-plan columns
+                        for plan_type, cols_list in multi_plan_cols.items():
+                            for plan_num, (carrier_col, renewal_col, wp_col, remarks_col, oi_col) in enumerate(cols_list, 1):
+                                if safe_val(carrier_col) or (renewal_col is not None and safe_val(renewal_col)):
+                                    has_coverage = True
+                                    break
+                            if has_coverage:
+                                break
+                    if not has_coverage:
+                        # Also check core fields
+                        has_coverage = bool(benefit_data.get('form_fire_code') or benefit_data.get('funding') or benefit_data.get('enrollment_poc'))
+
+                    if not has_coverage:
+                        continue
+
                     benefit_obj = EmployeeBenefit(**benefit_data)
                     session.add(benefit_obj)
                     session.flush()
@@ -4074,6 +4095,26 @@ def import_from_excel():
                                 commercial_data['general_liability_endorsement_staffing'] = str(safe_val(sc + 13)).strip().upper() == 'YES' if safe_val(sc + 13) else False
                                 commercial_data['general_liability_endorsement_accidental_medical'] = str(safe_val(sc + 14)).strip().upper() == 'YES' if safe_val(sc + 14) else False
                                 commercial_data['general_liability_endorsement_liquor_liability'] = str(safe_val(sc + 15)).strip().upper() == 'YES' if safe_val(sc + 15) else False
+
+                    # Check if any actual coverage data exists (skip empty rows)
+                    has_coverage = False
+                    for prefix, label in commercial_single_import_defs:
+                        if commercial_data.get(f'{prefix}_carrier') or commercial_data.get(f'{prefix}_premium'):
+                            has_coverage = True
+                            break
+
+                    if not has_coverage:
+                        # Check multi-plan columns too
+                        for plan_type, cols_list in comm_multi_col_map.items():
+                            for plan_num, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
+                                if safe_val(carrier_col) or (premium_col is not None and safe_val(premium_col)):
+                                    has_coverage = True
+                                    break
+                            if has_coverage:
+                                break
+
+                    if not has_coverage:
+                        continue
 
                     comm_obj = CommercialInsurance(**commercial_data)
                     session.add(comm_obj)
