@@ -3864,45 +3864,31 @@ def import_from_excel():
                         if oi_col is not None:
                             benefit_data[f'{prefix}_outstanding_item'] = safe_val(oi_col)
 
-                    # Check if any actual coverage data exists (skip empty rows)
-                    has_coverage = any(
-                        benefit_data.get(f'{prefix}_carrier') or benefit_data.get(f'{prefix}_renewal_date')
-                        for prefix in single_plan_labels.keys()
-                    )
-                    if not has_coverage:
-                        # Check multi-plan columns
-                        for plan_type, cols_list in multi_plan_cols.items():
-                            for plan_num, (carrier_col, renewal_col, wp_col, remarks_col, oi_col) in enumerate(cols_list, 1):
-                                if safe_val(carrier_col) or (renewal_col is not None and safe_val(renewal_col)):
-                                    has_coverage = True
-                                    break
-                            if has_coverage:
-                                break
-                    if not has_coverage:
-                        # Also check core fields
-                        has_coverage = bool(benefit_data.get('form_fire_code') or benefit_data.get('funding') or benefit_data.get('enrollment_poc'))
-
-                    if not has_coverage:
-                        continue
-
                     benefit_obj = EmployeeBenefit(**benefit_data)
                     session.add(benefit_obj)
                     session.flush()
                     stats['benefits_created'] += 1
 
-                    # Multi-plan types: create BenefitPlan child records
+                    # Multi-plan types: create BenefitPlan child records (deduplicate by carrier)
                     for plan_type, cols_list in multi_plan_cols.items():
-                        for plan_num, (carrier_col, renewal_col, wp_col, remarks_col, oi_col) in enumerate(cols_list, 1):
+                        seen_carriers = set()
+                        actual_plan_num = 0
+                        for _, (carrier_col, renewal_col, wp_col, remarks_col, oi_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
                             wp_val = safe_val(wp_col) if wp_col is not None else None
                             remarks_val = safe_val(remarks_col) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
                             if carrier or renewal:
+                                dedup_key = str(carrier or '').strip().lower()
+                                if dedup_key in seen_carriers:
+                                    continue
+                                seen_carriers.add(dedup_key)
+                                actual_plan_num += 1
                                 plan = BenefitPlan(
                                     employee_benefit_id=benefit_obj.id,
                                     plan_type=plan_type,
-                                    plan_number=plan_num,
+                                    plan_number=actual_plan_num,
                                     carrier=carrier,
                                     renewal_date=renewal,
                                     waiting_period=wp_val,
@@ -3911,7 +3897,7 @@ def import_from_excel():
                                 )
                                 session.add(plan)
                                 # Also set flat fields from first plan
-                                if plan_num == 1:
+                                if actual_plan_num == 1:
                                     if plan_type == 'medical':
                                         benefit_obj.current_carrier = carrier
                                         benefit_obj.renewal_date = renewal
@@ -4096,34 +4082,16 @@ def import_from_excel():
                                 commercial_data['general_liability_endorsement_accidental_medical'] = str(safe_val(sc + 14)).strip().upper() == 'YES' if safe_val(sc + 14) else False
                                 commercial_data['general_liability_endorsement_liquor_liability'] = str(safe_val(sc + 15)).strip().upper() == 'YES' if safe_val(sc + 15) else False
 
-                    # Check if any actual coverage data exists (skip empty rows)
-                    has_coverage = False
-                    for prefix, label in commercial_single_import_defs:
-                        if commercial_data.get(f'{prefix}_carrier') or commercial_data.get(f'{prefix}_premium'):
-                            has_coverage = True
-                            break
-
-                    if not has_coverage:
-                        # Check multi-plan columns too
-                        for plan_type, cols_list in comm_multi_col_map.items():
-                            for plan_num, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
-                                if safe_val(carrier_col) or (premium_col is not None and safe_val(premium_col)):
-                                    has_coverage = True
-                                    break
-                            if has_coverage:
-                                break
-
-                    if not has_coverage:
-                        continue
-
                     comm_obj = CommercialInsurance(**commercial_data)
                     session.add(comm_obj)
                     session.flush()
                     stats['commercial_created'] += 1
 
-                    # Multi-plan types: create CommercialPlan child records
+                    # Multi-plan types: create CommercialPlan child records (deduplicate by carrier+policy_number)
                     for plan_type, cols_list in comm_multi_col_map.items():
-                        for plan_num, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
+                        seen_plans = set()  # track (carrier, policy_number) to skip duplicates
+                        actual_plan_num = 0
+                        for _, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             agency = safe_val(agency_col) if agency_col is not None else None
                             policy_number = safe_val(policy_col) if policy_col is not None else None
@@ -4134,10 +4102,16 @@ def import_from_excel():
                             remarks_val = safe_val(remarks_col) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
                             if carrier or occ_limit_val or agg_limit_val or premium or renewal:
+                                # Skip duplicate plans (same carrier and policy number)
+                                dedup_key = (str(carrier or '').strip().lower(), str(policy_number or '').strip().lower())
+                                if dedup_key in seen_plans:
+                                    continue
+                                seen_plans.add(dedup_key)
+                                actual_plan_num += 1
                                 plan = CommercialPlan(
                                     commercial_insurance_id=comm_obj.id,
                                     plan_type=plan_type,
-                                    plan_number=plan_num,
+                                    plan_number=actual_plan_num,
                                     carrier=carrier,
                                     agency=agency,
                                     policy_number=policy_number,
@@ -4154,7 +4128,7 @@ def import_from_excel():
                                         setattr(plan, ekey, str(safe_val(ecol)).strip().upper() == 'YES' if safe_val(ecol) else False)
                                 session.add(plan)
                                 # Set flat fields from first plan for backward compat
-                                if plan_num == 1:
+                                if actual_plan_num == 1:
                                     setattr(comm_obj, f'{plan_type}_carrier', carrier)
                                     setattr(comm_obj, f'{plan_type}_agency', agency)
                                     setattr(comm_obj, f'{plan_type}_policy_number', policy_number)
