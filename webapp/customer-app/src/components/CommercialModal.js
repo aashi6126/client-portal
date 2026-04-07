@@ -693,11 +693,10 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
               sx={{ mb: 2 }}
             />
             <Autocomplete
-              freeSolo
               options={clients.map(c => c.client_name).filter(Boolean)}
-              value={formData.parent_client || ''}
+              value={formData.parent_client || null}
               onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-              onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
+              isOptionEqualToValue={(option, value) => option === value}
               renderInput={(params) => (
                 <TextField {...params} label="Parent Client" size="small" fullWidth />
               )}
