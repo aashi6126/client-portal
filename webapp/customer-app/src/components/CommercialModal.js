@@ -132,14 +132,37 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
   };
 
   const handleCopyToBOP = (sourcePrefix) => {
-    const fields = ['carrier', 'agency', 'policy_number', 'premium', 'renewal_date', 'occ_limit', 'agg_limit'];
+    // Standard fields that map directly
+    const directFields = ['carrier', 'agency', 'policy_number', 'premium', 'renewal_date'];
     const updates = {};
-    fields.forEach(field => {
+    directFields.forEach(field => {
       const sourceVal = formData[`${sourcePrefix}_${field}`];
       if (sourceVal !== undefined && sourceVal !== '' && sourceVal !== null) {
         updates[`bop_${field}`] = sourceVal;
       }
     });
+
+    if (sourcePrefix === 'property') {
+      // Property's occ_limit/agg_limit (which are Building Limit / Personal Property)
+      // map to BOP's bop_building_limit / bop_personal_property
+      const buildingLimit = formData.property_occ_limit;
+      const personalProperty = formData.property_agg_limit;
+      if (buildingLimit !== undefined && buildingLimit !== '' && buildingLimit !== null) {
+        updates.bop_building_limit = buildingLimit;
+      }
+      if (personalProperty !== undefined && personalProperty !== '' && personalProperty !== null) {
+        updates.bop_personal_property = personalProperty;
+      }
+    } else {
+      // GL/Auto/Umbrella: copy occ_limit/agg_limit to BOP's same fields
+      ['occ_limit', 'agg_limit'].forEach(field => {
+        const sourceVal = formData[`${sourcePrefix}_${field}`];
+        if (sourceVal !== undefined && sourceVal !== '' && sourceVal !== null) {
+          updates[`bop_${field}`] = sourceVal;
+        }
+      });
+    }
+
     setFormData({ ...formData, ...updates });
     setCopyMenuAnchor(null);
   };
@@ -871,7 +894,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                               <Grid container spacing={2}>
                                 <Grid item xs={12} sm={4}>
                                   <TextField
-                                    label="Occurrence Limit"
+                                    label={prefix === 'property' ? 'Building Limit' : 'Occurrence Limit'}
                                     type="number"
                                     value={formData[`${product.prefix}_occ_limit`] || ''}
                                     onChange={handleChange(`${product.prefix}_occ_limit`)}
@@ -880,14 +903,14 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     placeholder="0"
                                     InputProps={{
                                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                      endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                                      endAdornment: prefix === 'property' ? null : <InputAdornment position="end">M</InputAdornment>,
                                       inputProps: { min: 0, step: 0.01, style: { textAlign: 'right' } }
                                     }}
                                   />
                                 </Grid>
                                 <Grid item xs={12} sm={4}>
                                   <TextField
-                                    label="Aggregate Limit"
+                                    label={prefix === 'property' ? 'Personal Property' : 'Aggregate Limit'}
                                     type="number"
                                     value={formData[`${product.prefix}_agg_limit`] || ''}
                                     onChange={handleChange(`${product.prefix}_agg_limit`)}
@@ -896,7 +919,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     placeholder="0"
                                     InputProps={{
                                       startAdornment: <InputAdornment position="start">$</InputAdornment>,
-                                      endAdornment: <InputAdornment position="end">M</InputAdornment>,
+                                      endAdornment: prefix === 'property' ? null : <InputAdornment position="end">M</InputAdornment>,
                                       inputProps: { min: 0, step: 0.01, style: { textAlign: 'right' } }
                                     }}
                                   />

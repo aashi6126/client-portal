@@ -3399,7 +3399,10 @@ def export_to_excel():
         comm_single_col_start = col_pos
         comm_single_col_sizes = {}  # prefix -> number of cols
         for prefix, label in commercial_single_plan_defs:
-            base_cols = ['Carrier', 'Agency', 'Policy Number', 'Occ Limit (M)', 'Agg Limit (M)', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
+            if prefix == 'property':
+                base_cols = ['Carrier', 'Agency', 'Policy Number', 'Building Limit', 'Personal Property', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
+            else:
+                base_cols = ['Carrier', 'Agency', 'Policy Number', 'Occ Limit (M)', 'Agg Limit (M)', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
             if prefix == 'general_liability':
                 base_cols.extend(GL_ENDORSEMENT_COLS)
             elif prefix == 'bop':
@@ -4087,11 +4090,16 @@ def import_from_excel():
                             occ_limit_val = safe_val(sc + 3)
                             if occ_limit_val and str(occ_limit_val) == 'N/A':
                                 occ_limit_val = None
-                            commercial_data[f'{prefix}_occ_limit'] = format_limit(occ_limit_val)
                             agg_limit_val = safe_val(sc + 4)
                             if agg_limit_val and str(agg_limit_val) == 'N/A':
                                 agg_limit_val = None
-                            commercial_data[f'{prefix}_agg_limit'] = format_limit(agg_limit_val)
+                            # Property uses absolute dollar amounts (Building Limit, Personal Property), not millions
+                            if prefix == 'property':
+                                commercial_data[f'{prefix}_occ_limit'] = str(occ_limit_val) if occ_limit_val is not None else None
+                                commercial_data[f'{prefix}_agg_limit'] = str(agg_limit_val) if agg_limit_val is not None else None
+                            else:
+                                commercial_data[f'{prefix}_occ_limit'] = format_limit(occ_limit_val)
+                                commercial_data[f'{prefix}_agg_limit'] = format_limit(agg_limit_val)
                             commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 5))
                             commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 6))
                             commercial_data[f'{prefix}_remarks'] = safe_val(sc + 7)
