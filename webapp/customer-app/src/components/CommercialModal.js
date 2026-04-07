@@ -119,7 +119,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [copyMenuAnchor, setCopyMenuAnchor] = useState(null);
 
-  // Returns array of {prefix, label} for coverages with carrier data on this record (excluding bop)
+  // Returns array of {prefix, label} for coverages active on this record (excluding bop)
   const getCopyableCoverages = () => {
     const sources = [
       { prefix: 'general_liability', label: 'General Liability' },
@@ -127,7 +127,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
       { prefix: 'umbrella', label: 'Umbrella' },
       { prefix: 'property', label: 'Commercial Property' },
     ];
-    return sources.filter(s => formData[`${s.prefix}_carrier`] || formData[`${s.prefix}_premium`]);
+    // Show any coverage that is active (in activeCoverages tabs) — user added it
+    return sources.filter(s => activeCoverages.includes(s.prefix));
   };
 
   const handleCopyToBOP = (sourcePrefix) => {
