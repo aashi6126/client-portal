@@ -498,16 +498,24 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
               fullWidth
               sx={{ mb: 2 }}
             />
-            <Autocomplete
-              freeSolo
-              options={clients.map(c => c.client_name).filter(Boolean)}
+            <TextField
+              select
+              label="Parent Client"
               value={formData.parent_client || ''}
-              onChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-              onInputChange={(e, newValue) => setFormData({ ...formData, parent_client: newValue || '' })}
-              renderInput={(params) => (
-                <TextField {...params} label="Parent Client" size="small" fullWidth />
-              )}
-            />
+              onChange={(e) => setFormData({ ...formData, parent_client: e.target.value })}
+              fullWidth
+              size="small"
+              SelectProps={{ MenuProps: { PaperProps: { style: { maxHeight: 400 } } } }}
+            >
+              <MenuItem value=""><em>None</em></MenuItem>
+              {clients
+                .map(c => c.client_name)
+                .filter(Boolean)
+                .sort((a, b) => a.localeCompare(b))
+                .map(name => (
+                  <MenuItem key={name} value={name}>{name}</MenuItem>
+                ))}
+            </TextField>
           </Box>
 
           {/* Medical Global Fields */}
