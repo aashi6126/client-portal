@@ -11,6 +11,7 @@ import {
   Autocomplete,
   Typography,
   Divider,
+  Menu,
   MenuItem,
   IconButton,
   Paper,
@@ -27,6 +28,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import InvoiceDialog from './InvoiceDialog';
 
 // Multi-plan types: support multiple carrier/limit/premium/renewal per type
@@ -115,6 +117,31 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     crime: []
   });
   const [invoiceOpen, setInvoiceOpen] = useState(false);
+  const [copyMenuAnchor, setCopyMenuAnchor] = useState(null);
+
+  // Returns array of {prefix, label} for coverages with carrier data on this record (excluding bop)
+  const getCopyableCoverages = () => {
+    const sources = [
+      { prefix: 'general_liability', label: 'General Liability' },
+      { prefix: 'auto', label: 'Commercial Auto' },
+      { prefix: 'umbrella', label: 'Umbrella' },
+      { prefix: 'property', label: 'Commercial Property' },
+    ];
+    return sources.filter(s => formData[`${s.prefix}_carrier`] || formData[`${s.prefix}_premium`]);
+  };
+
+  const handleCopyToBOP = (sourcePrefix) => {
+    const fields = ['carrier', 'agency', 'policy_number', 'premium', 'renewal_date', 'occ_limit', 'agg_limit'];
+    const updates = {};
+    fields.forEach(field => {
+      const sourceVal = formData[`${sourcePrefix}_${field}`];
+      if (sourceVal !== undefined && sourceVal !== '' && sourceVal !== null) {
+        updates[`bop_${field}`] = sourceVal;
+      }
+    });
+    setFormData({ ...formData, ...updates });
+    setCopyMenuAnchor(null);
+  };
 
   // Insurance product types configuration
   const insuranceProducts = [
@@ -742,7 +769,31 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
 
                 return (
                   <Box key={prefix}>
-                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 1 }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', gap: 1, mb: 1 }}>
+                      {prefix === 'bop' && getCopyableCoverages().length > 0 && (
+                        <>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            startIcon={<ContentCopyIcon fontSize="small" />}
+                            onClick={(e) => setCopyMenuAnchor(e.currentTarget)}
+                            sx={{ textTransform: 'none' }}
+                          >
+                            Copy From...
+                          </Button>
+                          <Menu
+                            anchorEl={copyMenuAnchor}
+                            open={Boolean(copyMenuAnchor)}
+                            onClose={() => setCopyMenuAnchor(null)}
+                          >
+                            {getCopyableCoverages().map(({ prefix: srcPrefix, label }) => (
+                              <MenuItem key={srcPrefix} onClick={() => handleCopyToBOP(srcPrefix)}>
+                                {label}
+                              </MenuItem>
+                            ))}
+                          </Menu>
+                        </>
+                      )}
                       <Tooltip title={`Remove ${product.name}`}>
                         <IconButton
                           size="small"
