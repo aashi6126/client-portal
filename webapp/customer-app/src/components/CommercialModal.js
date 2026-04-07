@@ -60,6 +60,21 @@ const isPastDate = (dateStr) => {
 /**
  * CommercialModal - Form for creating/editing commercial insurance records
  */
+// Format a number with comma thousands separators for display
+const formatCurrency = (val) => {
+  if (val === null || val === undefined || val === '') return '';
+  const num = typeof val === 'number' ? val : parseFloat(String(val).replace(/,/g, ''));
+  if (isNaN(num)) return '';
+  return num.toLocaleString('en-US');
+};
+
+// Parse a comma-separated string back to a number string
+const parseCurrency = (val) => {
+  if (!val) return '';
+  const cleaned = String(val).replace(/[^0-9.]/g, '');
+  return cleaned;
+};
+
 const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], initialCoverageTab = null }) => {
   // Initialize form with all fields
   const getInitialFormData = () => ({
@@ -69,7 +84,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     // Single-plan types (flat fields)
     general_liability_carrier: '', general_liability_agency: '', general_liability_policy_number: '', general_liability_occ_limit: '', general_liability_agg_limit: '', general_liability_premium: '', general_liability_renewal_date: '', general_liability_remarks: '', general_liability_outstanding_item: '', general_liability_endorsement_bop: false, general_liability_endorsement_marine: false, general_liability_endorsement_foreign: false, general_liability_endorsement_molestation: false, general_liability_endorsement_staffing: false, general_liability_endorsement_accidental_medical: false, general_liability_endorsement_liquor_liability: false,
     property_carrier: '', property_agency: '', property_policy_number: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
-    bop_carrier: '', bop_agency: '', bop_policy_number: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '',
+    bop_carrier: '', bop_agency: '', bop_policy_number: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '', bop_building_limit: '', bop_personal_property: '',
     workers_comp_carrier: '', workers_comp_agency: '', workers_comp_policy_number: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_remarks: '', workers_comp_outstanding_item: '',
     auto_carrier: '', auto_agency: '', auto_policy_number: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_remarks: '', auto_outstanding_item: '',
     epli_carrier: '', epli_agency: '', epli_policy_number: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_remarks: '', epli_outstanding_item: '',
@@ -890,6 +905,46 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     </Box>
                                   ))}
                                 </Box>
+                              </Box>
+                            </Grid>
+                          )}
+                          {/* Property Coverage (BOP only) */}
+                          {prefix === 'bop' && (
+                            <Grid item xs={12}>
+                              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, position: 'relative' }}>
+                                <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 12, bgcolor: '#fafafa', px: 0.75, color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
+                                  Property Coverage
+                                </Typography>
+                                <Grid container spacing={2}>
+                                  <Grid item xs={12} sm={6}>
+                                    <TextField
+                                      label="Building Limit"
+                                      value={formatCurrency(formData.bop_building_limit)}
+                                      onChange={(e) => setFormData({ ...formData, bop_building_limit: parseCurrency(e.target.value) })}
+                                      fullWidth
+                                      size="small"
+                                      placeholder="0"
+                                      InputProps={{
+                                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                        inputProps: { style: { textAlign: 'right' } }
+                                      }}
+                                    />
+                                  </Grid>
+                                  <Grid item xs={12} sm={6}>
+                                    <TextField
+                                      label="Personal Property"
+                                      value={formatCurrency(formData.bop_personal_property)}
+                                      onChange={(e) => setFormData({ ...formData, bop_personal_property: parseCurrency(e.target.value) })}
+                                      fullWidth
+                                      size="small"
+                                      placeholder="0"
+                                      InputProps={{
+                                        startAdornment: <InputAdornment position="start">$</InputAdornment>,
+                                        inputProps: { style: { textAlign: 'right' } }
+                                      }}
+                                    />
+                                  </Grid>
+                                </Grid>
                               </Box>
                             </Grid>
                           )}

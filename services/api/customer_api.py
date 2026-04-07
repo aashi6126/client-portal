@@ -540,6 +540,8 @@ class CommercialInsurance(db.Model):
     bop_agg_limit = db.Column(db.String(100))
     bop_premium = db.Column(db.Numeric(12, 2))
     bop_renewal_date = db.Column(db.Date)
+    bop_building_limit = db.Column(db.Numeric(15, 2))
+    bop_personal_property = db.Column(db.Numeric(15, 2))
 
     # 4. Umbrella Liability
     umbrella_carrier = db.Column(db.String(200))
@@ -779,6 +781,8 @@ class CommercialInsurance(db.Model):
             'bop_agg_limit': self.bop_agg_limit,
             'bop_premium': format_premium(self.bop_premium),
             'bop_renewal_date': self.bop_renewal_date.isoformat() if self.bop_renewal_date else None,
+            'bop_building_limit': format_premium(self.bop_building_limit),
+            'bop_personal_property': format_premium(self.bop_personal_property),
             'bop_remarks': self.bop_remarks,
             'bop_outstanding_item': self.bop_outstanding_item,
             'bop_outstanding_item_due_date': self.bop_outstanding_item_due_date.isoformat() if self.bop_outstanding_item_due_date else None,
@@ -2029,6 +2033,10 @@ def create_commercial():
             setattr(commercial, f'general_liability_endorsement_{endorsement}',
                     bool(data.get(f'general_liability_endorsement_{endorsement}')))
 
+        # BOP property coverage fields
+        commercial.bop_building_limit = parse_premium(data.get('bop_building_limit'))
+        commercial.bop_personal_property = parse_premium(data.get('bop_personal_property'))
+
         # Multi-plan type flat fields (backward compat - will be overwritten by save_commercial_plans)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
@@ -2111,6 +2119,12 @@ def update_commercial(commercial_id):
             key = f'general_liability_endorsement_{endorsement}'
             if key in data:
                 setattr(commercial, key, bool(data.get(key)))
+
+        # BOP property coverage fields
+        if 'bop_building_limit' in data:
+            commercial.bop_building_limit = parse_premium(data.get('bop_building_limit'))
+        if 'bop_personal_property' in data:
+            commercial.bop_personal_property = parse_premium(data.get('bop_personal_property'))
 
         # Update multi-plan type flat fields (backward compat)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
@@ -2198,6 +2212,8 @@ def clone_commercial(commercial_id):
             bop_agg_limit=original.bop_agg_limit,
             bop_premium=original.bop_premium,
             bop_renewal_date=original.bop_renewal_date,
+            bop_building_limit=original.bop_building_limit,
+            bop_personal_property=original.bop_personal_property,
             umbrella_carrier=original.umbrella_carrier,
             umbrella_agency=original.umbrella_agency,
             umbrella_occ_limit=original.umbrella_occ_limit,
