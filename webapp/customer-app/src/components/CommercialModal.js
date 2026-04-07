@@ -953,7 +953,6 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                 </Typography>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 1 }}>
                                   {[
-                                    { key: 'general_liability_endorsement_bop', label: 'BOP' },
                                     { key: 'general_liability_endorsement_staffing', label: 'Staffing' },
                                     { key: 'general_liability_endorsement_foreign', label: 'Foreign' },
                                     { key: 'general_liability_endorsement_molestation', label: 'Molestation' },
