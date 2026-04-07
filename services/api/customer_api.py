@@ -3395,12 +3395,15 @@ def export_to_excel():
 
         # Single-plan type columns
         GL_ENDORSEMENT_COLS = ['Endorsement BOP', 'Endorsement Marine', 'Endorsement Foreign', 'Endorsement Molestation', 'Endorsement Staffing', 'Endorsement Accidental & Medical', 'Endorsement Liquor Liability']
+        BOP_PROPERTY_COLS = ['Building Limit', 'Personal Property']
         comm_single_col_start = col_pos
         comm_single_col_sizes = {}  # prefix -> number of cols
         for prefix, label in commercial_single_plan_defs:
             base_cols = ['Carrier', 'Agency', 'Policy Number', 'Occ Limit (M)', 'Agg Limit (M)', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
             if prefix == 'general_liability':
                 base_cols.extend(GL_ENDORSEMENT_COLS)
+            elif prefix == 'bop':
+                base_cols.extend(BOP_PROPERTY_COLS)
             commercial_headers.extend(base_cols)
             ncols = len(base_cols)
             commercial_sections.append((col_pos, col_pos + ncols - 1, label))
@@ -3470,6 +3473,11 @@ def export_to_excel():
                     ws_commercial.cell(row=row_idx, column=sc + 13, value='Yes' if getattr(comm, 'general_liability_endorsement_staffing', False) else '')
                     ws_commercial.cell(row=row_idx, column=sc + 14, value='Yes' if getattr(comm, 'general_liability_endorsement_accidental_medical', False) else '')
                     ws_commercial.cell(row=row_idx, column=sc + 15, value='Yes' if getattr(comm, 'general_liability_endorsement_liquor_liability', False) else '')
+                elif prefix == 'bop':
+                    bl = getattr(comm, 'bop_building_limit', None)
+                    pp = getattr(comm, 'bop_personal_property', None)
+                    ws_commercial.cell(row=row_idx, column=sc + 9, value=float(bl) if bl else None)
+                    ws_commercial.cell(row=row_idx, column=sc + 10, value=float(pp) if pp else None)
                 sc += comm_single_col_sizes[prefix]
 
             # Multi-plan types
@@ -4097,6 +4105,10 @@ def import_from_excel():
                                 commercial_data['general_liability_endorsement_staffing'] = str(safe_val(sc + 13)).strip().upper() == 'YES' if safe_val(sc + 13) else False
                                 commercial_data['general_liability_endorsement_accidental_medical'] = str(safe_val(sc + 14)).strip().upper() == 'YES' if safe_val(sc + 14) else False
                                 commercial_data['general_liability_endorsement_liquor_liability'] = str(safe_val(sc + 15)).strip().upper() == 'YES' if safe_val(sc + 15) else False
+                            # BOP property coverage (2 extra columns after the base 9)
+                            elif prefix == 'bop':
+                                commercial_data['bop_building_limit'] = safe_decimal(safe_val(sc + 9))
+                                commercial_data['bop_personal_property'] = safe_decimal(safe_val(sc + 10))
 
                     comm_obj = CommercialInsurance(**commercial_data)
                     session.add(comm_obj)
