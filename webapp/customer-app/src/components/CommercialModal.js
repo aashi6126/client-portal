@@ -22,7 +22,9 @@ import {
   Tab,
   FormControlLabel,
   Checkbox,
-  FormGroup
+  FormGroup,
+  Radio,
+  RadioGroup
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
@@ -88,7 +90,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     property_carrier: '', property_agency: '', property_policy_number: '', property_occ_limit: '', property_agg_limit: '', property_premium: '', property_renewal_date: '', property_remarks: '', property_outstanding_item: '',
     bop_carrier: '', bop_agency: '', bop_policy_number: '', bop_occ_limit: '', bop_agg_limit: '', bop_premium: '', bop_renewal_date: '', bop_remarks: '', bop_outstanding_item: '', bop_building_limit: '', bop_personal_property: '',
     workers_comp_carrier: '', workers_comp_agency: '', workers_comp_policy_number: '', workers_comp_occ_limit: '', workers_comp_agg_limit: '', workers_comp_premium: '', workers_comp_renewal_date: '', workers_comp_remarks: '', workers_comp_outstanding_item: '',
-    auto_carrier: '', auto_agency: '', auto_policy_number: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_remarks: '', auto_outstanding_item: '',
+    auto_carrier: '', auto_agency: '', auto_policy_number: '', auto_occ_limit: '', auto_agg_limit: '', auto_premium: '', auto_renewal_date: '', auto_remarks: '', auto_outstanding_item: '', auto_type: '',
     epli_carrier: '', epli_agency: '', epli_policy_number: '', epli_occ_limit: '', epli_agg_limit: '', epli_premium: '', epli_renewal_date: '', epli_remarks: '', epli_outstanding_item: '',
     nydbl_carrier: '', nydbl_agency: '', nydbl_policy_number: '', nydbl_occ_limit: '', nydbl_agg_limit: '', nydbl_premium: '', nydbl_renewal_date: '', nydbl_remarks: '', nydbl_outstanding_item: '',
     surety_carrier: '', surety_agency: '', surety_policy_number: '', surety_occ_limit: '', surety_agg_limit: '', surety_premium: '', surety_renewal_date: '', surety_remarks: '', surety_outstanding_item: '',
@@ -980,6 +982,24 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     </Box>
                                   ))}
                                 </Box>
+                              </Box>
+                            </Grid>
+                          )}
+                          {/* Auto Type (Auto only) */}
+                          {prefix === 'auto' && (
+                            <Grid item xs={12}>
+                              <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 2, position: 'relative' }}>
+                                <Typography variant="caption" sx={{ position: 'absolute', top: -9, left: 12, bgcolor: '#fafafa', px: 0.75, color: '#888', fontWeight: 500, textTransform: 'uppercase', letterSpacing: 0.5, fontSize: '0.65rem' }}>
+                                  Auto Type
+                                </Typography>
+                                <RadioGroup
+                                  row
+                                  value={formData.auto_type || ''}
+                                  onChange={(e) => setFormData({ ...formData, auto_type: e.target.value })}
+                                >
+                                  <FormControlLabel value="Owned" control={<Radio size="small" />} label="Owned" />
+                                  <FormControlLabel value="Hired/Non-Owned" control={<Radio size="small" />} label="Hired/Non-Owned" />
+                                </RadioGroup>
                               </Box>
                             </Grid>
                           )}

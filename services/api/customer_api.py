@@ -587,6 +587,7 @@ class CommercialInsurance(db.Model):
     auto_agg_limit = db.Column(db.String(100))
     auto_premium = db.Column(db.Numeric(12, 2))
     auto_renewal_date = db.Column(db.Date)
+    auto_type = db.Column(db.String(50))  # 'Owned' or 'Hired/Non-Owned'
 
     # 9. EPLI
     epli_carrier = db.Column(db.String(200))
@@ -824,6 +825,7 @@ class CommercialInsurance(db.Model):
             'auto_agg_limit': self.auto_agg_limit,
             'auto_premium': format_premium(self.auto_premium),
             'auto_renewal_date': self.auto_renewal_date.isoformat() if self.auto_renewal_date else None,
+            'auto_type': self.auto_type,
             'auto_remarks': self.auto_remarks,
             'auto_outstanding_item': self.auto_outstanding_item,
             'auto_outstanding_item_due_date': self.auto_outstanding_item_due_date.isoformat() if self.auto_outstanding_item_due_date else None,
@@ -2037,6 +2039,9 @@ def create_commercial():
         commercial.bop_building_limit = parse_premium(data.get('bop_building_limit'))
         commercial.bop_personal_property = parse_premium(data.get('bop_personal_property'))
 
+        # Auto type
+        commercial.auto_type = data.get('auto_type') or None
+
         # Multi-plan type flat fields (backward compat - will be overwritten by save_commercial_plans)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
             setattr(commercial, f'{product}_carrier', data.get(f'{product}_carrier') or None)
@@ -2125,6 +2130,10 @@ def update_commercial(commercial_id):
             commercial.bop_building_limit = parse_premium(data.get('bop_building_limit'))
         if 'bop_personal_property' in data:
             commercial.bop_personal_property = parse_premium(data.get('bop_personal_property'))
+
+        # Auto type
+        if 'auto_type' in data:
+            commercial.auto_type = data.get('auto_type') or None
 
         # Update multi-plan type flat fields (backward compat)
         for product in MULTI_PLAN_COMMERCIAL_TYPES:
@@ -2244,6 +2253,7 @@ def clone_commercial(commercial_id):
             auto_agg_limit=original.auto_agg_limit,
             auto_premium=original.auto_premium,
             auto_renewal_date=original.auto_renewal_date,
+            auto_type=original.auto_type,
             epli_carrier=original.epli_carrier,
             epli_agency=original.epli_agency,
             epli_occ_limit=original.epli_occ_limit,
@@ -3396,6 +3406,7 @@ def export_to_excel():
         # Single-plan type columns
         GL_ENDORSEMENT_COLS = ['Endorsement BOP', 'Endorsement Marine', 'Endorsement Foreign', 'Endorsement Molestation', 'Endorsement Staffing', 'Endorsement Accidental & Medical', 'Endorsement Liquor Liability']
         BOP_PROPERTY_COLS = ['Building Limit', 'Personal Property']
+        AUTO_TYPE_COLS = ['Auto Type']
         comm_single_col_start = col_pos
         comm_single_col_sizes = {}  # prefix -> number of cols
         for prefix, label in commercial_single_plan_defs:
@@ -3407,6 +3418,8 @@ def export_to_excel():
                 base_cols.extend(GL_ENDORSEMENT_COLS)
             elif prefix == 'bop':
                 base_cols.extend(BOP_PROPERTY_COLS)
+            elif prefix == 'auto':
+                base_cols.extend(AUTO_TYPE_COLS)
             commercial_headers.extend(base_cols)
             ncols = len(base_cols)
             commercial_sections.append((col_pos, col_pos + ncols - 1, label))
@@ -3481,6 +3494,8 @@ def export_to_excel():
                     pp = getattr(comm, 'bop_personal_property', None)
                     ws_commercial.cell(row=row_idx, column=sc + 9, value=float(bl) if bl else None)
                     ws_commercial.cell(row=row_idx, column=sc + 10, value=float(pp) if pp else None)
+                elif prefix == 'auto':
+                    ws_commercial.cell(row=row_idx, column=sc + 9, value=getattr(comm, 'auto_type', None) or '')
                 sc += comm_single_col_sizes[prefix]
 
             # Multi-plan types
@@ -4117,6 +4132,9 @@ def import_from_excel():
                             elif prefix == 'bop':
                                 commercial_data['bop_building_limit'] = safe_decimal(safe_val(sc + 9))
                                 commercial_data['bop_personal_property'] = safe_decimal(safe_val(sc + 10))
+                            # Auto type (1 extra column after the base 9)
+                            elif prefix == 'auto':
+                                commercial_data['auto_type'] = safe_val(sc + 9)
 
                     comm_obj = CommercialInsurance(**commercial_data)
                     session.add(comm_obj)
