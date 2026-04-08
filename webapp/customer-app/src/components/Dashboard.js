@@ -65,13 +65,27 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
   const [outstandingTab, setOutstandingTab] = useState(0);
   const [crossSellTab, setCrossSellTab] = useState(0);
 
+  // Base month for the renewals view: defaults to next month (YYYY-MM)
+  const getDefaultBaseMonth = () => {
+    const d = new Date();
+    const next = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+    return `${next.getFullYear()}-${String(next.getMonth() + 1).padStart(2, '0')}`;
+  };
+  const [baseMonth, setBaseMonth] = useState(getDefaultBaseMonth());
+
   // Fetch dashboard-specific data (renewals and cross-sell only)
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
+        // Compute date range: from baseMonth start to baseMonth + 2 months end
+        const [year, month] = baseMonth.split('-').map(Number);
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month + 2, 0); // last day of (month + 2)
+        const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
         const [renewalsRes, crossSellRes] = await Promise.all([
-          axios.get(API_DASHBOARD_RENEWALS),
+          axios.get(API_DASHBOARD_RENEWALS, { params: { start_date: fmt(startDate), end_date: fmt(endDate) } }),
           axios.get(API_DASHBOARD_CROSS_SELL)
         ]);
 
@@ -94,7 +108,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     };
 
     fetchDashboardData();
-  }, [dataVersion]);
+  }, [dataVersion, baseMonth]);
 
   // Group renewals by month for chart
   const monthlyRenewals = useMemo(() => {
@@ -125,10 +139,10 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     return Object.values(grouped).sort((a, b) => a.month.localeCompare(b.month));
   }, [renewals]);
 
-  // Helper to filter renewals by month offset (0 = next month, 1 = month after, 2 = month after that)
+  // Helper to filter renewals by month offset relative to baseMonth (0 = baseMonth, 1 = next, 2 = month after)
   const filterRenewalsByMonth = (monthOffset) => {
-    const today = new Date();
-    const targetMonth = new Date(today.getFullYear(), today.getMonth() + 1 + monthOffset, 1);
+    const [bYear, bMonth] = baseMonth.split('-').map(Number);
+    const targetMonth = new Date(bYear, bMonth - 1 + monthOffset, 1);
     const targetYear = targetMonth.getFullYear();
     const targetMon = targetMonth.getMonth();
 
@@ -140,10 +154,10 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       .sort((a, b) => parseDate(a.renewal_date) - parseDate(b.renewal_date));
   };
 
-  // Get month name for tab labels
+  // Get month name for tab labels (offset relative to baseMonth)
   const getMonthLabel = (monthOffset) => {
-    const today = new Date();
-    const targetMonth = new Date(today.getFullYear(), today.getMonth() + 1 + monthOffset, 1);
+    const [bYear, bMonth] = baseMonth.split('-').map(Number);
+    const targetMonth = new Date(bYear, bMonth - 1 + monthOffset, 1);
     return targetMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
   };
 
@@ -186,7 +200,8 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       month2: groupRenewalsByClientAndType(filterRenewalsByMonth(1)),
       month3: groupRenewalsByClientAndType(filterRenewalsByMonth(2))
     };
-  }, [renewals]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [renewals, baseMonth]);
 
   // Get current tab's renewals, filtered by type
   const currentRenewals = useMemo(() => {
@@ -601,9 +616,28 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
 
       {/* Section 3: Upcoming Renewals with Time Range Tabs */}
       <Paper sx={{ p: 3, mb: 4 }}>
-        <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-          Upcoming Renewals
-        </Typography>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Renewals
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">Starting from:</Typography>
+            <input
+              type="month"
+              value={baseMonth}
+              onChange={(e) => { setBaseMonth(e.target.value); setRenewalTab(0); }}
+              style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.875rem' }}
+            />
+            <Button
+              size="small"
+              variant="outlined"
+              onClick={() => { setBaseMonth(getDefaultBaseMonth()); setRenewalTab(0); }}
+              sx={{ textTransform: 'none' }}
+            >
+              Reset
+            </Button>
+          </Box>
+        </Box>
         <Tabs
           value={renewalTab}
           onChange={(_, newValue) => setRenewalTab(newValue)}

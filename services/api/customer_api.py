@@ -1527,13 +1527,18 @@ def update_client(client_id):
             session.query(ClientContact).filter_by(client_id=client.id).delete()
             # Add new contacts
             for i, c in enumerate(data['contacts']):
-                if c.get('contact_person') or c.get('email') or c.get('phone_number'):
+                if c.get('contact_person') or c.get('email') or c.get('phone_number') or c.get('address_line_1'):
                     contact = ClientContact(
                         client_id=client.id,
                         contact_person=c.get('contact_person', ''),
                         email=c.get('email', ''),
                         phone_number=c.get('phone_number', ''),
                         phone_extension=c.get('phone_extension', ''),
+                        address_line_1=c.get('address_line_1', ''),
+                        address_line_2=c.get('address_line_2', ''),
+                        city=c.get('city', ''),
+                        state=c.get('state', ''),
+                        zip_code=c.get('zip_code', ''),
                         sort_order=i
                     )
                     session.add(contact)
@@ -2924,11 +2929,26 @@ def clone_personal(personal_id):
 
 @app.route('/api/dashboard/renewals', methods=['GET'])
 def get_dashboard_renewals():
-    """Get renewal data for dashboard (next 12 months from both benefits and commercial)."""
+    """Get renewal data for dashboard.
+
+    Query params:
+        start_date (YYYY-MM-DD, optional): start of date range. Defaults to today.
+        end_date (YYYY-MM-DD, optional): end of date range. Defaults to today + 12 months.
+    """
     session = Session()
     try:
         today = datetime.now().date()
-        twelve_months = today + timedelta(days=365)
+        start_param = request.args.get('start_date')
+        end_param = request.args.get('end_date')
+
+        try:
+            start_date = parse(start_param).date() if start_param else today
+        except (ValueError, TypeError):
+            start_date = today
+        try:
+            end_date = parse(end_param).date() if end_param else (today + timedelta(days=365))
+        except (ValueError, TypeError):
+            end_date = today + timedelta(days=365)
 
         renewals = []
 
@@ -2938,7 +2958,7 @@ def get_dashboard_renewals():
         for benefit in benefits:
             # Multi-plan types: read from benefit_plans child table
             for plan in benefit.plans:
-                if plan.renewal_date and today <= plan.renewal_date <= twelve_months:
+                if plan.renewal_date and start_date <= plan.renewal_date <= end_date:
                     type_name = multi_plan_type_names.get(plan.plan_type, plan.plan_type)
                     label = f"{type_name} Plan {plan.plan_number}" if plan.plan_number > 1 else type_name
                     renewals.append({
@@ -2963,7 +2983,7 @@ def get_dashboard_renewals():
 
             for field_name, policy_type in single_plan_fields:
                 renewal_date = getattr(benefit, field_name)
-                if renewal_date and today <= renewal_date <= twelve_months:
+                if renewal_date and start_date <= renewal_date <= end_date:
                     carrier = getattr(benefit, field_name.replace('_renewal_date', '_carrier'), None)
                     renewals.append({
                         'type': 'benefits',
@@ -2980,7 +3000,7 @@ def get_dashboard_renewals():
         for comm in commercial:
             # Multi-plan types: read from commercial_plans child table
             for plan in comm.commercial_plans:
-                if plan.renewal_date and today <= plan.renewal_date <= twelve_months:
+                if plan.renewal_date and start_date <= plan.renewal_date <= end_date:
                     type_name = multi_plan_commercial_names.get(plan.plan_type, plan.plan_type)
                     label = f"{type_name} Plan {plan.plan_number}" if plan.plan_number > 1 else type_name
                     renewals.append({
@@ -3011,7 +3031,7 @@ def get_dashboard_renewals():
 
             for field_name, policy_type in single_plan_fields:
                 renewal_date = getattr(comm, field_name)
-                if renewal_date and today <= renewal_date <= twelve_months:
+                if renewal_date and start_date <= renewal_date <= end_date:
                     renewals.append({
                         'type': 'commercial',
                         'policy_type': policy_type,
@@ -3033,7 +3053,7 @@ def get_dashboard_renewals():
         for pers in personal_records:
             for field_name, policy_type in personal_renewal_fields:
                 renewal_date = getattr(pers, field_name)
-                if renewal_date and today <= renewal_date <= twelve_months:
+                if renewal_date and start_date <= renewal_date <= end_date:
                     carrier_field = field_name.replace('_renewal_date', '_carrier').replace('_start_date', '_carrier')
                     ind = pers.individual
                     ind_name = f"{ind.first_name or ''} {ind.last_name or ''}".strip() if ind else None
