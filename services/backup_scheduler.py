@@ -12,7 +12,7 @@ import urllib.request
 from datetime import datetime, timedelta
 
 # Configuration (all overridable via environment variables)
-API_PORT = os.environ.get('API_PORT', '5000')
+API_PORT = os.environ.get('API_PORT', '5001')
 API_URL = os.environ.get('BACKUP_API_URL', f'http://127.0.0.1:{API_PORT}/api/export')
 BACKUP_DIR = os.environ.get('BACKUP_DIR',
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backups'))
