@@ -86,17 +86,42 @@ def get_next_run_time():
     return next_time, wait_seconds
 
 
+HEARTBEAT_FILE = os.environ.get('BACKUP_HEARTBEAT_FILE',
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '.backup_heartbeat'))
+
+
+def write_heartbeat():
+    """Write current timestamp to heartbeat file so the API can verify scheduler is alive."""
+    try:
+        with open(HEARTBEAT_FILE, 'w') as f:
+            f.write(datetime.now().isoformat())
+    except Exception as e:
+        logging.error(f"Failed to write heartbeat: {e}")
+
+
 def main():
     logging.info("Backup scheduler started")
     logging.info(f"Backups will be saved to: {os.path.abspath(BACKUP_DIR)}")
     logging.info(f"Schedule: 12:00 AM, 12:00 PM, and 6:00 PM daily")
+    logging.info(f"Heartbeat file: {os.path.abspath(HEARTBEAT_FILE)}")
+
+    write_heartbeat()
+    last_heartbeat = time.time()
 
     while True:
         next_time, wait_seconds = get_next_run_time()
         logging.info(f"Next backup at {next_time.strftime('%Y-%m-%d %I:%M %p')} "
                      f"(in {wait_seconds/3600:.1f} hours)")
-        time.sleep(wait_seconds)
+
+        # Sleep in 5-minute chunks so we can write heartbeat regularly
+        end_time = time.time() + wait_seconds
+        while time.time() < end_time:
+            chunk = min(300, end_time - time.time())  # 5-minute chunks
+            time.sleep(max(1, chunk))
+            write_heartbeat()
+
         run_backup()
+        write_heartbeat()
 
 
 if __name__ == '__main__':

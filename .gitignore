@@ -45,3 +45,4 @@ config.env
 # Backups
 backups/*.xlsx
 backups/*.log
+.backup_heartbeat

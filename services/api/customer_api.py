@@ -4509,6 +4509,40 @@ def health_check():
         }), 500
 
 
+@app.route('/api/backup/status')
+def backup_status():
+    """Check if the backup scheduler is alive by reading its heartbeat file.
+
+    Considers the scheduler healthy if the heartbeat is less than 30 minutes old.
+    """
+    heartbeat_file = os.environ.get('BACKUP_HEARTBEAT_FILE',
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '.backup_heartbeat'))
+    try:
+        if not os.path.exists(heartbeat_file):
+            return jsonify({
+                'status': 'down',
+                'reason': 'No heartbeat file found',
+                'last_heartbeat': None
+            })
+        with open(heartbeat_file, 'r') as f:
+            last_heartbeat_str = f.read().strip()
+        last_heartbeat = datetime.fromisoformat(last_heartbeat_str)
+        age_seconds = (datetime.now() - last_heartbeat).total_seconds()
+        is_healthy = age_seconds < 1800  # 30 minutes
+        return jsonify({
+            'status': 'ok' if is_healthy else 'down',
+            'last_heartbeat': last_heartbeat_str,
+            'age_seconds': int(age_seconds),
+            'reason': None if is_healthy else f'Heartbeat is {int(age_seconds / 60)} minutes old'
+        })
+    except Exception as e:
+        return jsonify({
+            'status': 'error',
+            'last_heartbeat': None,
+            'reason': str(e)
+        }), 500
+
+
 # ===========================================================================
 # POC MANAGEMENT
 # ===========================================================================

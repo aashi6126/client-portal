@@ -69,12 +69,16 @@ function NewApp() {
 
   // Backend health state
   const [apiStatus, setApiStatus] = useState('checking'); // 'up', 'down', 'checking'
+  const [backupStatus, setBackupStatus] = useState({ status: 'checking', last_heartbeat: null });
 
   useEffect(() => {
     const checkHealth = () => {
       axios.get('/api/health', { timeout: 5000 })
         .then(() => setApiStatus('up'))
         .catch(() => setApiStatus('down'));
+      axios.get('/api/backup/status', { timeout: 5000 })
+        .then(res => setBackupStatus(res.data))
+        .catch(() => setBackupStatus({ status: 'down', last_heartbeat: null }));
     };
     checkHealth();
     const interval = setInterval(checkHealth, 30000);
@@ -679,15 +683,38 @@ function NewApp() {
             <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1.5 }}>
               Client Hub
               <Tooltip title={apiStatus === 'up' ? 'API Connected' : apiStatus === 'down' ? 'API Disconnected' : 'Checking...'}>
-                <Box
-                  sx={{
-                    width: 10,
-                    height: 10,
-                    borderRadius: '50%',
-                    backgroundColor: apiStatus === 'up' ? '#4caf50' : apiStatus === 'down' ? '#f44336' : '#ff9800',
-                    boxShadow: apiStatus === 'up' ? '0 0 6px #4caf50' : apiStatus === 'down' ? '0 0 6px #f44336' : 'none',
-                  }}
-                />
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: apiStatus === 'up' ? '#4caf50' : apiStatus === 'down' ? '#f44336' : '#ff9800',
+                      boxShadow: apiStatus === 'up' ? '0 0 6px #4caf50' : apiStatus === 'down' ? '0 0 6px #f44336' : 'none',
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.85 }}>API</Typography>
+                </Box>
+              </Tooltip>
+              <Tooltip title={
+                backupStatus.status === 'ok'
+                  ? `Backup scheduler running (last heartbeat: ${backupStatus.last_heartbeat ? new Date(backupStatus.last_heartbeat).toLocaleString() : 'unknown'})`
+                  : backupStatus.status === 'down'
+                    ? `Backup scheduler down — ${backupStatus.reason || 'no recent heartbeat'}`
+                    : 'Checking backup scheduler...'
+              }>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                  <Box
+                    sx={{
+                      width: 10,
+                      height: 10,
+                      borderRadius: '50%',
+                      backgroundColor: backupStatus.status === 'ok' ? '#4caf50' : backupStatus.status === 'down' ? '#f44336' : '#ff9800',
+                      boxShadow: backupStatus.status === 'ok' ? '0 0 6px #4caf50' : backupStatus.status === 'down' ? '0 0 6px #f44336' : 'none',
+                    }}
+                  />
+                  <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.85 }}>Backup</Typography>
+                </Box>
               </Tooltip>
             </Typography>
             <Stack direction="row" spacing={1}>
