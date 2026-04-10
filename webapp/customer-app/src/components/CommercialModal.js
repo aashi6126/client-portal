@@ -572,7 +572,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                         }}
                       />
                     </Grid>
-                    <Grid item xs={12} sm={12}>
+                    <Grid size={12}>
                       <Autocomplete
                         multiple
                         options={(clients || [])
@@ -986,7 +986,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                   />
                                 </Grid>
                                 {prefix !== 'workers_comp' && (
-                                  <Grid item xs={12} sm={12}>
+                                  <Grid size={12}>
                                     <Autocomplete
                                       multiple
                                       options={(clients || [])
