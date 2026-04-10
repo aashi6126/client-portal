@@ -33,6 +33,11 @@ import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import InvoiceDialog from './InvoiceDialog';
 
+// CSV helpers for co-insurers field (stored as comma-separated client names)
+const parseCsv = (s) =>
+  s ? s.split(',').map((x) => x.trim()).filter(Boolean) : [];
+const stringifyCsv = (arr) => (arr && arr.length ? arr.join(', ') : '');
+
 // Multi-plan types: support multiple carrier/limit/premium/renewal per type
 const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
 
@@ -99,6 +104,8 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     directors_officers_carrier: '', directors_officers_agency: '', directors_officers_policy_number: '', directors_officers_occ_limit: '', directors_officers_agg_limit: '', directors_officers_premium: '', directors_officers_renewal_date: '', directors_officers_remarks: '', directors_officers_outstanding_item: '',
     fiduciary_carrier: '', fiduciary_agency: '', fiduciary_policy_number: '', fiduciary_occ_limit: '', fiduciary_agg_limit: '', fiduciary_premium: '', fiduciary_renewal_date: '', fiduciary_remarks: '', fiduciary_outstanding_item: '',
     inland_marine_carrier: '', inland_marine_agency: '', inland_marine_policy_number: '', inland_marine_occ_limit: '', inland_marine_agg_limit: '', inland_marine_premium: '', inland_marine_renewal_date: '', inland_marine_remarks: '', inland_marine_outstanding_item: '',
+    // Co-insurers (comma-separated client names) — all non-WC single-plan coverages
+    general_liability_insured_entities: '', property_insured_entities: '', bop_insured_entities: '', auto_insured_entities: '', epli_insured_entities: '', nydbl_insured_entities: '', surety_insured_entities: '', product_liability_insured_entities: '', flood_insured_entities: '', directors_officers_insured_entities: '', fiduciary_insured_entities: '', inland_marine_insured_entities: '',
     // Multi-plan flat fields (backward compat, set by save_commercial_plans)
     umbrella_carrier: '', umbrella_agency: '', umbrella_policy_number: '', umbrella_occ_limit: '', umbrella_agg_limit: '', umbrella_premium: '', umbrella_renewal_date: '',
     professional_eo_carrier: '', professional_eo_agency: '', professional_eo_policy_number: '', professional_eo_occ_limit: '', professional_eo_agg_limit: '', professional_eo_premium: '', professional_eo_renewal_date: '',
@@ -565,6 +572,35 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                         }}
                       />
                     </Grid>
+                    <Grid item xs={12}>
+                      <Autocomplete
+                        multiple
+                        options={(clients || [])
+                          .map((c) => c.client_name)
+                          .filter((name) => name && name !== selectedClient?.client_name)}
+                        value={parseCsv(plan.insured_entities)}
+                        onChange={(_, newValue) =>
+                          updatePlan(planType, idx, 'insured_entities', stringifyCsv(newValue))
+                        }
+                        renderTags={(value, getTagProps) =>
+                          value.map((name, i) => (
+                            <Chip
+                              label={name}
+                              size="small"
+                              {...getTagProps({ index: i })}
+                            />
+                          ))
+                        }
+                        renderInput={(params) => (
+                          <TextField
+                            {...params}
+                            label="Insured Entities"
+                            size="small"
+                            placeholder="Select clients"
+                          />
+                        )}
+                      />
+                    </Grid>
                   </Grid>
                 </Box>
               </Grid>
@@ -949,6 +985,40 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     }}
                                   />
                                 </Grid>
+                                {prefix !== 'workers_comp' && (
+                                  <Grid item xs={12}>
+                                    <Autocomplete
+                                      multiple
+                                      options={(clients || [])
+                                        .map((c) => c.client_name)
+                                        .filter((name) => name && name !== selectedClient?.client_name)}
+                                      value={parseCsv(formData[`${prefix}_insured_entities`])}
+                                      onChange={(_, newValue) =>
+                                        setFormData((prev) => ({
+                                          ...prev,
+                                          [`${prefix}_insured_entities`]: stringifyCsv(newValue),
+                                        }))
+                                      }
+                                      renderTags={(value, getTagProps) =>
+                                        value.map((name, i) => (
+                                          <Chip
+                                            label={name}
+                                            size="small"
+                                            {...getTagProps({ index: i })}
+                                          />
+                                        ))
+                                      }
+                                      renderInput={(params) => (
+                                        <TextField
+                                          {...params}
+                                          label="Insured Entities"
+                                          size="small"
+                                          placeholder="Select clients"
+                                        />
+                                      )}
+                                    />
+                                  </Grid>
+                                )}
                               </Grid>
                             </Box>
                           </Grid>

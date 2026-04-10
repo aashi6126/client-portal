@@ -703,6 +703,20 @@ class CommercialInsurance(db.Model):
     fiduciary_remarks = db.Column(db.Text)
     inland_marine_remarks = db.Column(db.Text)
 
+    # Co-insurers (comma-separated client names) for non-WC single-plan coverages
+    general_liability_insured_entities = db.Column(db.Text)
+    property_insured_entities = db.Column(db.Text)
+    bop_insured_entities = db.Column(db.Text)
+    auto_insured_entities = db.Column(db.Text)
+    epli_insured_entities = db.Column(db.Text)
+    nydbl_insured_entities = db.Column(db.Text)
+    surety_insured_entities = db.Column(db.Text)
+    product_liability_insured_entities = db.Column(db.Text)
+    flood_insured_entities = db.Column(db.Text)
+    directors_officers_insured_entities = db.Column(db.Text)
+    fiduciary_insured_entities = db.Column(db.Text)
+    inland_marine_insured_entities = db.Column(db.Text)
+
     # Outstanding item columns for single-plan types
     general_liability_outstanding_item = db.Column(db.Text)
     property_outstanding_item = db.Column(db.Text)
@@ -916,6 +930,18 @@ class CommercialInsurance(db.Model):
             'inland_marine_remarks': self.inland_marine_remarks,
             'inland_marine_outstanding_item': self.inland_marine_outstanding_item,
             'inland_marine_outstanding_item_due_date': self.inland_marine_outstanding_item_due_date.isoformat() if self.inland_marine_outstanding_item_due_date else None,
+            'general_liability_insured_entities': self.general_liability_insured_entities,
+            'property_insured_entities': self.property_insured_entities,
+            'bop_insured_entities': self.bop_insured_entities,
+            'auto_insured_entities': self.auto_insured_entities,
+            'epli_insured_entities': self.epli_insured_entities,
+            'nydbl_insured_entities': self.nydbl_insured_entities,
+            'surety_insured_entities': self.surety_insured_entities,
+            'product_liability_insured_entities': self.product_liability_insured_entities,
+            'flood_insured_entities': self.flood_insured_entities,
+            'directors_officers_insured_entities': self.directors_officers_insured_entities,
+            'fiduciary_insured_entities': self.fiduciary_insured_entities,
+            'inland_marine_insured_entities': self.inland_marine_insured_entities,
             'plans': self._get_commercial_plans_dict()
         }
         return result
@@ -951,6 +977,7 @@ class CommercialPlan(db.Model):
     remarks = db.Column(db.Text)
     outstanding_item = db.Column(db.Text)
     outstanding_item_due_date = db.Column(db.Date)
+    insured_entities = db.Column(db.Text)
 
     # Endorsements (used by professional_eo plans)
     endorsement_tech_eo = db.Column(db.Boolean, default=False)
@@ -976,6 +1003,7 @@ class CommercialPlan(db.Model):
             'remarks': self.remarks,
             'outstanding_item': self.outstanding_item,
             'outstanding_item_due_date': self.outstanding_item_due_date.isoformat() if self.outstanding_item_due_date else None,
+            'insured_entities': self.insured_entities,
             'endorsement_tech_eo': self.endorsement_tech_eo or False,
             'endorsement_allied_healthcare': self.endorsement_allied_healthcare or False,
             'endorsement_staffing': self.endorsement_staffing or False,
@@ -1274,7 +1302,8 @@ def save_commercial_plans(session, commercial, plans_data):
                     endorsement_tech_eo=bool(plan_info.get('endorsement_tech_eo')),
                     endorsement_allied_healthcare=bool(plan_info.get('endorsement_allied_healthcare')),
                     endorsement_staffing=bool(plan_info.get('endorsement_staffing')),
-                    endorsement_medical_malpractice=bool(plan_info.get('endorsement_medical_malpractice'))
+                    endorsement_medical_malpractice=bool(plan_info.get('endorsement_medical_malpractice')),
+                    insured_entities=plan_info.get('insured_entities') or None,
                 )
                 session.add(plan)
 
@@ -2034,6 +2063,8 @@ def create_commercial():
             setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
             setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
             setattr(commercial, f'{product}_outstanding_item_due_date', parse_date(data.get(f'{product}_outstanding_item_due_date')))
+            if product != 'workers_comp':
+                setattr(commercial, f'{product}_insured_entities', data.get(f'{product}_insured_entities') or None)
 
         # GL endorsements
         for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
@@ -2123,6 +2154,8 @@ def update_commercial(commercial_id):
                 setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
             if f'{product}_outstanding_item_due_date' in data:
                 setattr(commercial, f'{product}_outstanding_item_due_date', parse_date(data.get(f'{product}_outstanding_item_due_date')))
+            if product != 'workers_comp' and f'{product}_insured_entities' in data:
+                setattr(commercial, f'{product}_insured_entities', data.get(f'{product}_insured_entities') or None)
 
         # Update GL endorsements
         for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
@@ -3440,6 +3473,9 @@ def export_to_excel():
                 base_cols.extend(BOP_PROPERTY_COLS)
             elif prefix == 'auto':
                 base_cols.extend(AUTO_TYPE_COLS)
+            # Co-Insurers column (all non-WC coverages); appended at the very end of the section
+            if prefix != 'workers_comp':
+                base_cols.append('Insured Entities')
             commercial_headers.extend(base_cols)
             ncols = len(base_cols)
             commercial_sections.append((col_pos, col_pos + ncols - 1, label))
@@ -3456,6 +3492,8 @@ def export_to_excel():
             base_plan_cols = ['Carrier', 'Agency', 'Policy Number', 'Occ Limit', 'Agg Limit', 'Premium', 'Renewal Date', 'Remarks', 'Outstanding Item']
             if plan_type == 'professional_eo':
                 base_plan_cols.extend(EO_ENDORSEMENT_COLS)
+            # Co-Insurers column per plan (all multi-plan types)
+            base_plan_cols.append('Insured Entities')
             cols_per_plan = len(base_plan_cols)
             comm_multi_plan_col_size[plan_type] = cols_per_plan
             for i in range(1, n + 1):
@@ -3516,6 +3554,11 @@ def export_to_excel():
                     ws_commercial.cell(row=row_idx, column=sc + 10, value=float(pp) if pp else None)
                 elif prefix == 'auto':
                     ws_commercial.cell(row=row_idx, column=sc + 9, value=getattr(comm, 'auto_type', None) or '')
+                # Co-Insurers: last column of the section for all non-WC coverages
+                if prefix != 'workers_comp':
+                    co_ins_offset = comm_single_col_sizes[prefix] - 1
+                    ws_commercial.cell(row=row_idx, column=sc + co_ins_offset,
+                                       value=getattr(comm, f'{prefix}_insured_entities', None) or '')
                 sc += comm_single_col_sizes[prefix]
 
             # Multi-plan types
@@ -3544,6 +3587,8 @@ def export_to_excel():
                             ws_commercial.cell(row=row_idx, column=base + 10, value='Yes' if p.endorsement_staffing else '')
                             ws_commercial.cell(row=row_idx, column=base + 11, value='Yes' if p.endorsement_allied_healthcare else '')
                             ws_commercial.cell(row=row_idx, column=base + 12, value='Yes' if p.endorsement_medical_malpractice else '')
+                        # Co-Insurers: last column of the plan block
+                        ws_commercial.cell(row=row_idx, column=base + cps - 1, value=p.insured_entities or '')
 
         # ========== PERSONAL INSURANCE SHEET ==========
         ws_personal = wb.create_sheet("Personal")
@@ -4022,6 +4067,27 @@ def import_from_excel():
                 if label in section_col_map:
                     comm_single_col_map[prefix] = section_col_map[label]
 
+            # Detect the insured-entities column per single-plan coverage (header-based, backward-compat).
+            # Scans within each section's column range for a header containing "INSURED ENTIT" (current)
+            # or "CO INSURER" (legacy exports).
+            comm_single_co_ins_col = {}  # prefix -> col index (0-based) or None
+            sorted_sections = sorted(section_col_map.items(), key=lambda kv: kv[1])
+            for prefix, label in commercial_single_import_defs:
+                if label not in section_col_map:
+                    continue
+                section_start = section_col_map[label]
+                # Determine section end: col before the next section's start, or end of row
+                section_end = len(comm_headers)
+                for _, other_start in sorted_sections:
+                    if other_start > section_start:
+                        section_end = other_start
+                        break
+                for col_i in range(section_start, section_end):
+                    h = (comm_headers[col_i] or '').upper().replace('-', ' ').strip()
+                    if 'INSURED ENTIT' in h or 'CO INSURER' in h:
+                        comm_single_co_ins_col[prefix] = col_i
+                        break
+
             # Build column maps for multi-plan types — detect how many plans per type
             comm_multi_col_map = {}  # plan_type -> [(carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols), ...]
             for plan_type, label in commercial_multi_import_defs:
@@ -4065,7 +4131,14 @@ def import_from_excel():
                                     if j < len(comm_headers) and 'ENDORSEMENT' in comm_headers[j].upper() and ek in comm_headers[j].upper():
                                         endorsement_cols[ekey] = j
                                         j += 1
-                            plans.append((i, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols))
+                            # Insured Entities column (optional; accepts legacy "Co-Insurers" header too)
+                            co_ins_col = None
+                            if j < len(comm_headers):
+                                h_next = (comm_headers[j] or '').upper().replace('-', ' ').strip()
+                                if 'INSURED ENTIT' in h_next or 'CO INSURER' in h_next:
+                                    co_ins_col = j
+                                    j += 1
+                            plans.append((i, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols, co_ins_col))
                             i = j
                         else:
                             break
@@ -4155,6 +4228,9 @@ def import_from_excel():
                             # Auto type (1 extra column after the base 9)
                             elif prefix == 'auto':
                                 commercial_data['auto_type'] = safe_val(sc + 9)
+                            # Co-Insurers (non-WC only, detected via header scan — position varies)
+                            if prefix != 'workers_comp' and prefix in comm_single_co_ins_col:
+                                commercial_data[f'{prefix}_insured_entities'] = safe_val(comm_single_co_ins_col[prefix])
 
                     comm_obj = CommercialInsurance(**commercial_data)
                     session.add(comm_obj)
@@ -4165,7 +4241,7 @@ def import_from_excel():
                     for plan_type, cols_list in comm_multi_col_map.items():
                         seen_plans = set()  # track (carrier, policy_number) to skip duplicates
                         actual_plan_num = 0
-                        for _, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols) in enumerate(cols_list, 1):
+                        for _, (carrier_col, agency_col, policy_col, occ_limit_col, agg_limit_col, premium_col, renewal_col, remarks_col, oi_col, endorsement_cols, co_ins_col) in enumerate(cols_list, 1):
                             carrier = safe_val(carrier_col)
                             agency = safe_val(agency_col) if agency_col is not None else None
                             policy_number = safe_val(policy_col) if policy_col is not None else None
@@ -4175,6 +4251,7 @@ def import_from_excel():
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
                             remarks_val = safe_val(remarks_col) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
+                            co_ins_val = safe_val(co_ins_col) if co_ins_col is not None else None
                             if carrier or occ_limit_val or agg_limit_val or premium or renewal:
                                 # Skip duplicate plans (same carrier and policy number)
                                 dedup_key = (str(carrier or '').strip().lower(), str(policy_number or '').strip().lower())
@@ -4194,7 +4271,8 @@ def import_from_excel():
                                     premium=premium,
                                     renewal_date=renewal,
                                     remarks=remarks_val,
-                                    outstanding_item=oi_val
+                                    outstanding_item=oi_val,
+                                    insured_entities=co_ins_val,
                                 )
                                 # Professional E&O endorsements
                                 if plan_type == 'professional_eo' and endorsement_cols:

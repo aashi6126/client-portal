@@ -64,6 +64,7 @@ def _collect_line_items(commercial_data, policy_types):
                         'policy_number': policy_number,
                         'premium': float(premium) if premium else 0,
                         'renewal_date': renewal_date,
+                        'insured_entities': plan.get('insured_entities') or '',
                     })
         else:
             carrier = commercial_data.get(f'{ptype}_carrier') or ''
@@ -76,6 +77,7 @@ def _collect_line_items(commercial_data, policy_types):
                     'policy_number': policy_number,
                     'premium': float(premium) if premium else 0,
                     'renewal_date': renewal_date,
+                    'insured_entities': commercial_data.get(f'{ptype}_insured_entities') or '',
                 })
 
     return items
@@ -196,6 +198,8 @@ def generate_invoice_pdf(
     subtotal = sum(item['premium'] for item in line_items)
     table_data = [['Effective Date', 'DESCRIPTION', 'AMOUNT']]
 
+    desc_style = ParagraphStyle('desc_cell', parent=styles['Normal'], fontSize=9, leading=11)
+
     for item in line_items:
         date_start = _format_date(item['renewal_date'])
         date_end = _end_date(item['renewal_date'])
@@ -205,7 +209,10 @@ def generate_invoice_pdf(
             desc_parts.append(f"Policy No. {item['policy_number']}")
         if item['carrier']:
             desc_parts.append(f"Carrier: {item['carrier']}")
-        desc_cell = '\n'.join(desc_parts)
+        if item.get('insured_entities'):
+            desc_parts.append(f"Insured Entities: {item['insured_entities']}")
+        # Wrap in Paragraph so long lines (e.g., many co-insurers) wrap within the column
+        desc_cell = Paragraph('<br/>'.join(desc_parts), desc_style)
         amount_cell = f"${item['premium']:,.2f}"
         table_data.append([date_cell, desc_cell, amount_cell])
 
