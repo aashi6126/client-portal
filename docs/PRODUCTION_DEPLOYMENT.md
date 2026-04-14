@@ -75,7 +75,7 @@ DATABASE_URI=postgresql://client_portal_user:your_secure_password@localhost:5432
 
 # API Server
 API_HOST=0.0.0.0
-API_PORT=5000
+API_PORT=5001
 API_DEBUG=false
 
 # Network Security
@@ -85,7 +85,8 @@ ALLOWED_ORIGINS=
 
 # Backups
 BACKUP_DIR=C:\ClientPortal\backups
-BACKUP_API_URL=http://127.0.0.1:5000/api/export
+# BACKUP_API_URL is auto-built from API_PORT; only set to override the default.
+# BACKUP_API_URL=http://127.0.0.1:5001/api/export
 BACKUP_MAX_COUNT=30
 ```
 
@@ -109,26 +110,26 @@ start-all.bat
 ```
 
 This starts:
-1. **API Server** — Flask on port 5000 (serves both API and React frontend)
-2. **Backup Scheduler** — XLSX exports at 12 AM and 12 PM daily
+1. **API Server** — Flask on port 5001 (serves both API and React frontend)
+2. **Backup Scheduler** — XLSX exports at 12 AM, 12 PM, and 6 PM daily
 3. **React Dev Server** — port 3000 (optional, for development only)
 
 Verify:
-- Open `http://localhost:5000` — app should load
-- Open `http://localhost:5000/api/health` — should return 200
+- Open `http://localhost:5001` — app should load
+- Open `http://localhost:5001/api/health` — should return 200
 
 ## Step 7: Import Data
 
 If migrating from an existing SQLite installation, use the pre-migration XLSX export:
 
 **Option A — Via the app UI:**
-1. Open `http://localhost:5000`
+1. Open `http://localhost:5001`
 2. Use the Import function to upload the XLSX file
 
 **Option B — Via curl:**
 
 ```bat
-curl -X POST -F "file=@pre_migration_export.xlsx" http://127.0.0.1:5000/api/import
+curl -X POST -F "file=@pre_migration_export.xlsx" http://127.0.0.1:5001/api/import
 ```
 
 **Option C — Via the standalone import script** (for the original `Data Sheet.xlsx` format):
@@ -149,7 +150,7 @@ REM Check row counts
 "C:\Program Files\PostgreSQL\17\bin\psql.exe" -U client_portal_user -d client_portal -c "SELECT 'clients' as tbl, COUNT(*) FROM clients UNION ALL SELECT 'employee_benefits', COUNT(*) FROM employee_benefits UNION ALL SELECT 'commercial_insurance', COUNT(*) FROM commercial_insurance;"
 
 REM Test export endpoint
-curl -o test_export.xlsx http://127.0.0.1:5000/api/export
+curl -o test_export.xlsx http://127.0.0.1:5001/api/export
 ```
 
 ---
@@ -167,14 +168,14 @@ stop-all.bat
 ### Automatic Backups
 
 The backup scheduler runs automatically (started by `start-all.bat`):
-- Exports to XLSX at **12:00 AM** and **12:00 PM** daily
+- Exports to XLSX at **12:00 AM**, **12:00 PM**, and **6:00 PM** daily
 - Saves to `BACKUP_DIR` (default: `C:\ClientPortal\backups`)
 - Keeps the most recent 30 backups (configurable via `BACKUP_MAX_COUNT`)
 
 ### Manual Backup
 
 ```bat
-curl -o "C:\ClientPortal\backups\manual_backup_%date:~-4%%date:~4,2%%date:~7,2%.xlsx" http://127.0.0.1:5000/api/export
+curl -o "C:\ClientPortal\backups\manual_backup_%date:~-4%%date:~4,2%%date:~7,2%.xlsx" http://127.0.0.1:5001/api/export
 ```
 
 ### PostgreSQL Database Backup (Full)
@@ -204,7 +205,7 @@ curl -o "C:\ClientPortal\backups\manual_backup_%date:~-4%%date:~4,2%%date:~7,2%.
 | `psycopg2` import error | Verify `pip install psycopg2-binary` in the venv |
 | Connection refused | Check PostgreSQL service is running: `sc query postgresql-x64-17` |
 | Authentication failed | Verify credentials in `config.env` match the database user |
-| Port 5000 in use | Change `API_PORT` in `config.env`, or stop the conflicting process |
+| Port 5001 in use | Change `API_PORT` in `config.env`, or stop the conflicting process |
 | Tables not created | App creates tables on startup — check logs in the API window |
 | Health check fails on start | Wait a few more seconds; increase timeout in `start-all.bat` |
 
