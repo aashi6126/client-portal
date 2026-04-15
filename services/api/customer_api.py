@@ -1235,6 +1235,17 @@ def parse_date(date_str):
         return None
 
 
+def parse_int(value):
+    """Coerce form value to int, or None. Empty strings on int columns otherwise
+    raise InvalidTextRepresentation in Postgres."""
+    if value is None or value == '':
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
 def save_benefit_plans(session, benefit, plans_data):
     """Save multi-plan child records for a benefit. Deletes existing plans first."""
     # Delete existing plans for this benefit
@@ -1452,8 +1463,8 @@ def create_client():
             state=data.get('state'),
             zip_code=data.get('zip_code'),
             status=data.get('status', 'Active'),
-            gross_revenue=data.get('gross_revenue'),
-            total_ees=data.get('total_ees')
+            gross_revenue=parse_premium(data.get('gross_revenue')),
+            total_ees=parse_int(data.get('total_ees'))
         )
 
         session.add(client)
@@ -1546,8 +1557,10 @@ def update_client(client_id):
         client.state = data.get('state', client.state)
         client.zip_code = data.get('zip_code', client.zip_code)
         client.status = data.get('status', client.status)
-        client.gross_revenue = data.get('gross_revenue', client.gross_revenue)
-        client.total_ees = data.get('total_ees', client.total_ees)
+        if 'gross_revenue' in data:
+            client.gross_revenue = parse_premium(data.get('gross_revenue'))
+        if 'total_ees' in data:
+            client.total_ees = parse_int(data.get('total_ees'))
         client.industry = data.get('industry', client.industry)
 
         # Update contacts if provided
@@ -1702,8 +1715,8 @@ def create_benefit():
             renewal_date=parse_date(data.get('renewal_date')),
             funding=data.get('funding'),
             current_carrier=data.get('current_carrier'),
-            num_employees_at_renewal=data.get('num_employees_at_renewal'),
-            enrolled_ees=data.get('enrolled_ees'),
+            num_employees_at_renewal=parse_int(data.get('num_employees_at_renewal')),
+            enrolled_ees=parse_int(data.get('enrolled_ees')),
             waiting_period=data.get('waiting_period'),
             deductible_accumulation=data.get('deductible_accumulation'),
             previous_carrier=data.get('previous_carrier'),
@@ -1796,8 +1809,10 @@ def update_benefit(benefit_id):
         benefit.renewal_date = parse_date(data.get('renewal_date')) if 'renewal_date' in data else benefit.renewal_date
         benefit.funding = data.get('funding', benefit.funding)
         benefit.current_carrier = data.get('current_carrier', benefit.current_carrier)
-        benefit.num_employees_at_renewal = data.get('num_employees_at_renewal', benefit.num_employees_at_renewal)
-        benefit.enrolled_ees = data.get('enrolled_ees', benefit.enrolled_ees)
+        if 'num_employees_at_renewal' in data:
+            benefit.num_employees_at_renewal = parse_int(data.get('num_employees_at_renewal'))
+        if 'enrolled_ees' in data:
+            benefit.enrolled_ees = parse_int(data.get('enrolled_ees'))
         benefit.waiting_period = data.get('waiting_period', benefit.waiting_period)
         benefit.deductible_accumulation = data.get('deductible_accumulation', benefit.deductible_accumulation)
         benefit.previous_carrier = data.get('previous_carrier', benefit.previous_carrier)
