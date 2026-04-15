@@ -223,6 +223,26 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     return list.filter(r => r.type === renewalTypeFilter);
   }, [renewalTab, renewalsByRange, renewalTypeFilter]);
 
+  // Top 10 named industries + "Other" bucket. "Unspecified" is pulled out and
+  // shown separately in the caption so it doesn't dominate the chart.
+  const { topIndustries, unspecifiedCount, namedIndustryCount } = useMemo(() => {
+    const named = policyAgg.by_industry.filter(r => r.industry !== 'Unspecified');
+    const unspec = policyAgg.by_industry.find(r => r.industry === 'Unspecified');
+    const sorted = [...named].sort((a, b) => b.count - a.count);
+    let result = sorted;
+    if (sorted.length > 10) {
+      const top = sorted.slice(0, 10);
+      const otherCount = sorted.slice(10).reduce((s, r) => s + r.count, 0);
+      const otherCategories = sorted.length - 10;
+      result = [...top, { industry: `Other (${otherCategories})`, count: otherCount }];
+    }
+    return {
+      topIndustries: result,
+      unspecifiedCount: unspec ? unspec.count : 0,
+      namedIndustryCount: named.length
+    };
+  }, [policyAgg.by_industry]);
+
   // Format month for display
   const formatMonth = (monthKey) => {
     const [year, month] = monthKey.split('-');
@@ -629,27 +649,29 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             Policies by Industry
           </Typography>
           <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
-            Total: <strong>{policyAgg.by_industry.reduce((s, r) => s + r.count, 0)}</strong> (excludes personal)
+            Top 10 of <strong>{namedIndustryCount}</strong> industries · Unspecified: <strong>{unspecifiedCount}</strong>
           </Typography>
-          {policyAgg.by_industry.length > 0 ? (
-            <Box sx={{ flex: 1, minHeight: 260 }}>
+          {topIndustries.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
-                  data={policyAgg.by_industry}
+                  data={topIndustries}
                   layout="vertical"
-                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
+                  barCategoryGap="20%"
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
                   <YAxis
                     type="category"
                     dataKey="industry"
-                    tick={{ fontSize: 10 }}
-                    width={140}
+                    tick={{ fontSize: 11 }}
+                    width={150}
                     interval={0}
+                    tickFormatter={(v) => v.length > 20 ? v.slice(0, 19) + '…' : v}
                   />
                   <Tooltip formatter={(value) => [value, 'Policies']} />
-                  <Bar dataKey="count" fill="#4caf50" />
+                  <Bar dataKey="count" fill="#4caf50" label={{ position: 'right', fontSize: 10, fill: '#555' }} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -669,24 +691,49 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             Total: <strong>{policyAgg.by_coverage_type.reduce((s, r) => s + r.count, 0)}</strong>
           </Typography>
           {policyAgg.by_coverage_type.length > 0 ? (
-            <Box sx={{ flex: 1, minHeight: 260 }}>
+            <Box sx={{ flex: 1, minHeight: 320 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={policyAgg.by_coverage_type}
                   layout="vertical"
-                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
+                  barCategoryGap="15%"
                 >
-                  <CartesianGrid strokeDasharray="3 3" />
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
                   <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
                   <YAxis
                     type="category"
                     dataKey="coverage_type"
-                    tick={{ fontSize: 10 }}
+                    tick={{ fontSize: 11 }}
                     width={110}
                     interval={0}
                   />
-                  <Tooltip formatter={(value) => [value, 'Policies']} />
-                  <Bar dataKey="count" fill="#1976d2" />
+                  <Tooltip
+                    formatter={(value, _name, item) => {
+                      const cat = item?.payload?.category;
+                      const catLabel = cat === 'benefits' ? 'Benefits' : cat === 'commercial' ? 'Commercial' : 'Personal';
+                      return [value, `Policies (${catLabel})`];
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={24}
+                    iconType="square"
+                    wrapperStyle={{ fontSize: 11 }}
+                    payload={[
+                      { value: 'Employee Benefits', type: 'square', color: '#fb8c00' },
+                      { value: 'Commercial', type: 'square', color: '#1976d2' },
+                      { value: 'Personal', type: 'square', color: '#9c27b0' }
+                    ]}
+                  />
+                  <Bar dataKey="count" label={{ position: 'right', fontSize: 10, fill: '#555' }}>
+                    {policyAgg.by_coverage_type.map((entry, idx) => (
+                      <Cell
+                        key={`cov-${idx}`}
+                        fill={entry.category === 'benefits' ? '#fb8c00' : entry.category === 'commercial' ? '#1976d2' : '#9c27b0'}
+                      />
+                    ))}
+                  </Bar>
                 </BarChart>
               </ResponsiveContainer>
             </Box>

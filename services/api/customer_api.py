@@ -3202,12 +3202,18 @@ def get_policy_aggregations():
     session = Session()
     try:
         industry_counts = {}
-        coverage_counts = {}
+        coverage_counts = {}  # {(category, label): count}
 
-        def bump(bucket, key, n=1):
+        def bump_industry(key, n=1):
             if not key:
                 return
-            bucket[key] = bucket.get(key, 0) + n
+            industry_counts[key] = industry_counts.get(key, 0) + n
+
+        def bump_coverage(category, label, n=1):
+            if not label:
+                return
+            k = (category, label)
+            coverage_counts[k] = coverage_counts.get(k, 0) + n
 
         # --- Employee Benefits ---
         benefits = session.query(EmployeeBenefit).all()
@@ -3217,13 +3223,13 @@ def get_policy_aggregations():
 
             for plan in benefit.plans:
                 if plan.carrier:
-                    bump(industry_counts, industry_key)
-                    bump(coverage_counts, BENEFIT_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
+                    bump_industry(industry_key)
+                    bump_coverage('benefits', BENEFIT_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
 
             for field_name, label in BENEFIT_SINGLE_LABELS:
                 if getattr(benefit, field_name, None):
-                    bump(industry_counts, industry_key)
-                    bump(coverage_counts, label)
+                    bump_industry(industry_key)
+                    bump_coverage('benefits', label)
 
         # --- Commercial ---
         commercial = session.query(CommercialInsurance).all()
@@ -3233,20 +3239,20 @@ def get_policy_aggregations():
 
             for plan in comm.commercial_plans:
                 if plan.carrier:
-                    bump(industry_counts, industry_key)
-                    bump(coverage_counts, COMMERCIAL_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
+                    bump_industry(industry_key)
+                    bump_coverage('commercial', COMMERCIAL_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
 
             for field_name, label in COMMERCIAL_SINGLE_LABELS:
                 if getattr(comm, field_name, None):
-                    bump(industry_counts, industry_key)
-                    bump(coverage_counts, label)
+                    bump_industry(industry_key)
+                    bump_coverage('commercial', label)
 
         # --- Personal (coverage only; no client → no industry) ---
         personal_records = session.query(PersonalInsurance).all()
         for pers in personal_records:
             for field_name, label in PERSONAL_SINGLE_LABELS:
                 if getattr(pers, field_name, None):
-                    bump(coverage_counts, label)
+                    bump_coverage('personal', label)
 
         by_industry = sorted(
             [{'industry': k, 'count': v} for k, v in industry_counts.items()],
@@ -3254,7 +3260,8 @@ def get_policy_aggregations():
             reverse=True
         )
         by_coverage_type = sorted(
-            [{'coverage_type': k, 'count': v} for k, v in coverage_counts.items()],
+            [{'coverage_type': label, 'category': category, 'count': v}
+             for (category, label), v in coverage_counts.items()],
             key=lambda r: r['count'],
             reverse=True
         )
