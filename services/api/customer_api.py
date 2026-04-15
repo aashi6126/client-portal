@@ -3154,6 +3154,122 @@ def get_cross_sell_opportunities():
         session.close()
 
 
+# Short labels mirror the tabLabels in BenefitsModal.js / CommercialModal.js / PersonalModal.js.
+# Duplicates across categories (Auto, Umbrella) are disambiguated with a "Personal" prefix.
+BENEFIT_PLAN_LABELS = {'medical': 'Med', 'dental': 'Dental', 'vision': 'Vision', 'life_adnd': 'Life'}
+BENEFIT_SINGLE_LABELS = [
+    ('ltd_carrier', 'LTD'),
+    ('std_carrier', 'STD'),
+    ('k401_carrier', '401K'),
+    ('critical_illness_carrier', 'CI'),
+    ('accident_carrier', 'Accident'),
+    ('hospital_carrier', 'Hospital'),
+    ('voluntary_life_carrier', 'Vol Life'),
+]
+COMMERCIAL_PLAN_LABELS = {'umbrella': 'Umbrella', 'professional_eo': 'E&O', 'cyber': 'Cyber', 'crime': 'Crime'}
+COMMERCIAL_SINGLE_LABELS = [
+    ('general_liability_carrier', 'GL'),
+    ('property_carrier', 'Property'),
+    ('bop_carrier', 'BOP'),
+    ('workers_comp_carrier', 'WC'),
+    ('auto_carrier', 'Auto'),
+    ('epli_carrier', 'EPLI'),
+    ('nydbl_carrier', 'NYDBL'),
+    ('surety_carrier', 'Surety'),
+    ('product_liability_carrier', 'Product'),
+    ('flood_carrier', 'Flood'),
+    ('directors_officers_carrier', 'D&O'),
+    ('fiduciary_carrier', 'Fiduciary'),
+    ('inland_marine_carrier', 'Inland Marine'),
+]
+PERSONAL_SINGLE_LABELS = [
+    ('personal_auto_carrier', 'Personal Auto'),
+    ('homeowners_carrier', 'Home'),
+    ('personal_umbrella_carrier', 'Personal Umbrella'),
+    ('event_carrier', 'Event'),
+    ('visitors_medical_carrier', 'Visitors'),
+]
+
+
+@app.route('/api/dashboard/policy-aggregations', methods=['GET'])
+def get_policy_aggregations():
+    """Return policy counts grouped by client industry and by coverage type.
+
+    A "policy" = one coverage line with a non-null carrier (matches the
+    convention used by the renewals endpoint). Personal policies are not
+    owned by a client and so are excluded from the industry breakdown.
+    """
+    session = Session()
+    try:
+        industry_counts = {}
+        coverage_counts = {}
+
+        def bump(bucket, key, n=1):
+            if not key:
+                return
+            bucket[key] = bucket.get(key, 0) + n
+
+        # --- Employee Benefits ---
+        benefits = session.query(EmployeeBenefit).all()
+        for benefit in benefits:
+            industry = benefit.client.industry if benefit.client else None
+            industry_key = industry if industry else 'Unspecified'
+
+            for plan in benefit.plans:
+                if plan.carrier:
+                    bump(industry_counts, industry_key)
+                    bump(coverage_counts, BENEFIT_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
+
+            for field_name, label in BENEFIT_SINGLE_LABELS:
+                if getattr(benefit, field_name, None):
+                    bump(industry_counts, industry_key)
+                    bump(coverage_counts, label)
+
+        # --- Commercial ---
+        commercial = session.query(CommercialInsurance).all()
+        for comm in commercial:
+            industry = comm.client.industry if comm.client else None
+            industry_key = industry if industry else 'Unspecified'
+
+            for plan in comm.commercial_plans:
+                if plan.carrier:
+                    bump(industry_counts, industry_key)
+                    bump(coverage_counts, COMMERCIAL_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
+
+            for field_name, label in COMMERCIAL_SINGLE_LABELS:
+                if getattr(comm, field_name, None):
+                    bump(industry_counts, industry_key)
+                    bump(coverage_counts, label)
+
+        # --- Personal (coverage only; no client → no industry) ---
+        personal_records = session.query(PersonalInsurance).all()
+        for pers in personal_records:
+            for field_name, label in PERSONAL_SINGLE_LABELS:
+                if getattr(pers, field_name, None):
+                    bump(coverage_counts, label)
+
+        by_industry = sorted(
+            [{'industry': k, 'count': v} for k, v in industry_counts.items()],
+            key=lambda r: r['count'],
+            reverse=True
+        )
+        by_coverage_type = sorted(
+            [{'coverage_type': k, 'count': v} for k, v in coverage_counts.items()],
+            key=lambda r: r['count'],
+            reverse=True
+        )
+
+        return jsonify({
+            'by_industry': by_industry,
+            'by_coverage_type': by_coverage_type
+        }), 200
+    except Exception as e:
+        logging.error(f"Error fetching policy aggregations: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
 # ===========================================================================
 # EXCEL EXPORT/IMPORT ENDPOINTS
 # ===========================================================================

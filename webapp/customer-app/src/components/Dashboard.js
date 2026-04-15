@@ -37,6 +37,7 @@ import axios from 'axios';
 
 const API_DASHBOARD_RENEWALS = '/api/dashboard/renewals';
 const API_DASHBOARD_CROSS_SELL = '/api/dashboard/cross-sell';
+const API_DASHBOARD_POLICY_AGG = '/api/dashboard/policy-aggregations';
 
 // Parse date string as local time (avoids UTC timezone shift)
 const parseDate = (d) => {
@@ -58,6 +59,7 @@ const parseDate = (d) => {
 const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal = [], onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion }) => {
   const [renewals, setRenewals] = useState([]);
   const [crossSell, setCrossSell] = useState({ benefits_only: [], commercial_only: [] });
+  const [policyAgg, setPolicyAgg] = useState({ by_industry: [], by_coverage_type: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [renewalTab, setRenewalTab] = useState(0);
@@ -84,13 +86,18 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         const endDate = new Date(year, month + 2, 0); // last day of (month + 2)
         const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
-        const [renewalsRes, crossSellRes] = await Promise.all([
+        const [renewalsRes, crossSellRes, policyAggRes] = await Promise.all([
           axios.get(API_DASHBOARD_RENEWALS, { params: { start_date: fmt(startDate), end_date: fmt(endDate) } }),
-          axios.get(API_DASHBOARD_CROSS_SELL)
+          axios.get(API_DASHBOARD_CROSS_SELL),
+          axios.get(API_DASHBOARD_POLICY_AGG)
         ]);
 
         setRenewals(renewalsRes.data.renewals || []);
         setCrossSell(crossSellRes.data);
+        setPolicyAgg({
+          by_industry: policyAggRes.data.by_industry || [],
+          by_coverage_type: policyAggRes.data.by_coverage_type || []
+        });
         setLoading(false);
       } catch (err) {
         console.error('Error fetching dashboard data:', err);
@@ -612,6 +619,83 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             )}
           </Paper>
         </Box>
+      </Box>
+
+      {/* Section 2: Policy Aggregations (by Industry + by Coverage Type) */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
+        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+            Policies by Industry
+          </Typography>
+          <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
+            Total: <strong>{policyAgg.by_industry.reduce((s, r) => s + r.count, 0)}</strong> (excludes personal)
+          </Typography>
+          {policyAgg.by_industry.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={policyAgg.by_industry}
+                  layout="vertical"
+                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="industry"
+                    tick={{ fontSize: 10 }}
+                    width={140}
+                    interval={0}
+                  />
+                  <Tooltip formatter={(value) => [value, 'Policies']} />
+                  <Bar dataKey="count" fill="#4caf50" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No policies to aggregate
+            </Typography>
+          )}
+        </Paper>
+
+        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            <SecurityIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+            Policies by Coverage Type
+          </Typography>
+          <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
+            Total: <strong>{policyAgg.by_coverage_type.reduce((s, r) => s + r.count, 0)}</strong>
+          </Typography>
+          {policyAgg.by_coverage_type.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 260 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={policyAgg.by_coverage_type}
+                  layout="vertical"
+                  margin={{ top: 5, right: 20, left: 10, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="coverage_type"
+                    tick={{ fontSize: 10 }}
+                    width={110}
+                    interval={0}
+                  />
+                  <Tooltip formatter={(value) => [value, 'Policies']} />
+                  <Bar dataKey="count" fill="#1976d2" />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No policies to aggregate
+            </Typography>
+          )}
+        </Paper>
       </Box>
 
       {/* Section 3: Upcoming Renewals with Time Range Tabs */}
