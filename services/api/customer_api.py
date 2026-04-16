@@ -3208,7 +3208,7 @@ PERSONAL_SINGLE_LABELS = [
 
 @app.route('/api/dashboard/policy-aggregations', methods=['GET'])
 def get_policy_aggregations():
-    """Return policy counts grouped by client industry and by coverage type.
+    """Return policy counts grouped by client industry, by coverage type, and by carrier.
 
     A "policy" = one coverage line with a non-null carrier (matches the
     convention used by the renewals endpoint). Personal policies are not
@@ -3218,6 +3218,7 @@ def get_policy_aggregations():
     try:
         industry_counts = {}
         coverage_counts = {}  # {(category, label): count}
+        carrier_counts = {}
 
         def bump_industry(key, n=1):
             if not key:
@@ -3230,6 +3231,14 @@ def get_policy_aggregations():
             k = (category, label)
             coverage_counts[k] = coverage_counts.get(k, 0) + n
 
+        def bump_carrier(carrier, n=1):
+            if not carrier:
+                return
+            key = str(carrier).strip()
+            if not key:
+                return
+            carrier_counts[key] = carrier_counts.get(key, 0) + n
+
         # --- Employee Benefits ---
         benefits = session.query(EmployeeBenefit).all()
         for benefit in benefits:
@@ -3240,11 +3249,14 @@ def get_policy_aggregations():
                 if plan.carrier:
                     bump_industry(industry_key)
                     bump_coverage('benefits', BENEFIT_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
+                    bump_carrier(plan.carrier)
 
             for field_name, label in BENEFIT_SINGLE_LABELS:
-                if getattr(benefit, field_name, None):
+                carrier = getattr(benefit, field_name, None)
+                if carrier:
                     bump_industry(industry_key)
                     bump_coverage('benefits', label)
+                    bump_carrier(carrier)
 
         # --- Commercial ---
         commercial = session.query(CommercialInsurance).all()
@@ -3256,18 +3268,23 @@ def get_policy_aggregations():
                 if plan.carrier:
                     bump_industry(industry_key)
                     bump_coverage('commercial', COMMERCIAL_PLAN_LABELS.get(plan.plan_type, plan.plan_type))
+                    bump_carrier(plan.carrier)
 
             for field_name, label in COMMERCIAL_SINGLE_LABELS:
-                if getattr(comm, field_name, None):
+                carrier = getattr(comm, field_name, None)
+                if carrier:
                     bump_industry(industry_key)
                     bump_coverage('commercial', label)
+                    bump_carrier(carrier)
 
         # --- Personal (coverage only; no client → no industry) ---
         personal_records = session.query(PersonalInsurance).all()
         for pers in personal_records:
             for field_name, label in PERSONAL_SINGLE_LABELS:
-                if getattr(pers, field_name, None):
+                carrier = getattr(pers, field_name, None)
+                if carrier:
                     bump_coverage('personal', label)
+                    bump_carrier(carrier)
 
         by_industry = sorted(
             [{'industry': k, 'count': v} for k, v in industry_counts.items()],
@@ -3280,10 +3297,16 @@ def get_policy_aggregations():
             key=lambda r: r['count'],
             reverse=True
         )
+        by_carrier = sorted(
+            [{'carrier': k, 'count': v} for k, v in carrier_counts.items()],
+            key=lambda r: r['count'],
+            reverse=True
+        )
 
         return jsonify({
             'by_industry': by_industry,
-            'by_coverage_type': by_coverage_type
+            'by_coverage_type': by_coverage_type,
+            'by_carrier': by_carrier
         }), 200
     except Exception as e:
         logging.error(f"Error fetching policy aggregations: {e}")

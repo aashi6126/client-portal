@@ -59,7 +59,7 @@ const parseDate = (d) => {
 const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal = [], onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion }) => {
   const [renewals, setRenewals] = useState([]);
   const [crossSell, setCrossSell] = useState({ benefits_only: [], commercial_only: [] });
-  const [policyAgg, setPolicyAgg] = useState({ by_industry: [], by_coverage_type: [] });
+  const [policyAgg, setPolicyAgg] = useState({ by_industry: [], by_coverage_type: [], by_carrier: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [renewalTab, setRenewalTab] = useState(0);
@@ -96,7 +96,8 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         setCrossSell(crossSellRes.data);
         setPolicyAgg({
           by_industry: policyAggRes.data.by_industry || [],
-          by_coverage_type: policyAggRes.data.by_coverage_type || []
+          by_coverage_type: policyAggRes.data.by_coverage_type || [],
+          by_carrier: policyAggRes.data.by_carrier || []
         });
         setLoading(false);
       } catch (err) {
@@ -222,6 +223,18 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     if (renewalTypeFilter === 'all') return list;
     return list.filter(r => r.type === renewalTypeFilter);
   }, [renewalTab, renewalsByRange, renewalTypeFilter]);
+
+  // Top 30 carriers + "Other" bucket — long tail of low-frequency carriers
+  // hurts readability.
+  const CARRIER_TOP_N = 30;
+  const topCarriers = useMemo(() => {
+    const sorted = [...policyAgg.by_carrier].sort((a, b) => b.count - a.count);
+    if (sorted.length <= CARRIER_TOP_N) return sorted;
+    const top = sorted.slice(0, CARRIER_TOP_N);
+    const otherCount = sorted.slice(CARRIER_TOP_N).reduce((s, r) => s + r.count, 0);
+    const otherCategories = sorted.length - CARRIER_TOP_N;
+    return [...top, { carrier: `Other (${otherCategories})`, count: otherCount }];
+  }, [policyAgg.by_carrier]);
 
   // Top 10 named industries + "Other" bucket. "Unspecified" is pulled out and
   // shown separately in the caption so it doesn't dominate the chart.
@@ -744,6 +757,68 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           )}
         </Paper>
       </Box>
+
+      {/* Section 2b: Policies by Carrier — compact sortable table with inline bars */}
+      <Paper sx={{ p: 2, mb: 4 }}>
+        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
+          <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+          Policies by Carrier
+        </Typography>
+        <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1, display: 'block' }}>
+          Top {CARRIER_TOP_N} of <strong>{policyAgg.by_carrier.length}</strong> carriers · Total: <strong>{policyAgg.by_carrier.reduce((s, r) => s + r.count, 0)}</strong> policies
+        </Typography>
+        {topCarriers.length > 0 ? (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: 50, fontWeight: 'bold' }}>#</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Carrier</TableCell>
+                  <TableCell align="right" sx={{ width: 80, fontWeight: 'bold' }}>Policies</TableCell>
+                  <TableCell align="right" sx={{ width: 70, fontWeight: 'bold' }}>Share</TableCell>
+                  <TableCell sx={{ width: '30%', fontWeight: 'bold' }}></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(() => {
+                  const total = policyAgg.by_carrier.reduce((s, r) => s + r.count, 0) || 1;
+                  const maxCount = topCarriers[0]?.count || 1;
+                  return topCarriers.map((row, idx) => {
+                    const isOther = row.carrier.startsWith('Other (');
+                    const pct = (row.count / total) * 100;
+                    const barPct = (row.count / maxCount) * 100;
+                    return (
+                      <TableRow key={`carrier-${idx}`} hover>
+                        <TableCell sx={{ color: 'text.secondary' }}>{isOther ? '' : idx + 1}</TableCell>
+                        <TableCell sx={{ fontStyle: isOther ? 'italic' : 'normal', color: isOther ? 'text.secondary' : 'text.primary' }}>
+                          {row.carrier}
+                        </TableCell>
+                        <TableCell align="right">{row.count.toLocaleString()}</TableCell>
+                        <TableCell align="right" sx={{ color: 'text.secondary' }}>{pct.toFixed(1)}%</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <Box sx={{ flex: 1, height: 8, backgroundColor: '#eceff1', borderRadius: 1, overflow: 'hidden' }}>
+                              <Box sx={{
+                                width: `${barPct}%`,
+                                height: '100%',
+                                backgroundColor: isOther ? '#b0bec5' : '#00796b'
+                              }} />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                })()}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+            No policies to aggregate
+          </Typography>
+        )}
+      </Paper>
 
       {/* Section 3: Upcoming Renewals with Time Range Tabs */}
       <Paper sx={{ p: 3, mb: 4 }}>
