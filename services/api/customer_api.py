@@ -3892,6 +3892,33 @@ def import_from_excel():
                 'details': validation_errors
             }), 400
 
+        # Shared helpers for all import sections — defined once, not per-row.
+        def parse_excel_date(val):
+            if val is None or val == '' or val == 'N/A':
+                return None
+            if isinstance(val, datetime):
+                return val.date()
+            try:
+                return parse(str(val)).date()
+            except Exception:
+                return None
+
+        def safe_int(val):
+            if val is None or val == '':
+                return None
+            try:
+                return int(val)
+            except (TypeError, ValueError):
+                return None
+
+        def safe_decimal(val):
+            if val is None or val == '' or val == 'N/A':
+                return None
+            try:
+                return float(val)
+            except (TypeError, ValueError):
+                return None
+
         stats = {
             'clients_created': 0,
             'individuals_created': 0,
@@ -4012,7 +4039,11 @@ def import_from_excel():
                     error_rows_clients.append((row, str(e)))
                     stats['errors'].append(f"Clients row {row_idx}: {str(e)}")
 
-        session.flush()  # Flush to ensure clients are available for FK references
+        session.flush()
+
+        # Pre-build lookup dicts so benefits/commercial/personal don't
+        # issue a per-row DB query to resolve FKs (the main perf bottleneck).
+        client_by_tax_id = {c.tax_id: c for c in session.query(Client).all()}
 
         # ========== IMPORT INDIVIDUALS ==========
         if 'Individuals' in wb.sheetnames:
@@ -4046,7 +4077,8 @@ def import_from_excel():
                     error_rows_individuals.append((row, str(e)))
                     stats['errors'].append(f"Individuals row {row_idx}: {str(e)}")
 
-        session.flush()  # Flush to ensure individuals are available for FK references
+        session.flush()
+        individual_by_id = {ind.individual_id: ind for ind in session.query(Individual).all()}
 
         # ========== IMPORT EMPLOYEE BENEFITS ==========
         if 'Employee Benefits' in wb.sheetnames:
@@ -4120,29 +4152,11 @@ def import_from_excel():
                     if not tax_id:
                         continue
 
-                    client = session.query(Client).filter_by(tax_id=tax_id).first()
+                    client = client_by_tax_id.get(tax_id)
                     if not client:
                         error_rows_benefits.append((row, f"Client with tax_id {tax_id} not found"))
                         stats['errors'].append(f"Benefits row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
-
-                    def parse_excel_date(val):
-                        if val is None or val == '' or val == 'N/A':
-                            return None
-                        if isinstance(val, datetime):
-                            return val.date()
-                        try:
-                            return parse(str(val)).date()
-                        except:
-                            return None
-
-                    def safe_int(val):
-                        if val is None or val == '':
-                            return None
-                        try:
-                            return int(val)
-                        except:
-                            return None
 
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
@@ -4355,29 +4369,11 @@ def import_from_excel():
                     if not tax_id:
                         continue
 
-                    client = session.query(Client).filter_by(tax_id=tax_id).first()
+                    client = client_by_tax_id.get(tax_id)
                     if not client:
                         error_rows_commercial.append((row, f"Client with tax_id {tax_id} not found"))
                         stats['errors'].append(f"Commercial row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
-
-                    def parse_excel_date(val):
-                        if val is None or val == '' or val == 'N/A':
-                            return None
-                        if isinstance(val, datetime):
-                            return val.date()
-                        try:
-                            return parse(str(val)).date()
-                        except:
-                            return None
-
-                    def safe_decimal(val):
-                        if val is None or val == '' or val == 'N/A':
-                            return None
-                        try:
-                            return float(val)
-                        except:
-                            return None
 
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
@@ -4543,29 +4539,11 @@ def import_from_excel():
                     if not ind_id:
                         continue
 
-                    ind = session.query(Individual).filter_by(individual_id=ind_id).first()
+                    ind = individual_by_id.get(ind_id)
                     if not ind:
                         error_rows_personal.append((row, f"Individual with id {ind_id} not found"))
                         stats['errors'].append(f"Personal row {row_idx}: Individual with id {ind_id} not found")
                         continue
-
-                    def parse_excel_date_p(val):
-                        if val is None or val == '' or val == 'N/A':
-                            return None
-                        if isinstance(val, datetime):
-                            return val.date()
-                        try:
-                            return parse(str(val)).date()
-                        except:
-                            return None
-
-                    def safe_decimal_p(val):
-                        if val is None or val == '' or val == 'N/A':
-                            return None
-                        try:
-                            return float(val)
-                        except:
-                            return None
 
                     def safe_val_p(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
@@ -4581,9 +4559,9 @@ def import_from_excel():
                                 val = safe_val_p(start_col + fi)
                                 key = f'{prefix}_{field_suffix}'
                                 if field_suffix in date_fields:
-                                    personal_data[key] = parse_excel_date_p(val)
+                                    personal_data[key] = parse_excel_date(val)
                                 elif field_suffix in premium_fields:
-                                    personal_data[key] = safe_decimal_p(val)
+                                    personal_data[key] = safe_decimal(val)
                                 elif field_suffix in integer_fields:
                                     personal_data[key] = int(val) if val else None
                                 else:
