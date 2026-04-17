@@ -26,7 +26,20 @@ try:
 except ImportError:
     from chat import chat_with_ollama
 
+from logging.handlers import RotatingFileHandler
+
+LOG_DIR = os.environ.get('LOG_DIR',
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', '..', 'logs'))
+os.makedirs(LOG_DIR, exist_ok=True)
+
+_log_formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
+_file_handler = RotatingFileHandler(
+    os.path.join(LOG_DIR, 'api.log'), maxBytes=5*1024*1024, backupCount=3)
+_file_handler.setFormatter(_log_formatter)
+_file_handler.setLevel(logging.INFO)
+
 logging.basicConfig(level=logging.DEBUG)
+logging.getLogger().addHandler(_file_handler)
 
 # Serve React build in production (static_folder points to React build output)
 static_folder = os.environ.get('STATIC_FOLDER',
@@ -3936,7 +3949,7 @@ def import_from_excel():
         error_rows_personal = []
 
         # ========== DELETE ALL EXISTING DATA ==========
-        # Delete child records first to respect FK constraints
+        logging.info("[IMPORT] Clearing existing data...")
         session.query(HomeownersPolicy).delete()
         session.query(BenefitPlan).delete()
         session.query(CommercialPlan).delete()
@@ -3947,8 +3960,13 @@ def import_from_excel():
         session.query(Individual).delete()
         session.query(Client).delete()
         session.flush()
+        logging.info("[IMPORT] Existing data cleared")
+
+        import time as _time
+        _import_start = _time.time()
 
         # ========== IMPORT CLIENTS ==========
+        logging.info("[IMPORT] Starting Clients sheet...")
         imported_clients = {}  # tax_id -> Client object (for handling duplicates in xlsx)
         if 'Clients' in wb.sheetnames:
             ws_clients = wb['Clients']
@@ -4035,17 +4053,21 @@ def import_from_excel():
                     for cd in parsed_contacts:
                         session.add(ClientContact(client_id=client.id, **cd))
                     stats['clients_created'] += 1
+                    if stats['clients_created'] % 100 == 0:
+                        logging.info(f"[IMPORT] Clients: {stats['clients_created']} imported...")
                 except Exception as e:
                     error_rows_clients.append((row, str(e)))
                     stats['errors'].append(f"Clients row {row_idx}: {str(e)}")
 
         session.flush()
+        logging.info(f"[IMPORT] Clients done: {stats['clients_created']} records")
 
         # Pre-build lookup dicts so benefits/commercial/personal don't
         # issue a per-row DB query to resolve FKs (the main perf bottleneck).
         client_by_tax_id = {c.tax_id: c for c in session.query(Client).all()}
 
         # ========== IMPORT INDIVIDUALS ==========
+        logging.info("[IMPORT] Starting Individuals sheet...")
         if 'Individuals' in wb.sheetnames:
             ws_individuals = wb['Individuals']
             for row_idx, row in enumerate(ws_individuals.iter_rows(min_row=3, values_only=True), start=3):
@@ -4078,9 +4100,11 @@ def import_from_excel():
                     stats['errors'].append(f"Individuals row {row_idx}: {str(e)}")
 
         session.flush()
+        logging.info(f"[IMPORT] Individuals done: {stats['individuals_created']} records")
         individual_by_id = {ind.individual_id: ind for ind in session.query(Individual).all()}
 
         # ========== IMPORT EMPLOYEE BENEFITS ==========
+        logging.info("[IMPORT] Starting Employee Benefits sheet...")
         if 'Employee Benefits' in wb.sheetnames:
             ws_benefits = wb['Employee Benefits']
 
@@ -4192,6 +4216,8 @@ def import_from_excel():
                     session.add(benefit_obj)
                     session.flush()
                     stats['benefits_created'] += 1
+                    if stats['benefits_created'] % 100 == 0:
+                        logging.info(f"[IMPORT] Benefits: {stats['benefits_created']} imported...")
 
                     # Multi-plan types: create BenefitPlan child records (deduplicate by carrier)
                     for plan_type, cols_list in multi_plan_cols.items():
@@ -4233,7 +4259,10 @@ def import_from_excel():
                     error_rows_benefits.append((row, str(e)))
                     stats['errors'].append(f"Benefits row {row_idx}: {str(e)}")
 
+        logging.info(f"[IMPORT] Benefits done: {stats['benefits_created']} records")
+
         # ========== IMPORT COMMERCIAL INSURANCE ==========
+        logging.info("[IMPORT] Starting Commercial sheet...")
         if 'Commercial' in wb.sheetnames:
             ws_commercial = wb['Commercial']
 
@@ -4435,6 +4464,8 @@ def import_from_excel():
                     session.add(comm_obj)
                     session.flush()
                     stats['commercial_created'] += 1
+                    if stats['commercial_created'] % 100 == 0:
+                        logging.info(f"[IMPORT] Commercial: {stats['commercial_created']} imported...")
 
                     # Multi-plan types: create CommercialPlan child records (deduplicate by carrier+policy_number)
                     for plan_type, cols_list in comm_multi_col_map.items():
@@ -4492,7 +4523,10 @@ def import_from_excel():
                     error_rows_commercial.append((row, str(e)))
                     stats['errors'].append(f"Commercial row {row_idx}: {str(e)}")
 
+        logging.info(f"[IMPORT] Commercial done: {stats['commercial_created']} records")
+
         # ========== IMPORT PERSONAL INSURANCE ==========
+        logging.info("[IMPORT] Starting Personal sheet...")
         if 'Personal' in wb.sheetnames:
             ws_personal = wb['Personal']
 
@@ -4575,7 +4609,14 @@ def import_from_excel():
                     error_rows_personal.append((row, str(e)))
                     stats['errors'].append(f"Personal row {row_idx}: {str(e)}")
 
+        logging.info(f"[IMPORT] Personal done: {stats['personal_created']} records")
+
         session.commit()
+        elapsed = _time.time() - _import_start
+        logging.info(f"[IMPORT] Complete in {elapsed:.1f}s — "
+                     f"clients={stats['clients_created']}, individuals={stats['individuals_created']}, "
+                     f"benefits={stats['benefits_created']}, commercial={stats['commercial_created']}, "
+                     f"personal={stats['personal_created']}, errors={len(stats['errors'])}")
 
         # ========== BUILD ERRORS WORKBOOK ==========
         response_data = {

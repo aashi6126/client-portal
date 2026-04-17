@@ -495,6 +495,13 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     return clients.filter(c => c.status === 'Prospect');
   }, [clients]);
 
+  const clientsWithPolicies = useMemo(() => {
+    const ids = new Set();
+    benefits.forEach(b => ids.add(b.tax_id));
+    commercial.forEach(c => ids.add(c.tax_id));
+    return ids;
+  }, [benefits, commercial]);
+
   // Open edit modal for a policy item (used by action items and renewals)
   const handleEditItem = (taxId, source, prefix) => {
     if (source === 'Benefits') {
@@ -653,172 +660,6 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           </Paper>
         </Box>
       </Box>
-
-      {/* Section 2: Policy Aggregations (by Industry + by Coverage Type) */}
-      <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
-        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
-            <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
-            Policies by Industry
-          </Typography>
-          <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
-            Top 10 of <strong>{namedIndustryCount}</strong> industries · Unspecified: <strong>{unspecifiedCount}</strong>
-          </Typography>
-          {topIndustries.length > 0 ? (
-            <Box sx={{ flex: 1, minHeight: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={topIndustries}
-                  layout="vertical"
-                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
-                  barCategoryGap="20%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="industry"
-                    tick={{ fontSize: 11 }}
-                    width={150}
-                    interval={0}
-                    tickFormatter={(v) => v.length > 20 ? v.slice(0, 19) + '…' : v}
-                  />
-                  <Tooltip formatter={(value) => [value, 'Policies']} />
-                  <Bar dataKey="count" fill="#4caf50" label={{ position: 'right', fontSize: 10, fill: '#555' }} />
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          ) : (
-            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No policies to aggregate
-            </Typography>
-          )}
-        </Paper>
-
-        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
-          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
-            <SecurityIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
-            Policies by Coverage Type
-          </Typography>
-          <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
-            Total: <strong>{policyAgg.by_coverage_type.reduce((s, r) => s + r.count, 0)}</strong>
-          </Typography>
-          {policyAgg.by_coverage_type.length > 0 ? (
-            <Box sx={{ flex: 1, minHeight: 320 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={policyAgg.by_coverage_type}
-                  layout="vertical"
-                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
-                  barCategoryGap="15%"
-                >
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
-                  <YAxis
-                    type="category"
-                    dataKey="coverage_type"
-                    tick={{ fontSize: 11 }}
-                    width={110}
-                    interval={0}
-                  />
-                  <Tooltip
-                    formatter={(value, _name, item) => {
-                      const cat = item?.payload?.category;
-                      const catLabel = cat === 'benefits' ? 'Benefits' : cat === 'commercial' ? 'Commercial' : 'Personal';
-                      return [value, `Policies (${catLabel})`];
-                    }}
-                  />
-                  <Legend
-                    verticalAlign="top"
-                    height={24}
-                    iconType="square"
-                    wrapperStyle={{ fontSize: 11 }}
-                    payload={[
-                      { value: 'Employee Benefits', type: 'square', color: '#fb8c00' },
-                      { value: 'Commercial', type: 'square', color: '#1976d2' },
-                      { value: 'Personal', type: 'square', color: '#9c27b0' }
-                    ]}
-                  />
-                  <Bar dataKey="count" label={{ position: 'right', fontSize: 10, fill: '#555' }}>
-                    {policyAgg.by_coverage_type.map((entry, idx) => (
-                      <Cell
-                        key={`cov-${idx}`}
-                        fill={entry.category === 'benefits' ? '#fb8c00' : entry.category === 'commercial' ? '#1976d2' : '#9c27b0'}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </Box>
-          ) : (
-            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-              No policies to aggregate
-            </Typography>
-          )}
-        </Paper>
-      </Box>
-
-      {/* Section 2b: Policies by Carrier — compact sortable table with inline bars */}
-      <Paper sx={{ p: 2, mb: 4 }}>
-        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
-          <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
-          Policies by Carrier
-        </Typography>
-        <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1, display: 'block' }}>
-          Top {CARRIER_TOP_N} of <strong>{policyAgg.by_carrier.length}</strong> carriers · Total: <strong>{policyAgg.by_carrier.reduce((s, r) => s + r.count, 0)}</strong> policies
-        </Typography>
-        {topCarriers.length > 0 ? (
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 50, fontWeight: 'bold' }}>#</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Carrier</TableCell>
-                  <TableCell align="right" sx={{ width: 80, fontWeight: 'bold' }}>Policies</TableCell>
-                  <TableCell align="right" sx={{ width: 70, fontWeight: 'bold' }}>Share</TableCell>
-                  <TableCell sx={{ width: '30%', fontWeight: 'bold' }}></TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {(() => {
-                  const total = policyAgg.by_carrier.reduce((s, r) => s + r.count, 0) || 1;
-                  const maxCount = topCarriers[0]?.count || 1;
-                  return topCarriers.map((row, idx) => {
-                    const isOther = row.carrier.startsWith('Other (');
-                    const pct = (row.count / total) * 100;
-                    const barPct = (row.count / maxCount) * 100;
-                    return (
-                      <TableRow key={`carrier-${idx}`} hover>
-                        <TableCell sx={{ color: 'text.secondary' }}>{isOther ? '' : idx + 1}</TableCell>
-                        <TableCell sx={{ fontStyle: isOther ? 'italic' : 'normal', color: isOther ? 'text.secondary' : 'text.primary' }}>
-                          {row.carrier}
-                        </TableCell>
-                        <TableCell align="right">{row.count.toLocaleString()}</TableCell>
-                        <TableCell align="right" sx={{ color: 'text.secondary' }}>{pct.toFixed(1)}%</TableCell>
-                        <TableCell>
-                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            <Box sx={{ flex: 1, height: 8, backgroundColor: '#eceff1', borderRadius: 1, overflow: 'hidden' }}>
-                              <Box sx={{
-                                width: `${barPct}%`,
-                                height: '100%',
-                                backgroundColor: isOther ? '#b0bec5' : '#00796b'
-                              }} />
-                            </Box>
-                          </Box>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  });
-                })()}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        ) : (
-          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-            No policies to aggregate
-          </Typography>
-        )}
-      </Paper>
 
       {/* Section 3: Upcoming Renewals with Time Range Tabs */}
       <Paper sx={{ p: 3, mb: 4 }}>
@@ -983,7 +824,14 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       sx={{ backgroundColor: isOverdue ? '#ffebee' : item.due_date ? '#fff3e0' : 'inherit', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
                       onClick={() => handleEditItem(item.tax_id, item.source, item.prefix)}
                     >
-                      <TableCell><strong>{item.client_name}</strong></TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {!clientsWithPolicies.has(item.tax_id) && (
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#fb8c00', flexShrink: 0 }} title="No policies" />
+                          )}
+                          <strong>{item.client_name}</strong>
+                        </Box>
+                      </TableCell>
                       <TableCell>{item.policy}</TableCell>
                       <TableCell>
                         <Chip label={item.source} size="small" color={item.source === 'Benefits' ? 'warning' : item.source === 'Commercial' ? 'info' : 'default'} sx={{ fontSize: '0.75rem' }} />
@@ -1031,7 +879,14 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       sx={{ cursor: 'pointer', '&:hover': { backgroundColor: '#f5f5f5' } }}
                       onClick={() => onNavigateToTab && onNavigateToTab(1)}
                     >
-                      <TableCell><strong>{client.client_name}</strong></TableCell>
+                      <TableCell>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                          {!clientsWithPolicies.has(client.tax_id) && (
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#fb8c00', flexShrink: 0 }} title="No policies" />
+                          )}
+                          <strong>{client.client_name}</strong>
+                        </Box>
+                      </TableCell>
                       <TableCell>{client.tax_id}</TableCell>
                       <TableCell>{client.email || '—'}</TableCell>
                       <TableCell>{client.phone || '—'}</TableCell>
@@ -1244,6 +1099,172 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
               All commercial clients have full coverage
             </Typography>
           )
+        )}
+      </Paper>
+
+      {/* Policy Aggregations: by Industry + by Coverage Type */}
+      <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
+        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+            Policies by Industry
+          </Typography>
+          <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
+            Top 10 of <strong>{namedIndustryCount}</strong> industries · Unspecified: <strong>{unspecifiedCount}</strong>
+          </Typography>
+          {topIndustries.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={topIndustries}
+                  layout="vertical"
+                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
+                  barCategoryGap="20%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="industry"
+                    tick={{ fontSize: 11 }}
+                    width={150}
+                    interval={0}
+                    tickFormatter={(v) => v.length > 20 ? v.slice(0, 19) + '…' : v}
+                  />
+                  <Tooltip formatter={(value) => [value, 'Policies']} />
+                  <Bar dataKey="count" fill="#4caf50" label={{ position: 'right', fontSize: 10, fill: '#555' }} />
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No policies to aggregate
+            </Typography>
+          )}
+        </Paper>
+
+        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+          <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
+            <SecurityIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+            Policies by Coverage Type
+          </Typography>
+          <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1 }}>
+            Total: <strong>{policyAgg.by_coverage_type.reduce((s, r) => s + r.count, 0)}</strong>
+          </Typography>
+          {policyAgg.by_coverage_type.length > 0 ? (
+            <Box sx={{ flex: 1, minHeight: 320 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart
+                  data={policyAgg.by_coverage_type}
+                  layout="vertical"
+                  margin={{ top: 5, right: 40, left: 10, bottom: 5 }}
+                  barCategoryGap="15%"
+                >
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                  <XAxis type="number" tick={{ fontSize: 10 }} allowDecimals={false} />
+                  <YAxis
+                    type="category"
+                    dataKey="coverage_type"
+                    tick={{ fontSize: 11 }}
+                    width={110}
+                    interval={0}
+                  />
+                  <Tooltip
+                    formatter={(value, _name, item) => {
+                      const cat = item?.payload?.category;
+                      const catLabel = cat === 'benefits' ? 'Benefits' : cat === 'commercial' ? 'Commercial' : 'Personal';
+                      return [value, `Policies (${catLabel})`];
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="top"
+                    height={24}
+                    iconType="square"
+                    wrapperStyle={{ fontSize: 11 }}
+                    payload={[
+                      { value: 'Employee Benefits', type: 'square', color: '#fb8c00' },
+                      { value: 'Commercial', type: 'square', color: '#1976d2' },
+                      { value: 'Personal', type: 'square', color: '#9c27b0' }
+                    ]}
+                  />
+                  <Bar dataKey="count" label={{ position: 'right', fontSize: 10, fill: '#555' }}>
+                    {policyAgg.by_coverage_type.map((entry, idx) => (
+                      <Cell
+                        key={`cov-${idx}`}
+                        fill={entry.category === 'benefits' ? '#fb8c00' : entry.category === 'commercial' ? '#1976d2' : '#9c27b0'}
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </Box>
+          ) : (
+            <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+              No policies to aggregate
+            </Typography>
+          )}
+        </Paper>
+      </Box>
+
+      {/* Policies by Carrier — compact sortable table with inline bars */}
+      <Paper sx={{ p: 2, mb: 4 }}>
+        <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
+          <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
+          Policies by Carrier
+        </Typography>
+        <Typography variant="caption" color="text.secondary" gutterBottom sx={{ mb: 1, display: 'block' }}>
+          Top {CARRIER_TOP_N} of <strong>{policyAgg.by_carrier.length}</strong> carriers · Total: <strong>{policyAgg.by_carrier.reduce((s, r) => s + r.count, 0)}</strong> policies
+        </Typography>
+        {topCarriers.length > 0 ? (
+          <TableContainer>
+            <Table size="small">
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ width: 50, fontWeight: 'bold' }}>#</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Carrier</TableCell>
+                  <TableCell align="right" sx={{ width: 80, fontWeight: 'bold' }}>Policies</TableCell>
+                  <TableCell align="right" sx={{ width: 70, fontWeight: 'bold' }}>Share</TableCell>
+                  <TableCell sx={{ width: '30%', fontWeight: 'bold' }}></TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {(() => {
+                  const total = policyAgg.by_carrier.reduce((s, r) => s + r.count, 0) || 1;
+                  const maxCount = topCarriers[0]?.count || 1;
+                  return topCarriers.map((row, idx) => {
+                    const isOther = row.carrier.startsWith('Other (');
+                    const pct = (row.count / total) * 100;
+                    const barPct = (row.count / maxCount) * 100;
+                    return (
+                      <TableRow key={`carrier-${idx}`} hover>
+                        <TableCell sx={{ color: 'text.secondary' }}>{isOther ? '' : idx + 1}</TableCell>
+                        <TableCell sx={{ fontStyle: isOther ? 'italic' : 'normal', color: isOther ? 'text.secondary' : 'text.primary' }}>
+                          {row.carrier}
+                        </TableCell>
+                        <TableCell align="right">{row.count.toLocaleString()}</TableCell>
+                        <TableCell align="right" sx={{ color: 'text.secondary' }}>{pct.toFixed(1)}%</TableCell>
+                        <TableCell>
+                          <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
+                            <Box sx={{ flex: 1, height: 8, backgroundColor: '#eceff1', borderRadius: 1, overflow: 'hidden' }}>
+                              <Box sx={{
+                                width: `${barPct}%`,
+                                height: '100%',
+                                backgroundColor: isOther ? '#b0bec5' : '#00796b'
+                              }} />
+                            </Box>
+                          </Box>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  });
+                })()}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        ) : (
+          <Typography variant="caption" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
+            No policies to aggregate
+          </Typography>
         )}
       </Paper>
     </Box>

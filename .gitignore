@@ -46,3 +46,6 @@ config.env
 backups/*.xlsx
 backups/*.log
 .backup_heartbeat
+
+# Logs
+logs/

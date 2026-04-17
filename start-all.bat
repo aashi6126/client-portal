@@ -46,6 +46,7 @@ if defined BACKUP_DIR (
     if not exist "%BACKUP_DIR%" mkdir "%BACKUP_DIR%"
 )
 if not exist "%~dp0backups" mkdir "%~dp0backups"
+if not exist "%~dp0logs" mkdir "%~dp0logs"
 
 echo [DEBUG] Step 5: Check Python venv...
 REM --- Check Python venv ---
