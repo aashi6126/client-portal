@@ -3848,7 +3848,49 @@ def import_from_excel():
         if not file.filename.endswith(('.xlsx', '.xls')):
             return jsonify({'error': 'Invalid file format. Please upload an Excel file (.xlsx or .xls)'}), 400
 
-        wb = load_workbook(file)
+        try:
+            wb = load_workbook(file)
+        except Exception as e:
+            return jsonify({'error': f'Unable to read Excel file: {e}'}), 400
+
+        # ========== VALIDATE WORKBOOK STRUCTURE ==========
+        # Verify the file has the expected sheets and column headers BEFORE
+        # deleting any data — uploading a random spreadsheet must not wipe
+        # the database.
+        EXPECTED_SHEETS = ['Clients', 'Individuals', 'Employee Benefits', 'Commercial', 'Personal']
+        REQUIRED_HEADERS = {
+            'Clients': ['Tax ID', 'Client Name'],
+            'Individuals': ['Individual ID', 'First Name', 'Last Name'],
+            'Employee Benefits': ['Tax ID', 'Client Name'],
+            'Commercial': ['Tax ID', 'Client Name'],
+            'Personal': ['Individual ID', 'Individual Name'],
+        }
+
+        present_sheets = [s for s in EXPECTED_SHEETS if s in wb.sheetnames]
+        if not present_sheets:
+            return jsonify({
+                'error': f'No recognized sheets found. Expected at least one of: {", ".join(EXPECTED_SHEETS)}. '
+                         f'Found: {", ".join(wb.sheetnames)}'
+            }), 400
+
+        validation_errors = []
+        for sheet_name in present_sheets:
+            ws = wb[sheet_name]
+            header_row = [str(c.value).strip() if c.value else '' for c in ws[2]]
+            required = REQUIRED_HEADERS[sheet_name]
+            for idx, expected_col in enumerate(required):
+                actual = header_row[idx] if idx < len(header_row) else ''
+                if actual.lower() != expected_col.lower():
+                    validation_errors.append(
+                        f'Sheet "{sheet_name}": expected column {idx+1} to be "{expected_col}", '
+                        f'got "{actual or "(empty)"}"'
+                    )
+
+        if validation_errors:
+            return jsonify({
+                'error': 'Excel structure validation failed',
+                'details': validation_errors
+            }), 400
 
         stats = {
             'clients_created': 0,
