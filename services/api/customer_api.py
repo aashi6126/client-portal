@@ -6,7 +6,7 @@ import logging
 import ipaddress
 from flask import Flask, jsonify, request, send_file, abort
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, timedelta
+from datetime import datetime, date, timedelta
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy import create_engine, func, or_
 from dateutil.parser import parse
@@ -3924,6 +3924,32 @@ def import_from_excel():
             except (TypeError, ValueError):
                 return None
 
+        def clean_remarks(val):
+            """Replace date/timestamp values in remarks with N/A.
+            Excel auto-formatting can silently convert text to dates."""
+            if val is None or val == '':
+                return None
+            if isinstance(val, (datetime, date)):
+                return 'N/A'
+            s = str(val).strip()
+            if parse_excel_date(s) is not None and not any(c.isalpha() for c in s):
+                return 'N/A'
+            return s if s else None
+
+        def clean_premium_vs_agg(premium_val, agg_limit_val):
+            """If premium equals agg limit, the value was likely pasted wrong — zero it.
+            Agg limit may be in millions ('4') or dollars ('4,000,000')."""
+            if premium_val is None or agg_limit_val is None:
+                return premium_val
+            try:
+                p = float(premium_val)
+                a = float(str(agg_limit_val).replace(',', ''))
+                if p > 0 and (p == a or p == a * 1_000_000):
+                    return 0
+            except (TypeError, ValueError):
+                pass
+            return premium_val
+
         def safe_decimal(val):
             if val is None or val == '' or val == 'N/A':
                 return None
@@ -4208,7 +4234,7 @@ def import_from_excel():
                         if carrier_col is not None:
                             benefit_data[f'{prefix}_carrier'] = safe_val(carrier_col)
                         if remarks_col is not None:
-                            benefit_data[f'{prefix}_remarks'] = safe_val(remarks_col)
+                            benefit_data[f'{prefix}_remarks'] = clean_remarks(safe_val(remarks_col))
                         if oi_col is not None:
                             benefit_data[f'{prefix}_outstanding_item'] = safe_val(oi_col)
 
@@ -4227,7 +4253,7 @@ def import_from_excel():
                             carrier = safe_val(carrier_col)
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
                             wp_val = safe_val(wp_col) if wp_col is not None else None
-                            remarks_val = safe_val(remarks_col) if remarks_col is not None else None
+                            remarks_val = clean_remarks(safe_val(remarks_col)) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
                             if carrier or renewal:
                                 dedup_key = str(carrier or '').strip().lower()
@@ -4436,9 +4462,10 @@ def import_from_excel():
                             else:
                                 commercial_data[f'{prefix}_occ_limit'] = format_limit(occ_limit_val)
                                 commercial_data[f'{prefix}_agg_limit'] = format_limit(agg_limit_val)
-                            commercial_data[f'{prefix}_premium'] = safe_decimal(safe_val(sc + 5))
+                            raw_premium = safe_decimal(safe_val(sc + 5))
+                            commercial_data[f'{prefix}_premium'] = clean_premium_vs_agg(raw_premium, agg_limit_val)
                             commercial_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(sc + 6))
-                            commercial_data[f'{prefix}_remarks'] = safe_val(sc + 7)
+                            commercial_data[f'{prefix}_remarks'] = clean_remarks(safe_val(sc + 7))
                             commercial_data[f'{prefix}_outstanding_item'] = safe_val(sc + 8)
                             # GL endorsements (7 extra columns after the base 9)
                             if prefix == 'general_liability':
@@ -4478,8 +4505,9 @@ def import_from_excel():
                             occ_limit_val = format_limit(safe_val(occ_limit_col)) if occ_limit_col is not None else None
                             agg_limit_val = format_limit(safe_val(agg_limit_col)) if agg_limit_col is not None else None
                             premium = safe_decimal(safe_val(premium_col)) if premium_col is not None else None
+                            premium = clean_premium_vs_agg(premium, agg_limit_val)
                             renewal = parse_excel_date(safe_val(renewal_col)) if renewal_col is not None else None
-                            remarks_val = safe_val(remarks_col) if remarks_col is not None else None
+                            remarks_val = clean_remarks(safe_val(remarks_col)) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
                             co_ins_val = safe_val(co_ins_col) if co_ins_col is not None else None
                             if carrier or occ_limit_val or agg_limit_val or premium or renewal:
