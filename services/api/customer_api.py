@@ -4495,6 +4495,7 @@ def import_from_excel():
                         logging.info(f"[IMPORT] Commercial: {stats['commercial_created']} imported...")
 
                     # Multi-plan types: create CommercialPlan child records (deduplicate by carrier+policy_number)
+                    _multi_plan_counts = {}
                     for plan_type, cols_list in comm_multi_col_map.items():
                         seen_plans = set()  # track (carrier, policy_number) to skip duplicates
                         actual_plan_num = 0
@@ -4551,7 +4552,12 @@ def import_from_excel():
                     error_rows_commercial.append((row, str(e)))
                     stats['errors'].append(f"Commercial row {row_idx}: {str(e)}")
 
-        logging.info(f"[IMPORT] Commercial done: {stats['commercial_created']} records")
+        # Log multi-plan totals
+        _mp_totals = {}
+        for r in session.query(CommercialPlan).all():
+            _mp_totals[r.plan_type] = _mp_totals.get(r.plan_type, 0) + 1
+        logging.info(f"[IMPORT] Commercial done: {stats['commercial_created']} records, "
+                     f"multi-plan totals: {_mp_totals}")
 
         # ========== IMPORT PERSONAL INSURANCE ==========
         logging.info("[IMPORT] Starting Personal sheet...")
