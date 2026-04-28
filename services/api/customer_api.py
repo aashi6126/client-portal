@@ -4082,27 +4082,8 @@ def import_from_excel():
                     fc = parsed_contacts[0] if parsed_contacts else {}
 
                     if tax_id in imported_clients:
-                        # Duplicate tax_id in xlsx — update the existing record
-                        existing = imported_clients[tax_id]
-                        existing.client_name = row[1] if len(row) > 1 else existing.client_name
-                        existing.dba = row[2] if len(row) > 2 else existing.dba
-                        existing.industry = row[3] if len(row) > 3 else existing.industry
-                        existing.status = row[4] if len(row) > 4 and row[4] else existing.status
-                        existing.gross_revenue = float(row[5]) if len(row) > 5 and row[5] else existing.gross_revenue
-                        existing.total_ees = int(row[6]) if len(row) > 6 and row[6] else existing.total_ees
-                        if parsed_contacts:
-                            existing.contact_person = fc.get('contact_person')
-                            existing.email = fc.get('email')
-                            existing.phone_number = fc.get('phone_number')
-                            existing.address_line_1 = fc.get('address_line_1')
-                            existing.address_line_2 = fc.get('address_line_2')
-                            existing.city = fc.get('city')
-                            existing.state = fc.get('state')
-                            existing.zip_code = fc.get('zip_code')
-                            # Add new contacts (append to existing)
-                            for cd in parsed_contacts:
-                                session.add(ClientContact(client_id=existing.id, **cd))
-                        stats['clients_created'] += 1
+                        error_rows_clients.append((row, f"Duplicate tax_id {tax_id} — first occurrence kept, this row skipped"))
+                        stats['errors'].append(f"Clients row {row_idx}: Duplicate tax_id {tax_id}")
                         continue
 
                     client = Client(
@@ -4180,6 +4161,7 @@ def import_from_excel():
 
         # ========== IMPORT EMPLOYEE BENEFITS ==========
         logging.info("[IMPORT] Starting Employee Benefits sheet...")
+        _imported_benefits = set()
         if 'Employee Benefits' in wb.sheetnames:
             ws_benefits = wb['Employee Benefits']
 
@@ -4251,11 +4233,18 @@ def import_from_excel():
                     if not tax_id:
                         continue
 
+                    if tax_id in _imported_benefits:
+                        error_rows_benefits.append((row, f"Duplicate tax_id {tax_id} — first occurrence kept, this row skipped"))
+                        stats['errors'].append(f"Benefits row {row_idx}: Duplicate tax_id {tax_id}")
+                        continue
+
                     client = client_by_tax_id.get(tax_id)
                     if not client:
                         error_rows_benefits.append((row, f"Client with tax_id {tax_id} not found"))
                         stats['errors'].append(f"Benefits row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
+
+                    _imported_benefits.add(tax_id)
 
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
@@ -4336,10 +4325,12 @@ def import_from_excel():
                     error_rows_benefits.append((row, str(e)))
                     stats['errors'].append(f"Benefits row {row_idx}: {str(e)}")
 
-        logging.info(f"[IMPORT] Benefits done: {stats['benefits_created']} records")
+        logging.info(f"[IMPORT] Benefits done: {stats['benefits_created']} records, "
+                     f"{len(_imported_benefits)} unique, skipped {len(error_rows_benefits)} duplicates/errors")
 
         # ========== IMPORT COMMERCIAL INSURANCE ==========
         logging.info("[IMPORT] Starting Commercial sheet...")
+        _imported_commercial = set()
         if 'Commercial' in wb.sheetnames:
             ws_commercial = wb['Commercial']
 
@@ -4475,11 +4466,18 @@ def import_from_excel():
                     if not tax_id:
                         continue
 
+                    if tax_id in _imported_commercial:
+                        error_rows_commercial.append((row, f"Duplicate tax_id {tax_id} — first occurrence kept, this row skipped"))
+                        stats['errors'].append(f"Commercial row {row_idx}: Duplicate tax_id {tax_id}")
+                        continue
+
                     client = client_by_tax_id.get(tax_id)
                     if not client:
                         error_rows_commercial.append((row, f"Client with tax_id {tax_id} not found"))
                         stats['errors'].append(f"Commercial row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
+
+                    _imported_commercial.add(tax_id)
 
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
@@ -4546,7 +4544,6 @@ def import_from_excel():
                         logging.info(f"[IMPORT] Commercial: {stats['commercial_created']} imported...")
 
                     # Multi-plan types: create CommercialPlan child records (deduplicate by carrier+policy_number)
-                    _multi_plan_counts = {}
                     for plan_type, cols_list in comm_multi_col_map.items():
                         seen_plans = set()  # track (carrier, policy_number) to skip duplicates
                         actual_plan_num = 0
@@ -4603,15 +4600,26 @@ def import_from_excel():
                     error_rows_commercial.append((row, str(e)))
                     stats['errors'].append(f"Commercial row {row_idx}: {str(e)}")
 
-        # Log multi-plan totals
+        # Log multi-plan totals with breakdown
         _mp_totals = {}
         for r in session.query(CommercialPlan).all():
             _mp_totals[r.plan_type] = _mp_totals.get(r.plan_type, 0) + 1
         logging.info(f"[IMPORT] Commercial done: {stats['commercial_created']} records, "
+                     f"{len(_imported_commercial)} unique, skipped {len(error_rows_commercial)} duplicates/errors, "
                      f"multi-plan totals: {_mp_totals}")
+        # Log per-client umbrella details for debugging
+        _umb_by_client = {}
+        for r in session.query(CommercialPlan).filter_by(plan_type='umbrella').all():
+            comm = session.query(CommercialInsurance).get(r.commercial_insurance_id)
+            key = comm.tax_id if comm else '?'
+            _umb_by_client.setdefault(key, []).append(r.carrier)
+        _multi_umb = {k: v for k, v in _umb_by_client.items() if len(v) > 1}
+        logging.info(f"[IMPORT] Umbrella: {sum(len(v) for v in _umb_by_client.values())} plans, "
+                     f"{len(_umb_by_client)} clients, {len(_multi_umb)} with 2+ plans")
 
         # ========== IMPORT PERSONAL INSURANCE ==========
         logging.info("[IMPORT] Starting Personal sheet...")
+        _imported_personal = set()
         if 'Personal' in wb.sheetnames:
             ws_personal = wb['Personal']
 
@@ -4658,11 +4666,18 @@ def import_from_excel():
                     if not ind_id:
                         continue
 
+                    if ind_id in _imported_personal:
+                        error_rows_personal.append((row, f"Duplicate individual_id {ind_id} — first occurrence kept, this row skipped"))
+                        stats['errors'].append(f"Personal row {row_idx}: Duplicate individual_id {ind_id}")
+                        continue
+
                     ind = individual_by_id.get(ind_id)
                     if not ind:
                         error_rows_personal.append((row, f"Individual with id {ind_id} not found"))
                         stats['errors'].append(f"Personal row {row_idx}: Individual with id {ind_id} not found")
                         continue
+
+                    _imported_personal.add(ind_id)
 
                     def safe_val_p(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
