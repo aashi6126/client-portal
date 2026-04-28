@@ -1268,8 +1268,7 @@ def save_benefit_plans(session, benefit, plans_data):
     for plan_type in MULTI_PLAN_TYPES:
         for idx, plan_info in enumerate(plans_data.get(plan_type, []), 1):
             carrier = plan_info.get('carrier')
-            renewal = plan_info.get('renewal_date')
-            if carrier or renewal:
+            if carrier and str(carrier).strip():
                 plan = BenefitPlan(
                     employee_benefit_id=benefit.id,
                     plan_type=plan_type,
@@ -1308,7 +1307,7 @@ def save_commercial_plans(session, commercial, plans_data):
             occ_limit_val = plan_info.get('occ_limit')
             agg_limit_val = plan_info.get('agg_limit')
             premium_val = plan_info.get('premium')
-            if carrier or renewal or occ_limit_val or agg_limit_val or premium_val:
+            if carrier and str(carrier).strip():
                 plan = CommercialPlan(
                     commercial_insurance_id=commercial.id,
                     plan_type=plan_type,
@@ -2386,8 +2385,10 @@ def clone_commercial(commercial_id):
         session.add(new_commercial)
         session.flush()
 
-        # Clone child CommercialPlan records
+        # Clone child CommercialPlan records (skip plans with no carrier)
         for plan in original.commercial_plans:
+            if not plan.carrier or not str(plan.carrier).strip():
+                continue
             new_plan = CommercialPlan(
                 commercial_insurance_id=new_commercial.id,
                 plan_type=plan.plan_type,
