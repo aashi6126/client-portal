@@ -3268,6 +3268,93 @@ PERSONAL_SINGLE_LABELS = [
 ]
 
 
+@app.route('/api/cleanup/duplicate-plans', methods=['GET'])
+def preview_duplicate_plans():
+    """Preview multi-plan records that are clones from section boundary leak.
+    The import scanner for each type leaked into subsequent sections:
+    umbrella → E&O/Cyber/Crime, E&O → Cyber/Crime, Cyber → Crime.
+    A plan is a phantom if the same carrier exists in a later coverage type for the same client."""
+    session = Session()
+    try:
+        # Section order in the sheet — earlier types leaked into later ones
+        section_order = ['umbrella', 'professional_eo', 'cyber', 'crime']
+        commercial = session.query(CommercialInsurance).all()
+        dupes = []
+        for comm in commercial:
+            plans_by_type = {}
+            for plan in comm.commercial_plans:
+                plans_by_type.setdefault(plan.plan_type, []).append(plan)
+
+            for i, earlier_type in enumerate(section_order[:-1]):
+                later_carriers = set()
+                for later_type in section_order[i + 1:]:
+                    for p in plans_by_type.get(later_type, []):
+                        if p.carrier:
+                            later_carriers.add(p.carrier.strip().lower())
+
+                for p in plans_by_type.get(earlier_type, []):
+                    if p.carrier and p.carrier.strip().lower() in later_carriers:
+                        dupes.append({
+                            'id': p.id,
+                            'plan_type': earlier_type,
+                            'client_name': comm.client.client_name if comm.client else None,
+                            'tax_id': comm.tax_id,
+                            'carrier': p.carrier,
+                            'plan_number': p.plan_number
+                        })
+
+        from collections import Counter
+        by_type = Counter(d['plan_type'] for d in dupes)
+        return jsonify({'duplicates': dupes, 'count': len(dupes), 'by_type': dict(by_type)}), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/cleanup/duplicate-plans', methods=['DELETE'])
+def delete_duplicate_plans():
+    """Remove multi-plan records that are clones from section boundary leak."""
+    session = Session()
+    try:
+        section_order = ['umbrella', 'professional_eo', 'cyber', 'crime']
+        commercial = session.query(CommercialInsurance).all()
+        deleted = []
+        for comm in commercial:
+            plans_by_type = {}
+            for plan in comm.commercial_plans:
+                plans_by_type.setdefault(plan.plan_type, []).append(plan)
+
+            for i, earlier_type in enumerate(section_order[:-1]):
+                later_carriers = set()
+                for later_type in section_order[i + 1:]:
+                    for p in plans_by_type.get(later_type, []):
+                        if p.carrier:
+                            later_carriers.add(p.carrier.strip().lower())
+
+                for p in plans_by_type.get(earlier_type, []):
+                    if p.carrier and p.carrier.strip().lower() in later_carriers:
+                        deleted.append({
+                            'plan_type': earlier_type,
+                            'client_name': comm.client.client_name if comm.client else None,
+                            'tax_id': comm.tax_id,
+                            'carrier': p.carrier
+                        })
+                        session.delete(p)
+
+        session.commit()
+        from collections import Counter
+        by_type = Counter(d['plan_type'] for d in deleted)
+        logging.info(f"[CLEANUP] Removed {len(deleted)} duplicate plans: {dict(by_type)}")
+        return jsonify({'deleted': len(deleted), 'by_type': dict(by_type), 'details': deleted}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error in plan cleanup: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
 @app.route('/api/dashboard/policy-aggregations', methods=['GET'])
 def get_policy_aggregations():
     """Return policy counts grouped by client industry, by coverage type, and by carrier.
