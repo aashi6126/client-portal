@@ -1268,7 +1268,7 @@ def save_benefit_plans(session, benefit, plans_data):
     for plan_type in MULTI_PLAN_TYPES:
         for idx, plan_info in enumerate(plans_data.get(plan_type, []), 1):
             carrier = plan_info.get('carrier')
-            if carrier and str(carrier).strip():
+            if is_valid_carrier(carrier):
                 plan = BenefitPlan(
                     employee_benefit_id=benefit.id,
                     plan_type=plan_type,
@@ -1307,7 +1307,7 @@ def save_commercial_plans(session, commercial, plans_data):
             occ_limit_val = plan_info.get('occ_limit')
             agg_limit_val = plan_info.get('agg_limit')
             premium_val = plan_info.get('premium')
-            if carrier and str(carrier).strip():
+            if is_valid_carrier(carrier):
                 plan = CommercialPlan(
                     commercial_insurance_id=commercial.id,
                     plan_type=plan_type,
@@ -1382,6 +1382,14 @@ def save_homeowners_policies(session, personal, policies_data):
     personal.homeowners_renewal_date = parse_date(first.get('renewal_date'))
     personal.homeowners_remarks = first.get('remarks') or None
     personal.homeowners_outstanding_item = first.get('outstanding_item') or None
+
+
+def is_valid_carrier(val):
+    """Check if a carrier value is a real name, not empty/None/'None'."""
+    if val is None:
+        return False
+    s = str(val).strip()
+    return bool(s) and s.lower() != 'none'
 
 
 def parse_premium(val):
@@ -2387,7 +2395,7 @@ def clone_commercial(commercial_id):
 
         # Clone child CommercialPlan records (skip plans with no carrier)
         for plan in original.commercial_plans:
-            if not plan.carrier or not str(plan.carrier).strip():
+            if not is_valid_carrier(plan.carrier):
                 continue
             new_plan = CommercialPlan(
                 commercial_insurance_id=new_commercial.id,
@@ -4271,7 +4279,7 @@ def import_from_excel():
                     # Single-plan types — skip if carrier is empty
                     for prefix, (renewal_col, carrier_col, remarks_col, oi_col) in single_plan_col_map.items():
                         carrier_val = safe_val(carrier_col) if carrier_col is not None else None
-                        if not carrier_val or not str(carrier_val).strip():
+                        if not is_valid_carrier(carrier_val):
                             continue
                         benefit_data[f'{prefix}_carrier'] = carrier_val
                         if renewal_col is not None:
@@ -4487,9 +4495,7 @@ def import_from_excel():
                         if prefix in comm_single_col_map:
                             sc = comm_single_col_map[prefix]
                             carrier = safe_val(sc)
-                            if carrier and str(carrier).strip() == 'None':
-                                carrier = None
-                            if not carrier or not str(carrier).strip():
+                            if not is_valid_carrier(carrier):
                                 continue
                             commercial_data[f'{prefix}_carrier'] = carrier
                             commercial_data[f'{prefix}_agency'] = safe_val(sc + 1)
