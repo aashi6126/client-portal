@@ -3143,10 +3143,37 @@ def get_dashboard_renewals():
 
 @app.route('/api/dashboard/cross-sell', methods=['GET'])
 def get_cross_sell_opportunities():
-    """Get cross-sell opportunities (clients with only one type of insurance)."""
+    """Get cross-sell opportunities (clients with only one type of insurance).
+    Results sorted by earliest renewal date so the most urgent appear first."""
     session = Session()
     try:
         all_clients = session.query(Client).all()
+
+        def earliest_renewal_benefits(client):
+            dates = []
+            for b in client.employee_benefits:
+                for plan in b.plans:
+                    if plan.renewal_date:
+                        dates.append(plan.renewal_date)
+                for prefix in ['ltd', 'std', 'k401', 'critical_illness', 'accident', 'hospital', 'voluntary_life']:
+                    d = getattr(b, f'{prefix}_renewal_date', None)
+                    if d:
+                        dates.append(d)
+            return min(dates) if dates else None
+
+        def earliest_renewal_commercial(client):
+            dates = []
+            for c in client.commercial_insurance:
+                for plan in c.commercial_plans:
+                    if plan.renewal_date:
+                        dates.append(plan.renewal_date)
+                for prefix in ['general_liability', 'property', 'bop', 'workers_comp', 'auto',
+                               'epli', 'nydbl', 'surety', 'product_liability', 'flood',
+                               'directors_officers', 'fiduciary', 'inland_marine']:
+                    d = getattr(c, f'{prefix}_renewal_date', None)
+                    if d:
+                        dates.append(d)
+            return min(dates) if dates else None
 
         clients_with_benefits_only = []
         clients_with_commercial_only = []
@@ -3156,19 +3183,32 @@ def get_cross_sell_opportunities():
             has_commercial = len(client.commercial_insurance) > 0
 
             if has_benefits and not has_commercial:
+                er = earliest_renewal_benefits(client)
                 clients_with_benefits_only.append({
                     'tax_id': client.tax_id,
                     'client_name': client.client_name,
                     'contact_person': client.contact_person,
-                    'email': client.email
+                    'email': client.email,
+                    'earliest_renewal': er.isoformat() if er else None
                 })
             elif has_commercial and not has_benefits:
+                er = earliest_renewal_commercial(client)
                 clients_with_commercial_only.append({
                     'tax_id': client.tax_id,
                     'client_name': client.client_name,
                     'contact_person': client.contact_person,
-                    'email': client.email
+                    'email': client.email,
+                    'earliest_renewal': er.isoformat() if er else None
                 })
+
+        def _renewal_sort_key(c):
+            d = c.get('earliest_renewal')
+            if d and d[:4] >= '2000':
+                return d
+            return '9999-12-31'
+
+        clients_with_benefits_only.sort(key=_renewal_sort_key)
+        clients_with_commercial_only.sort(key=_renewal_sort_key)
 
         return jsonify({
             'benefits_only': clients_with_benefits_only,

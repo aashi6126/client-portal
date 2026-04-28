@@ -912,13 +912,14 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         {crossSellTab === 0 && (
           crossSell.benefits_only.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small">
+              <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Tax ID</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: 140 }}></TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Tax ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Earliest Renewal</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -930,6 +931,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                     >
                       <TableCell><strong>{client.client_name}</strong></TableCell>
                       <TableCell>{client.tax_id}</TableCell>
+                      <TableCell>{client.earliest_renewal ? formatDate(client.earliest_renewal) : '—'}</TableCell>
                       <TableCell>{client.email || '—'}</TableCell>
                       <TableCell>
                         <Button size="small" variant="outlined" sx={{ fontSize: '0.75rem', borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}>
@@ -952,13 +954,14 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         {crossSellTab === 1 && (
           crossSell.commercial_only.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small">
+              <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
                 <TableHead>
                   <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Tax ID</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: 140 }}></TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Tax ID</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Earliest Renewal</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}></TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -970,6 +973,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                     >
                       <TableCell><strong>{client.client_name}</strong></TableCell>
                       <TableCell>{client.tax_id}</TableCell>
+                      <TableCell>{client.earliest_renewal ? formatDate(client.earliest_renewal) : '—'}</TableCell>
                       <TableCell>{client.email || '—'}</TableCell>
                       <TableCell>
                         <Button size="small" variant="outlined" sx={{ fontSize: '0.75rem', borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}>
