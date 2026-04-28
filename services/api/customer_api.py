@@ -4268,12 +4268,14 @@ def import_from_excel():
                         'employee_contribution': str(row[col_employee_contribution]) if col_employee_contribution is not None and len(row) > col_employee_contribution and row[col_employee_contribution] else None
                     }
 
-                    # Single-plan types
+                    # Single-plan types — skip if carrier is empty
                     for prefix, (renewal_col, carrier_col, remarks_col, oi_col) in single_plan_col_map.items():
+                        carrier_val = safe_val(carrier_col) if carrier_col is not None else None
+                        if not carrier_val or not str(carrier_val).strip():
+                            continue
+                        benefit_data[f'{prefix}_carrier'] = carrier_val
                         if renewal_col is not None:
                             benefit_data[f'{prefix}_renewal_date'] = parse_excel_date(safe_val(renewal_col))
-                        if carrier_col is not None:
-                            benefit_data[f'{prefix}_carrier'] = safe_val(carrier_col)
                         if remarks_col is not None:
                             benefit_data[f'{prefix}_remarks'] = clean_remarks(safe_val(remarks_col))
                         if oi_col is not None:
@@ -4480,13 +4482,15 @@ def import_from_excel():
                         'assigned_to': row[3] if len(row) > 3 else None
                     }
 
-                    # Single-plan types (9 cols each: carrier, agency, policy_number, occ_limit, agg_limit, premium, renewal, remarks, outstanding_item + endorsements for GL)
+                    # Single-plan types — skip if carrier is empty
                     for prefix, label in commercial_single_import_defs:
                         if prefix in comm_single_col_map:
                             sc = comm_single_col_map[prefix]
                             carrier = safe_val(sc)
-                            if carrier and carrier == 'None':
+                            if carrier and str(carrier).strip() == 'None':
                                 carrier = None
+                            if not carrier or not str(carrier).strip():
+                                continue
                             commercial_data[f'{prefix}_carrier'] = carrier
                             commercial_data[f'{prefix}_agency'] = safe_val(sc + 1)
                             commercial_data[f'{prefix}_policy_number'] = safe_val(sc + 2)
