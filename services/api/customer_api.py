@@ -4426,10 +4426,15 @@ def import_from_excel():
             for plan_type, label in commercial_multi_import_defs:
                 if label in section_col_map:
                     start = section_col_map[label]
-                    # Count columns belonging to this section (until next section or end)
+                    # Find section end: where the next section starts
+                    section_end = len(comm_headers)
+                    for _, other_start in sorted_sections:
+                        if other_start > start:
+                            section_end = other_start
+                            break
                     plans = []
                     i = start
-                    while i < len(comm_headers):
+                    while i < section_end:
                         h = comm_headers[i].upper()
                         if 'CARRIER' in h:
                             j = i + 1
