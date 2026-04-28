@@ -80,10 +80,10 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     const fetchDashboardData = async () => {
       try {
         setLoading(true);
-        // Compute date range: from baseMonth start to baseMonth + 2 months end
+        // Fetch 12 months of renewals (chart shows full year; table tabs filter to 3)
         const [year, month] = baseMonth.split('-').map(Number);
         const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month + 2, 0); // last day of (month + 2)
+        const endDate = new Date(year, month + 11, 0); // last day of (month + 11)
         const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
         const [renewalsRes, crossSellRes, policyAggRes] = await Promise.all([
