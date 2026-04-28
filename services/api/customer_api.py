@@ -4255,8 +4255,8 @@ def import_from_excel():
                             wp_val = safe_val(wp_col) if wp_col is not None else None
                             remarks_val = clean_remarks(safe_val(remarks_col)) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
-                            if carrier or renewal:
-                                dedup_key = str(carrier or '').strip().lower()
+                            if carrier and str(carrier).strip():
+                                dedup_key = str(carrier).strip().lower()
                                 if dedup_key in seen_carriers:
                                     continue
                                 seen_carriers.add(dedup_key)
@@ -4511,9 +4511,9 @@ def import_from_excel():
                             remarks_val = clean_remarks(safe_val(remarks_col)) if remarks_col is not None else None
                             oi_val = safe_val(oi_col) if oi_col is not None else None
                             co_ins_val = safe_val(co_ins_col) if co_ins_col is not None else None
-                            if carrier or occ_limit_val or agg_limit_val or premium or renewal:
+                            if carrier and str(carrier).strip():
                                 # Skip duplicate plans (same carrier and policy number)
-                                dedup_key = (str(carrier or '').strip().lower(), str(policy_number or '').strip().lower())
+                                dedup_key = (str(carrier).strip().lower(), str(policy_number or '').strip().lower())
                                 if dedup_key in seen_plans:
                                     continue
                                 seen_plans.add(dedup_key)
