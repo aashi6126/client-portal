@@ -4244,10 +4244,29 @@ def import_from_excel():
                         stats['errors'].append(f"Benefits row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
 
-                    _imported_benefits.add(tax_id)
-
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
+
+                    # Skip row if no carrier is populated in any coverage
+                    _has_any_carrier = False
+                    for _, (_, carrier_col, _, _) in single_plan_col_map.items():
+                        if carrier_col is not None and is_valid_carrier(safe_val(carrier_col)):
+                            _has_any_carrier = True
+                            break
+                    if not _has_any_carrier:
+                        for _, cols_list in multi_plan_cols.items():
+                            for _, (carrier_col, *_rest) in enumerate(cols_list, 1):
+                                if is_valid_carrier(safe_val(carrier_col)):
+                                    _has_any_carrier = True
+                                    break
+                            if _has_any_carrier:
+                                break
+                    if not _has_any_carrier:
+                        error_rows_benefits.append((row, f"No carrier found in any coverage — row skipped"))
+                        stats['errors'].append(f"Benefits row {row_idx}: No carrier in any coverage for {tax_id}")
+                        continue
+
+                    _imported_benefits.add(tax_id)
 
                     benefit_data = {
                         'tax_id': tax_id,
@@ -4477,10 +4496,29 @@ def import_from_excel():
                         stats['errors'].append(f"Commercial row {row_idx}: Client with tax_id {tax_id} not found")
                         continue
 
-                    _imported_commercial.add(tax_id)
-
                     def safe_val(idx):
                         return row[idx] if len(row) > idx and row[idx] else None
+
+                    # Skip row if no carrier is populated in any coverage
+                    _has_any_carrier = False
+                    for prefix in comm_single_col_map:
+                        if is_valid_carrier(safe_val(comm_single_col_map[prefix])):
+                            _has_any_carrier = True
+                            break
+                    if not _has_any_carrier:
+                        for _, cols_list in comm_multi_col_map.items():
+                            for _, (carrier_col, *_rest) in enumerate(cols_list, 1):
+                                if is_valid_carrier(safe_val(carrier_col)):
+                                    _has_any_carrier = True
+                                    break
+                            if _has_any_carrier:
+                                break
+                    if not _has_any_carrier:
+                        error_rows_commercial.append((row, f"No carrier found in any coverage — row skipped"))
+                        stats['errors'].append(f"Commercial row {row_idx}: No carrier in any coverage for {tax_id}")
+                        continue
+
+                    _imported_commercial.add(tax_id)
 
                     commercial_data = {
                         'tax_id': tax_id,
