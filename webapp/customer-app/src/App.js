@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import CssBaseline from '@mui/material/CssBaseline';
 import {
   AppBar,
   Box,
@@ -68,6 +70,45 @@ const API_BENEFITS = '/api/benefits';
 const API_COMMERCIAL = '/api/commercial';
 const API_PERSONAL = '/api/personal';
 const API_FEEDBACK = '/api/feedback';
+
+const theme = createTheme({
+  typography: {
+    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+    fontSize: 13,
+    h3: { fontWeight: 700 },
+    h4: { fontWeight: 700 },
+    h5: { fontWeight: 700 },
+    h6: { fontWeight: 600 },
+    subtitle1: { fontWeight: 600 },
+    subtitle2: { fontWeight: 600 },
+    body2: { fontSize: '0.8125rem' },
+    caption: { fontSize: '0.7rem' },
+    button: { fontWeight: 600, textTransform: 'none' },
+  },
+  components: {
+    MuiTableCell: {
+      styleOverrides: {
+        root: { fontSize: '0.8125rem' },
+        head: { fontWeight: 600 },
+      },
+    },
+    MuiButton: {
+      styleOverrides: {
+        root: { textTransform: 'none', borderRadius: 6 },
+      },
+    },
+    MuiPaper: {
+      styleOverrides: {
+        root: { borderRadius: 8 },
+      },
+    },
+    MuiCard: {
+      styleOverrides: {
+        root: { borderRadius: 8 },
+      },
+    },
+  },
+});
 
 function NewApp() {
   // Tab state
@@ -679,7 +720,9 @@ function NewApp() {
   };
 
   return (
-    <Box>
+    <ThemeProvider theme={theme}>
+    <CssBaseline />
+    <Box sx={{ backgroundColor: '#1a1a2e', minHeight: '100vh' }}>
       {/* Hidden file input for import */}
       <input
         type="file"
@@ -690,7 +733,7 @@ function NewApp() {
       />
 
       {/* Header */}
-      <AppBar position="static" elevation={0} sx={{ background: '#16213e', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+      <AppBar position="static" elevation={0} sx={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <Toolbar variant="dense" sx={{ minHeight: 44, px: 2 }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.5, mr: 3 }}>
             Client Hub
@@ -762,7 +805,7 @@ function NewApp() {
             },
           }}
         >
-          <List sx={{ pt: 0.5, px: 1 }}>
+          <List sx={{ pt: 0.5, px: 0.5 }}>
             {[
               { label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
               { label: 'Clients', icon: <BusinessIcon fontSize="small" /> },
@@ -779,8 +822,8 @@ function NewApp() {
                 onClick={() => setActiveTab(index)}
                 sx={{
                   py: 0.8,
-                  my: 0.3,
-                  borderRadius: 1.5,
+                  my: 0.2,
+                  borderRadius: 0.5,
                   '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
                   '&.Mui-selected': {
                     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -805,7 +848,7 @@ function NewApp() {
         </Drawer>
 
         {/* Main Content */}
-        <Box sx={{ flexGrow: 1, px: 3, py: 2, overflow: 'auto', height: 'calc(100vh - 56px)', backgroundColor: '#f5f6fa' }}>
+        <Box sx={{ flexGrow: 1, px: 3, py: 1, overflow: 'auto', height: 'calc(100vh - 44px)', backgroundColor: '#f5f6fa' }}>
 
         {/* Tab 0: Dashboard */}
         {activeTab === 0 && (
@@ -1228,6 +1271,7 @@ function NewApp() {
       </Dialog>
       <ChatBubble />
     </Box>
+    </ThemeProvider>
   );
 }
 
