@@ -32,6 +32,19 @@ import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import FileUploadIcon from '@mui/icons-material/FileUpload';
 import DeleteIcon from '@mui/icons-material/Delete';
 import MenuItem from '@mui/material/MenuItem';
+import Drawer from '@mui/material/Drawer';
+import List from '@mui/material/List';
+import ListItemButton from '@mui/material/ListItemButton';
+import ListItemIcon from '@mui/material/ListItemIcon';
+import ListItemText from '@mui/material/ListItemText';
+import DashboardIcon from '@mui/icons-material/Dashboard';
+import BusinessIcon from '@mui/icons-material/Business';
+import PeopleIcon from '@mui/icons-material/People';
+import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
+import SecurityIcon from '@mui/icons-material/Security';
+import PersonIcon from '@mui/icons-material/Person';
+import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
+import FeedbackIcon from '@mui/icons-material/Feedback';
 
 // Import new components
 import Dashboard from './components/Dashboard';
@@ -677,86 +690,122 @@ function NewApp() {
       />
 
       {/* Header */}
-      <AppBar position="static" sx={{ background: 'linear-gradient(to left, #000000, #434343)' }}>
-        <Container maxWidth="xl">
-          <Toolbar sx={{ minHeight: '48px', py: 1, px: 0 }}>
-            <Typography variant="h5" sx={{ flexGrow: 1, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-              Client Hub
-              <Tooltip title={apiStatus === 'up' ? 'API Connected' : apiStatus === 'down' ? 'API Disconnected' : 'Checking...'}>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Box
-                    sx={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: '50%',
-                      backgroundColor: apiStatus === 'up' ? '#4caf50' : apiStatus === 'down' ? '#f44336' : '#ff9800',
-                      boxShadow: apiStatus === 'up' ? '0 0 6px #4caf50' : apiStatus === 'down' ? '0 0 6px #f44336' : 'none',
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.85 }}>API</Typography>
-                </Box>
-              </Tooltip>
-              <Tooltip title={
-                backupStatus.status === 'ok'
-                  ? `Backup scheduler running (last heartbeat: ${backupStatus.last_heartbeat ? new Date(backupStatus.last_heartbeat).toLocaleString() : 'unknown'})`
-                  : backupStatus.status === 'down'
-                    ? `Backup scheduler down — ${backupStatus.reason || 'no recent heartbeat'}`
-                    : 'Checking backup scheduler...'
-              }>
-                <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                  <Box
-                    sx={{
-                      width: 10,
-                      height: 10,
-                      borderRadius: '50%',
-                      backgroundColor: backupStatus.status === 'ok' ? '#4caf50' : backupStatus.status === 'down' ? '#f44336' : '#ff9800',
-                      boxShadow: backupStatus.status === 'ok' ? '0 0 6px #4caf50' : backupStatus.status === 'down' ? '0 0 6px #f44336' : 'none',
-                    }}
-                  />
-                  <Typography variant="caption" sx={{ fontSize: '0.7rem', opacity: 0.85 }}>Backup</Typography>
-                </Box>
-              </Tooltip>
-            </Typography>
-            <Stack direction="row" spacing={1}>
-              <Button
-                variant="outlined"
-                color="inherit"
-                startIcon={<FileUploadIcon />}
-                onClick={handleImportClick}
-                disabled={!isAdmin || importing}
-                size="small"
-              >
-                {importing ? 'Importing...' : 'Import'}
-              </Button>
-              <Button
-                variant="outlined"
-                color="inherit"
-                startIcon={<FileDownloadIcon />}
-                onClick={handleExport}
-                disabled={!isAdmin}
-                size="small"
-              >
-                Export
-              </Button>
-            </Stack>
-          </Toolbar>
-        </Container>
+      <AppBar position="static" elevation={0} sx={{ background: '#16213e', borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
+        <Toolbar variant="dense" sx={{ minHeight: 44, px: 2 }}>
+          <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.5, mr: 3 }}>
+            Client Hub
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Tooltip title={apiStatus === 'up' ? 'API Connected' : apiStatus === 'down' ? 'API Disconnected' : 'Checking...'}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: apiStatus === 'up' ? '#4caf50' : apiStatus === 'down' ? '#f44336' : '#ff9800' }} />
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.7 }}>API</Typography>
+              </Box>
+            </Tooltip>
+            <Tooltip title={
+              backupStatus.status === 'ok'
+                ? `Backup scheduler running (last heartbeat: ${backupStatus.last_heartbeat ? new Date(backupStatus.last_heartbeat).toLocaleString() : 'unknown'})`
+                : backupStatus.status === 'down'
+                  ? `Backup scheduler down — ${backupStatus.reason || 'no recent heartbeat'}`
+                  : 'Checking backup scheduler...'
+            }>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.4 }}>
+                <Box sx={{ width: 7, height: 7, borderRadius: '50%', backgroundColor: backupStatus.status === 'ok' ? '#4caf50' : backupStatus.status === 'down' ? '#f44336' : '#ff9800' }} />
+                <Typography variant="caption" sx={{ fontSize: '0.65rem', opacity: 0.7 }}>Backup</Typography>
+              </Box>
+            </Tooltip>
+          </Box>
+          <Box sx={{ flexGrow: 1 }} />
+          <Stack direction="row" spacing={0.5}>
+            <Button
+              variant="text"
+              color="inherit"
+              startIcon={<FileUploadIcon sx={{ fontSize: '1rem' }} />}
+              onClick={handleImportClick}
+              disabled={!isAdmin || importing}
+              size="small"
+              sx={{ fontSize: '0.75rem', textTransform: 'none', opacity: 0.85, '&:hover': { opacity: 1, backgroundColor: 'rgba(255,255,255,0.08)' } }}
+            >
+              {importing ? 'Importing...' : 'Import'}
+            </Button>
+            <Button
+              variant="text"
+              color="inherit"
+              startIcon={<FileDownloadIcon sx={{ fontSize: '1rem' }} />}
+              onClick={handleExport}
+              disabled={!isAdmin}
+              size="small"
+              sx={{ fontSize: '0.75rem', textTransform: 'none', opacity: 0.85, '&:hover': { opacity: 1, backgroundColor: 'rgba(255,255,255,0.08)' } }}
+            >
+              Export
+            </Button>
+          </Stack>
+        </Toolbar>
       </AppBar>
 
-      <Container maxWidth="xl">
-        {/* Tabs */}
-        <Box sx={{ borderBottom: 1, borderColor: 'divider', mt: 2 }}>
-          <Tabs value={activeTab} onChange={handleTabChange}>
-            <Tab label="Dashboard" />
-            <Tab label="Clients" />
-            <Tab label="Individuals" />
-            <Tab label="Employee Benefits" />
-            <Tab label="Commercial Insurance" />
-            <Tab label="Personal Insurance" />
-            <Tab label="PoC Management" />
-            <Tab label="Feedback" />
-          </Tabs>
-        </Box>
+      <Box sx={{ display: 'flex' }}>
+        {/* Left Navigation */}
+        <Drawer
+          variant="permanent"
+          sx={{
+            width: 200,
+            flexShrink: 0,
+            '& .MuiDrawer-paper': {
+              width: 200,
+              boxSizing: 'border-box',
+              top: 'auto',
+              position: 'relative',
+              border: 'none',
+              backgroundColor: '#1a1a2e',
+              height: 'calc(100vh - 56px)',
+              overflow: 'auto',
+            },
+          }}
+        >
+          <List sx={{ pt: 0.5, px: 1 }}>
+            {[
+              { label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
+              { label: 'Clients', icon: <BusinessIcon fontSize="small" /> },
+              { label: 'Individuals', icon: <PeopleIcon fontSize="small" /> },
+              { label: 'Benefits', icon: <HealthAndSafetyIcon fontSize="small" /> },
+              { label: 'Commercial', icon: <SecurityIcon fontSize="small" /> },
+              { label: 'Personal', icon: <PersonIcon fontSize="small" /> },
+              { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" /> },
+              { label: 'Feedback', icon: <FeedbackIcon fontSize="small" /> },
+            ].map((item, index) => (
+              <ListItemButton
+                key={item.label}
+                selected={activeTab === index}
+                onClick={() => setActiveTab(index)}
+                sx={{
+                  py: 0.8,
+                  my: 0.3,
+                  borderRadius: 1.5,
+                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                  '&.Mui-selected': {
+                    backgroundColor: 'rgba(255,255,255,0.12)',
+                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.18)' },
+                  },
+                }}
+              >
+                <ListItemIcon sx={{ minWidth: 32, color: activeTab === index ? '#90caf9' : 'rgba(255,255,255,0.5)' }}>
+                  {item.icon}
+                </ListItemIcon>
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{
+                    fontSize: '0.8rem',
+                    fontWeight: activeTab === index ? 600 : 400,
+                    color: activeTab === index ? '#fff' : 'rgba(255,255,255,0.7)',
+                  }}
+                />
+              </ListItemButton>
+            ))}
+          </List>
+        </Drawer>
+
+        {/* Main Content */}
+        <Box sx={{ flexGrow: 1, px: 3, py: 2, overflow: 'auto', height: 'calc(100vh - 56px)', backgroundColor: '#f5f6fa' }}>
 
         {/* Tab 0: Dashboard */}
         {activeTab === 0 && (
@@ -1040,7 +1089,8 @@ function NewApp() {
           </Box>
         )}
 
-      </Container>
+        </Box>
+      </Box>
 
       {/* Modals */}
       <ClientModal
