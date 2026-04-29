@@ -7,7 +7,7 @@ import ipaddress
 from flask import Flask, jsonify, request, send_file, abort
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, date, timedelta
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, subqueryload
 from sqlalchemy import create_engine, func, or_
 from dateutil.parser import parse
 from openpyxl import Workbook, load_workbook
@@ -3156,7 +3156,10 @@ def get_cross_sell_opportunities():
     Results sorted by earliest renewal date so the most urgent appear first."""
     session = Session()
     try:
-        all_clients = session.query(Client).all()
+        all_clients = session.query(Client).options(
+            subqueryload(Client.employee_benefits).subqueryload(EmployeeBenefit.plans),
+            subqueryload(Client.commercial_insurance).subqueryload(CommercialInsurance.commercial_plans)
+        ).all()
 
         def earliest_renewal_benefits(client):
             dates = []
