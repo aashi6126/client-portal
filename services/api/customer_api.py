@@ -1315,7 +1315,7 @@ def save_benefit_plans(session, benefit, plans_data):
                     plan_type=plan_type,
                     plan_number=idx,
                     carrier=carrier,
-                    renewal_date=parse_date(renewal),
+                    renewal_date=parse_date(plan_info.get('renewal_date')),
                     waiting_period=plan_info.get('waiting_period') or None,
                     remarks=plan_info.get('remarks') or None,
                     outstanding_item=plan_info.get('outstanding_item') or None
