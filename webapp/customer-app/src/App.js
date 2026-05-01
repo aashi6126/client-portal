@@ -48,6 +48,7 @@ import PersonIcon from '@mui/icons-material/Person';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import ChatIcon from '@mui/icons-material/Chat';
 import Divider from '@mui/material/Divider';
 
 // Import new components
@@ -63,7 +64,7 @@ import PersonalModal from './components/PersonalModal';
 import IndividualTable from './components/IndividualTable';
 import IndividualModal from './components/IndividualModal';
 import PocManagement from './components/PocManagement';
-import ChatBubble from './components/ChatBubble';
+import ChatPanel from './components/ChatPanel';
 import Invoices from './components/Invoices';
 
 // API URLs
@@ -822,6 +823,8 @@ function NewApp() {
               { type: 'divider', label: 'ADMIN' },
               { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
               { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
+              { type: 'divider' },
+              { label: 'Chat', icon: <ChatIcon fontSize="small" />, index: 9 },
             ];
             return (
               <List sx={{ pt: 0.5, px: 0.5 }}>
@@ -1069,6 +1072,11 @@ function NewApp() {
           <Invoices />
         )}
 
+        {/* Tab 9: Chat */}
+        {activeTab === 9 && (
+          <ChatPanel />
+        )}
+
         {/* Tab 7: Feedback */}
         {activeTab === 7 && (
           <Box mt={2}>
@@ -1298,7 +1306,6 @@ function NewApp() {
           </Button>
         </DialogActions>
       </Dialog>
-      <ChatBubble />
     </Box>
     </ThemeProvider>
   );
