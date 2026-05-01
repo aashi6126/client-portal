@@ -114,6 +114,7 @@ def _end_date(date_str):
 
 def generate_invoice_pdf(
     invoice_number, invoice_date, client_name, client_address, client_tax_id, line_items,
+    is_binding=False,
 ):
     """Generate a PDF invoice matching the Edison General Insurance template."""
     buf = io.BytesIO()
@@ -128,9 +129,10 @@ def generate_invoice_pdf(
     page_width = letter[0] - 1.0 * inch
 
     # --- HEADER ---
+    invoice_title = 'BINDING INVOICE' if is_binding else 'INVOICE'
     header_data = [[
         Paragraph(f'<font color="white" size="16"><b>{COMPANY_NAME}</b></font>', styles['Normal']),
-        Paragraph('<font color="white" size="20"><b>INVOICE</b></font>', styles['Normal']),
+        Paragraph(f'<font color="white" size="18"><b>{invoice_title}</b></font>', styles['Normal']),
     ]]
     header_table = Table(header_data, colWidths=[page_width * 0.7, page_width * 0.3])
     header_table.setStyle(TableStyle([
@@ -223,7 +225,8 @@ def generate_invoice_pdf(
         f'{COMPANY_ADDRESS_2.upper()}'
     )
     table_data.append(['', remit_text, ''])
-    table_data.append(['', 'SUBTOTAL', f'${subtotal:,.2f}'])
+    subtotal_label = 'BINDING DEPOSIT (25% of Premium)' if is_binding else 'SUBTOTAL'
+    table_data.append(['', subtotal_label, f'${subtotal:,.2f}'])
 
     col_widths = [page_width * 0.15, page_width * 0.6, page_width * 0.25]
     items_table = Table(table_data, colWidths=col_widths, repeatRows=1)
@@ -256,6 +259,16 @@ def generate_invoice_pdf(
 
     items_table.setStyle(TableStyle(items_style))
     elements.append(items_table)
+
+    if is_binding:
+        binding_style = ParagraphStyle('binding_note', parent=styles['Normal'], fontSize=9, leading=12, textColor=NAVY)
+        elements.append(Spacer(1, 8))
+        elements.append(Paragraph(
+            '<b>BINDING INVOICE</b> — This invoice represents 25% of the total annual premium '
+            'due as a deposit to bind coverage. The remaining balance will be invoiced separately.',
+            binding_style
+        ))
+
     elements.append(Spacer(1, 16))
 
     # --- FOOTER ---

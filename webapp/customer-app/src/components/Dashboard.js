@@ -33,6 +33,7 @@ import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import SecurityIcon from '@mui/icons-material/Security';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EditIcon from '@mui/icons-material/Edit';
+import PersonIcon from '@mui/icons-material/Person';
 import axios from 'axios';
 
 const API_DASHBOARD_RENEWALS = '/api/dashboard/renewals';
@@ -66,6 +67,8 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
   const [renewalTypeFilter, setRenewalTypeFilter] = useState('all');
   const [outstandingTab, setOutstandingTab] = useState(0);
   const [crossSellTab, setCrossSellTab] = useState(0);
+  const [oppMonthTab, setOppMonthTab] = useState(0);
+  const [oppTypeFilter, setOppTypeFilter] = useState('all');
 
   // Base month for the renewals view: defaults to next month (YYYY-MM)
   const getDefaultBaseMonth = () => {
@@ -502,6 +505,52 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     return ids;
   }, [benefits, commercial]);
 
+  // Combine and filter cross-sell opportunities by month (same pattern as renewals)
+  const allOpportunities = useMemo(() => {
+    const all = [
+      ...crossSell.benefits_only.map(c => ({ ...c, opp_type: 'benefits' })),
+      ...crossSell.commercial_only.map(c => ({ ...c, opp_type: 'commercial' }))
+    ];
+    return all.sort((a, b) => (a.earliest_renewal || '9999') < (b.earliest_renewal || '9999') ? -1 : 1);
+  }, [crossSell]);
+
+  const getOppMonthLabel = (monthOffset) => {
+    const [bYear, bMonth] = baseMonth.split('-').map(Number);
+    const targetMonth = new Date(bYear, bMonth - 1 + monthOffset, 1);
+    return targetMonth.toLocaleString('default', { month: 'long', year: 'numeric' });
+  };
+
+  const filterOppsByMonth = (monthOffset) => {
+    const [bYear, bMonth] = baseMonth.split('-').map(Number);
+    const target = new Date(bYear, bMonth - 1 + monthOffset, 1);
+    const tYear = target.getFullYear();
+    const tMon = target.getMonth();
+
+    let filtered = allOpportunities.filter(c => {
+      if (!c.earliest_renewal || c.earliest_renewal.slice(0, 4) < '2000') return false;
+      const d = parseDate(c.earliest_renewal);
+      return d && d.getFullYear() === tYear && d.getMonth() === tMon;
+    });
+    if (oppTypeFilter !== 'all') {
+      filtered = filtered.filter(c => c.opp_type === oppTypeFilter);
+    }
+    return filtered;
+  };
+
+  const oppMonthCounts = useMemo(() => {
+    return [0, 1, 2].map(offset => {
+      const [bYear, bMonth] = baseMonth.split('-').map(Number);
+      const target = new Date(bYear, bMonth - 1 + offset, 1);
+      const tYear = target.getFullYear();
+      const tMon = target.getMonth();
+      return allOpportunities.filter(c => {
+        if (!c.earliest_renewal || c.earliest_renewal.slice(0, 4) < '2000') return false;
+        const d = parseDate(c.earliest_renewal);
+        return d && d.getFullYear() === tYear && d.getMonth() === tMon;
+      }).length;
+    });
+  }, [allOpportunities, baseMonth]);
+
   // Open edit modal for a policy item (used by action items and renewals)
   const handleEditItem = (taxId, source, prefix) => {
     if (source === 'Benefits') {
@@ -604,7 +653,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                   {personal.length}
                 </Typography>
               </Box>
-              <SecurityIcon sx={{ fontSize: 36, color: '#9c27b0', opacity: 0.6 }} />
+              <PersonIcon sx={{ fontSize: 36, color: '#9c27b0', opacity: 0.6 }} />
             </Box>
           </CardContent>
         </Card>
@@ -892,108 +941,118 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         )}
       </Paper>
 
-      {/* Section 6: Cross-Sell & Within-Product Opportunities (tabbed) */}
-      <Paper sx={{ p: 3 }}>
+      {/* Section 6: Cross-Sell & Within-Product Opportunities */}
+      <Paper sx={{ p: 3, mb: 4 }}>
+        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
+          <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+            Opportunities
+          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" color="text.secondary">Starting from:</Typography>
+            <input
+              type="month"
+              value={baseMonth}
+              onChange={(e) => { setBaseMonth(e.target.value); setOppMonthTab(0); }}
+              style={{ padding: '6px 10px', border: '1px solid #ccc', borderRadius: 4, fontSize: '0.875rem' }}
+            />
+          </Box>
+        </Box>
+
+        <Tabs
+          value={oppMonthTab}
+          onChange={(_, newValue) => setOppMonthTab(newValue)}
+          sx={{ borderBottom: 1, borderColor: 'divider' }}
+        >
+          {[0, 1, 2].map(offset => (
+            <Tab key={offset} label={`${getOppMonthLabel(offset)} (${oppMonthCounts[offset]})`} />
+          ))}
+        </Tabs>
+
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5, mb: 1 }}>
+          {['all', 'benefits', 'commercial'].map(t => (
+            <Chip
+              key={t}
+              label={t === 'all' ? 'All' : t === 'benefits' ? 'Benefits Only' : 'Commercial Only'}
+              size="small"
+              variant={oppTypeFilter === t ? 'filled' : 'outlined'}
+              color={oppTypeFilter === t ? 'primary' : 'default'}
+              onClick={() => setOppTypeFilter(t)}
+            />
+          ))}
+          <Typography variant="caption" color="text.secondary" sx={{ ml: 1 }}>
+            {filterOppsByMonth(oppMonthTab).length} opportunities
+          </Typography>
+        </Box>
+
+        {(() => {
+          const opps = filterOppsByMonth(oppMonthTab);
+          return opps.length > 0 ? (
+            <TableContainer sx={{ maxHeight: 400 }}>
+              <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Client</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '10%' }}>Type</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Earliest Renewal</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Email</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', width: '20%' }}></TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {opps.map((client, idx) => (
+                    <TableRow
+                      key={idx}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={() => client.opp_type === 'benefits'
+                        ? onOpenCommercialModal && onOpenCommercialModal(client)
+                        : onOpenBenefitsModal && onOpenBenefitsModal(client)}
+                    >
+                      <TableCell><strong>{client.client_name}</strong></TableCell>
+                      <TableCell>
+                        <Chip
+                          label={client.opp_type === 'benefits' ? 'Benefits' : 'Commercial'}
+                          size="small"
+                          color={client.opp_type === 'benefits' ? 'warning' : 'info'}
+                          sx={{ fontSize: '0.7rem' }}
+                        />
+                      </TableCell>
+                      <TableCell>{client.earliest_renewal ? formatDate(client.earliest_renewal) : '—'}</TableCell>
+                      <TableCell>{client.email || '—'}</TableCell>
+                      <TableCell>
+                        <Button size="small" variant="outlined" sx={{ fontSize: '0.7rem' }}>
+                          {client.opp_type === 'benefits' ? 'Add Commercial' : 'Add Benefits'}
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          ) : (
+            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
+              No opportunities renewing in {getOppMonthLabel(oppMonthTab)}
+            </Typography>
+          );
+        })()}
+
+      </Paper>
+
+      {/* Section 7: Coverage Gaps */}
+      <Paper sx={{ p: 3, mb: 4 }}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
-          Opportunities
+          Coverage Gaps
         </Typography>
         <Tabs
           value={crossSellTab}
           onChange={(_, newValue) => setCrossSellTab(newValue)}
           sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label={`Benefits Only (${crossSell.benefits_only.length})`} />
-          <Tab label={`Commercial Only (${crossSell.commercial_only.length})`} />
           <Tab label={`Benefits Gaps (${withinProductOpportunities.benefitGaps.length})`} />
           <Tab label={`Commercial Gaps (${withinProductOpportunities.commercialGaps.length})`} />
         </Tabs>
 
-        {/* Benefits Only tab — clients with benefits but no commercial */}
         {crossSellTab === 0 && (
-          crossSell.benefits_only.length > 0 ? (
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Client</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Tax ID</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Earliest Renewal</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {crossSell.benefits_only.map((client, idx) => (
-                    <TableRow
-                      key={idx}
-                      sx={{ backgroundColor: '#fff3e0', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
-                      onClick={() => onOpenCommercialModal && onOpenCommercialModal(client)}
-                    >
-                      <TableCell><strong>{client.client_name}</strong></TableCell>
-                      <TableCell>{client.tax_id}</TableCell>
-                      <TableCell>{client.earliest_renewal ? formatDate(client.earliest_renewal) : '—'}</TableCell>
-                      <TableCell>{client.email || '—'}</TableCell>
-                      <TableCell>
-                        <Button size="small" variant="outlined" sx={{ fontSize: '0.75rem', borderColor: '#fb8c00', color: '#fb8c00', '&:hover': { borderColor: '#e65100', backgroundColor: '#fff3e0' } }}>
-                          Add Commercial
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              No cross-sell opportunities — all benefits clients also have commercial
-            </Typography>
-          )
-        )}
-
-        {/* Commercial Only tab — clients with commercial but no benefits */}
-        {crossSellTab === 1 && (
-          crossSell.commercial_only.length > 0 ? (
-            <TableContainer sx={{ maxHeight: 400 }}>
-              <Table stickyHeader size="small" sx={{ tableLayout: 'fixed' }}>
-                <TableHead>
-                  <TableRow>
-                    <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>Client</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Tax ID</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}>Earliest Renewal</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '25%' }}>Email</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', width: '15%' }}></TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {crossSell.commercial_only.map((client, idx) => (
-                    <TableRow
-                      key={idx}
-                      sx={{ backgroundColor: '#e3f2fd', cursor: 'pointer', '&:hover': { opacity: 0.85 } }}
-                      onClick={() => onOpenBenefitsModal && onOpenBenefitsModal(client)}
-                    >
-                      <TableCell><strong>{client.client_name}</strong></TableCell>
-                      <TableCell>{client.tax_id}</TableCell>
-                      <TableCell>{client.earliest_renewal ? formatDate(client.earliest_renewal) : '—'}</TableCell>
-                      <TableCell>{client.email || '—'}</TableCell>
-                      <TableCell>
-                        <Button size="small" variant="outlined" sx={{ fontSize: '0.75rem', borderColor: '#1976d2', color: '#1976d2', '&:hover': { borderColor: '#1565c0', backgroundColor: '#e3f2fd' } }}>
-                          Add Benefits
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          ) : (
-            <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-              No cross-sell opportunities — all commercial clients also have benefits
-            </Typography>
-          )
-        )}
-
-        {/* Benefits Gaps tab — clients with some benefit plans missing others */}
-        {crossSellTab === 2 && (
           withinProductOpportunities.benefitGaps.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table stickyHeader size="small">
@@ -1043,8 +1102,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           )
         )}
 
-        {/* Commercial Gaps tab — clients with some commercial products missing others */}
-        {crossSellTab === 3 && (
+        {crossSellTab === 1 && (
           withinProductOpportunities.commercialGaps.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table stickyHeader size="small">
@@ -1095,9 +1153,9 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         )}
       </Paper>
 
-      {/* Policy Aggregations: by Industry + by Coverage Type */}
+      {/* Policy Aggregations: by Industry + by Coverage Type — wrapped for margin */}
       <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
-        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+        <Paper sx={{ p: 2, flex: 1, overflow: 'hidden' }}>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
             <BusinessIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
             Policies by Industry
@@ -1106,7 +1164,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             Top 10 of <strong>{namedIndustryCount}</strong> industries · Unspecified: <strong>{unspecifiedCount}</strong>
           </Typography>
           {topIndustries.length > 0 ? (
-            <Box sx={{ flex: 1, minHeight: 320 }}>
+            <Box sx={{ width: '100%', height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={topIndustries}
@@ -1136,7 +1194,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           )}
         </Paper>
 
-        <Paper sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 320 }}>
+        <Paper sx={{ p: 2, flex: 1, overflow: 'hidden' }}>
           <Typography variant="subtitle2" gutterBottom sx={{ fontWeight: 'bold', mb: 0.5 }}>
             <SecurityIcon sx={{ mr: 0.5, verticalAlign: 'middle', fontSize: '1.1rem' }} />
             Policies by Coverage Type
@@ -1145,7 +1203,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             Total: <strong>{policyAgg.by_coverage_type.reduce((s, r) => s + r.count, 0)}</strong>
           </Typography>
           {policyAgg.by_coverage_type.length > 0 ? (
-            <Box sx={{ flex: 1, minHeight: 320 }}>
+            <Box sx={{ width: '100%', height: 300 }}>
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart
                   data={policyAgg.by_coverage_type}

@@ -1215,6 +1215,46 @@ class Feedback(db.Model):
         }
 
 
+class Invoice(db.Model):
+    __tablename__ = 'invoices'
+
+    id = db.Column(db.Integer, primary_key=True)
+    invoice_number = db.Column(db.Integer, unique=True, nullable=False)
+    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
+    commercial_id = db.Column(db.Integer, db.ForeignKey('commercial_insurance.id'))
+    invoice_date = db.Column(db.Date, nullable=False)
+    amount = db.Column(db.Numeric(12, 2))
+    recipient_email = db.Column(db.String(200))
+    cc_email = db.Column(db.String(200))
+    status = db.Column(db.String(50), default='pending')
+    payment_date = db.Column(db.Date)
+    payment_notes = db.Column(db.Text)
+    policies_description = db.Column(db.Text)
+    is_binding = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    client = db.relationship('Client', backref='invoices')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'invoice_number': self.invoice_number,
+            'tax_id': self.tax_id,
+            'client_name': self.client.client_name if self.client else None,
+            'commercial_id': self.commercial_id,
+            'invoice_date': self.invoice_date.isoformat() if self.invoice_date else None,
+            'amount': float(self.amount) if self.amount else None,
+            'recipient_email': self.recipient_email,
+            'cc_email': self.cc_email,
+            'status': self.status,
+            'payment_date': self.payment_date.isoformat() if self.payment_date else None,
+            'payment_notes': self.payment_notes,
+            'policies_description': self.policies_description,
+            'is_binding': self.is_binding,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 class InvoiceSequence(db.Model):
     __tablename__ = 'invoice_sequence'
 
@@ -2452,10 +2492,16 @@ def invoice_preview():
             return jsonify({'error': 'Client not found for this commercial record'}), 404
 
         commercial_data = commercial.to_dict()
+        is_binding = data.get('is_binding', False)
         line_items = _collect_line_items(commercial_data, policy_types)
 
         if not line_items:
             return jsonify({'error': 'No active policies found for selected types'}), 400
+
+        if is_binding:
+            for item in line_items:
+                item['premium'] = round((item.get('premium', 0) or 0) * 0.25, 2)
+                item['coverage'] = f"{item.get('coverage', '')} (Binding 25%)"
 
         invoice_number = InvoiceSequence.next_number(session)
 
@@ -2476,15 +2522,17 @@ def invoice_preview():
             client_address=client_address,
             client_tax_id=client.tax_id or '',
             line_items=line_items,
+            is_binding=is_binding,
         )
 
         session.commit()
 
+        prefix = 'Binding_Invoice' if is_binding else 'Invoice'
         return send_file(
             pdf_buf,
             mimetype='application/pdf',
             as_attachment=False,
-            download_name=f'Invoice_{invoice_number}_{(client.client_name or "Client").replace(" ", "_")}.pdf'
+            download_name=f'{prefix}_{invoice_number}_{(client.client_name or "Client").replace(" ", "_")}.pdf'
         )
     except Exception as e:
         session.rollback()
@@ -2521,15 +2569,22 @@ def invoice_send():
             return jsonify({'error': 'Client not found for this commercial record'}), 404
 
         commercial_data = commercial.to_dict()
+        is_binding = data.get('is_binding', False)
         line_items = _collect_line_items(commercial_data, policy_types)
 
         if not line_items:
             return jsonify({'error': 'No active policies found for selected types'}), 400
 
+        if is_binding:
+            for item in line_items:
+                item['premium'] = round((item.get('premium', 0) or 0) * 0.25, 2)
+                item['coverage'] = f"{item.get('coverage', '')} (Binding 25%)"
+
         invoice_number = InvoiceSequence.next_number(session)
 
         if not subject:
-            subject = f'Invoice #{invoice_number} — Edison General Insurance Service'
+            prefix = 'Binding Invoice' if is_binding else 'Invoice'
+            subject = f'{prefix} #{invoice_number} — Edison General Insurance Service'
 
         # Build client address
         addr_parts = [client.address_line_1 or '']
@@ -2548,6 +2603,7 @@ def invoice_send():
             client_address=client_address,
             client_tax_id=client.tax_id or '',
             line_items=line_items,
+            is_binding=is_binding,
         )
 
         # Send email
@@ -2564,10 +2620,14 @@ def invoice_send():
             msg['Cc'] = cc_email
         msg['Subject'] = subject
 
+        invoice_type = 'binding invoice' if is_binding else 'invoice'
+        binding_note = ('\nThis is a binding invoice representing 25% of the total premium '
+                        'due as a deposit to bind coverage.\n') if is_binding else ''
         body = (
             f"Dear {client.client_name or 'Valued Client'},\n\n"
-            f"Please find attached your invoice #{invoice_number} from Edison General Insurance Service.\n\n"
-            f"If you have any questions regarding this invoice, please contact us at 732-548-8700 "
+            f"Please find attached your {invoice_type} #{invoice_number} from Edison General Insurance Service.\n"
+            f"{binding_note}\n"
+            f"If you have any questions regarding this {invoice_type}, please contact us at 732-548-8700 "
             f"or email info@njgroups.com.\n\n"
             f"Thank you for your business.\n\n"
             f"Best regards,\n"
@@ -2597,11 +2657,27 @@ def invoice_send():
                 server.login(SMTP_USERNAME, SMTP_PASSWORD)
             server.sendmail(SMTP_FROM, recipients, msg.as_string())
 
+        total_amount = sum(item.get('premium', 0) or 0 for item in line_items)
+        policies_desc = ', '.join(item.get('coverage', '') for item in line_items if item.get('coverage'))
+        invoice_record = Invoice(
+            invoice_number=invoice_number,
+            tax_id=client.tax_id,
+            commercial_id=data.get('commercial_id'),
+            invoice_date=parse(invoice_date).date() if invoice_date else datetime.now().date(),
+            amount=total_amount,
+            recipient_email=to_email,
+            cc_email=cc_email,
+            status='pending',
+            policies_description=policies_desc,
+            is_binding=is_binding
+        )
+        session.add(invoice_record)
         session.commit()
 
         return jsonify({
             'message': 'Invoice sent successfully',
-            'invoice_number': invoice_number
+            'invoice_number': invoice_number,
+            'invoice_id': invoice_record.id
         }), 200
 
     except smtplib.SMTPException as e:
@@ -2611,6 +2687,82 @@ def invoice_send():
     except Exception as e:
         session.rollback()
         logging.error(f"Error sending invoice: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+# ===========================================================================
+# INVOICE MANAGEMENT ENDPOINTS
+# ===========================================================================
+
+@app.route('/api/invoices', methods=['GET'])
+def get_invoices():
+    """Get all invoices, optionally filtered by status and month."""
+    session = Session()
+    try:
+        query = session.query(Invoice)
+        status = request.args.get('status')
+        if status:
+            query = query.filter(Invoice.status == status)
+        month = request.args.get('month')
+        if month:
+            year, mon = month.split('-')
+            query = query.filter(
+                db.extract('year', Invoice.invoice_date) == int(year),
+                db.extract('month', Invoice.invoice_date) == int(mon)
+            )
+        invoices = query.order_by(Invoice.invoice_date.desc()).all()
+        return jsonify([inv.to_dict() for inv in invoices]), 200
+    except Exception as e:
+        logging.error(f"Error fetching invoices: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/invoices/<int:invoice_id>/payment', methods=['PUT'])
+def record_payment(invoice_id):
+    """Record a payment against an invoice."""
+    session = Session()
+    try:
+        invoice = session.query(Invoice).filter_by(id=invoice_id).first()
+        if not invoice:
+            return jsonify({'error': 'Invoice not found'}), 404
+
+        data = request.get_json()
+        invoice.status = 'paid'
+        invoice.payment_date = parse_date(data.get('payment_date')) or datetime.now().date()
+        invoice.payment_notes = data.get('payment_notes')
+        session.commit()
+
+        return jsonify({'message': 'Payment recorded', 'invoice': invoice.to_dict()}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error recording payment: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/invoices/<int:invoice_id>/payment', methods=['DELETE'])
+def undo_payment(invoice_id):
+    """Undo a payment (mark invoice as pending again)."""
+    session = Session()
+    try:
+        invoice = session.query(Invoice).filter_by(id=invoice_id).first()
+        if not invoice:
+            return jsonify({'error': 'Invoice not found'}), 404
+
+        invoice.status = 'pending'
+        invoice.payment_date = None
+        invoice.payment_notes = None
+        session.commit()
+
+        return jsonify({'message': 'Payment undone', 'invoice': invoice.to_dict()}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error undoing payment: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()

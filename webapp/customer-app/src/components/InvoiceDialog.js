@@ -67,6 +67,7 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
   const [ccEmail, setCcEmail] = useState('');
   const [subject, setSubject] = useState('');
   const [invoiceDate, setInvoiceDate] = useState(todayISO());
+  const [isBinding, setIsBinding] = useState(false);
   const [sending, setSending] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [alert, setAlert] = useState(null); // { severity, message }
@@ -119,6 +120,7 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
       setCcEmail('');
       setSubject(commercial ? `Invoice - ${commercial.business_name || ''}`.trim() : 'Invoice');
       setInvoiceDate(todayISO());
+      setIsBinding(false);
       setSending(false);
       setPreviewing(false);
       setAlert(null);
@@ -129,11 +131,22 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
     setSelected((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const subtotal = useMemo(() => {
+  const handleBindingToggle = (checked) => {
+    setIsBinding(checked);
+    const name = commercial?.business_name || commercial?.client_name || '';
+    setSubject(checked
+      ? `Binding Invoice - ${name}`.trim()
+      : `Invoice - ${name}`.trim()
+    );
+  };
+
+  const fullSubtotal = useMemo(() => {
     return activePolicies
       .filter((p) => selected[p.key])
       .reduce((sum, p) => sum + p.premium, 0);
   }, [activePolicies, selected]);
+
+  const subtotal = isBinding ? fullSubtotal * 0.25 : fullSubtotal;
 
   // Build policy_types array for the API (collapse multi-plan keys back)
   const buildPolicyTypes = () => {
@@ -157,7 +170,8 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
       const resp = await axios.post('/api/invoice/preview', {
         commercial_id: commercial.id,
         policy_types: buildPolicyTypes(),
-        invoice_date: invoiceDate
+        invoice_date: invoiceDate,
+        is_binding: isBinding
       }, { responseType: 'blob' });
 
       const blob = new Blob([resp.data], { type: 'application/pdf' });
@@ -190,7 +204,8 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
         invoice_date: invoiceDate,
         to_email: toEmail.trim(),
         cc_email: ccEmail.trim(),
-        subject: subject.trim()
+        subject: subject.trim(),
+        is_binding: isBinding
       });
       setAlert({ severity: 'success', message: 'Invoice sent successfully!' });
     } catch (err) {
@@ -244,14 +259,32 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
               </Box>
             ))}
             <Divider sx={{ my: 1 }} />
+            {isBinding && (
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 0.5 }}>
+                <Typography variant="body2" color="text.secondary">Full Premium</Typography>
+                <Typography variant="body2" color="text.secondary" sx={{ textDecoration: 'line-through' }}>{formatCurrency(fullSubtotal)}</Typography>
+              </Box>
+            )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-              <Typography variant="subtitle2">Subtotal</Typography>
+              <Typography variant="subtitle2">{isBinding ? 'Binding (25%)' : 'Subtotal'}</Typography>
               <Typography variant="subtitle2">{formatCurrency(subtotal)}</Typography>
             </Box>
           </Box>
         )}
 
         <Divider sx={{ my: 2 }} />
+
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+          <Checkbox
+            checked={isBinding}
+            onChange={(e) => handleBindingToggle(e.target.checked)}
+            size="small"
+          />
+          <Box>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>Binding Invoice</Typography>
+            <Typography variant="caption" color="text.secondary">Charge 25% of premium as binding deposit</Typography>
+          </Box>
+        </Box>
 
         <Typography variant="subtitle2" sx={{ mb: 1 }}>Invoice Date</Typography>
         <TextField

@@ -47,6 +47,8 @@ import SecurityIcon from '@mui/icons-material/Security';
 import PersonIcon from '@mui/icons-material/Person';
 import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import FeedbackIcon from '@mui/icons-material/Feedback';
+import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
+import Divider from '@mui/material/Divider';
 
 // Import new components
 import Dashboard from './components/Dashboard';
@@ -62,6 +64,7 @@ import IndividualTable from './components/IndividualTable';
 import IndividualModal from './components/IndividualModal';
 import PocManagement from './components/PocManagement';
 import ChatBubble from './components/ChatBubble';
+import Invoices from './components/Invoices';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
@@ -805,46 +808,67 @@ function NewApp() {
             },
           }}
         >
-          <List sx={{ pt: 0.5, px: 0.5 }}>
-            {[
-              { label: 'Dashboard', icon: <DashboardIcon fontSize="small" /> },
-              { label: 'Clients', icon: <BusinessIcon fontSize="small" /> },
-              { label: 'Individuals', icon: <PeopleIcon fontSize="small" /> },
-              { label: 'Benefits', icon: <HealthAndSafetyIcon fontSize="small" /> },
-              { label: 'Commercial', icon: <SecurityIcon fontSize="small" /> },
-              { label: 'Personal', icon: <PersonIcon fontSize="small" /> },
-              { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" /> },
-              { label: 'Feedback', icon: <FeedbackIcon fontSize="small" /> },
-            ].map((item, index) => (
-              <ListItemButton
-                key={item.label}
-                selected={activeTab === index}
-                onClick={() => setActiveTab(index)}
-                sx={{
-                  py: 0.8,
-                  my: 0.2,
-                  borderRadius: 0.5,
-                  '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
-                  '&.Mui-selected': {
-                    backgroundColor: 'rgba(255,255,255,0.12)',
-                    '&:hover': { backgroundColor: 'rgba(255,255,255,0.18)' },
-                  },
-                }}
-              >
-                <ListItemIcon sx={{ minWidth: 32, color: activeTab === index ? '#90caf9' : 'rgba(255,255,255,0.5)' }}>
-                  {item.icon}
-                </ListItemIcon>
-                <ListItemText
-                  primary={item.label}
-                  primaryTypographyProps={{
-                    fontSize: '0.8rem',
-                    fontWeight: activeTab === index ? 600 : 400,
-                    color: activeTab === index ? '#fff' : 'rgba(255,255,255,0.7)',
-                  }}
-                />
-              </ListItemButton>
-            ))}
-          </List>
+          {(() => {
+            const navItems = [
+              { label: 'Dashboard', icon: <DashboardIcon fontSize="small" />, index: 0 },
+              { type: 'divider', label: 'CLIENTS' },
+              { label: 'Clients', icon: <BusinessIcon fontSize="small" />, index: 1 },
+              { label: 'Benefits', icon: <HealthAndSafetyIcon fontSize="small" />, index: 3 },
+              { label: 'Commercial', icon: <SecurityIcon fontSize="small" />, index: 4 },
+              { label: 'Invoices', icon: <ReceiptLongIcon fontSize="small" />, index: 8 },
+              { type: 'divider', label: 'INDIVIDUALS' },
+              { label: 'Individuals', icon: <PeopleIcon fontSize="small" />, index: 2 },
+              { label: 'Personal', icon: <PersonIcon fontSize="small" />, index: 5 },
+              { type: 'divider', label: 'ADMIN' },
+              { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
+              { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
+            ];
+            return (
+              <List sx={{ pt: 0.5, px: 0.5 }}>
+                {navItems.map((item, i) =>
+                  item.type === 'divider' ? (
+                    <Box key={`div-${i}`}>
+                      {item.label ? (
+                        <Typography variant="caption" sx={{ px: 1.5, pt: 1.5, pb: 0.5, display: 'block', color: 'rgba(255,255,255,0.35)', fontSize: '0.65rem', fontWeight: 700, letterSpacing: 1 }}>
+                          {item.label}
+                        </Typography>
+                      ) : (
+                        <Divider sx={{ my: 0.5, borderColor: 'rgba(255,255,255,0.08)' }} />
+                      )}
+                    </Box>
+                  ) : (
+                    <ListItemButton
+                      key={item.label}
+                      selected={activeTab === item.index}
+                      onClick={() => setActiveTab(item.index)}
+                      sx={{
+                        py: 0.7,
+                        my: 0.2,
+                        borderRadius: 0.5,
+                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                        '&.Mui-selected': {
+                          backgroundColor: 'rgba(255,255,255,0.12)',
+                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.18)' },
+                        },
+                      }}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32, color: activeTab === item.index ? '#90caf9' : 'rgba(255,255,255,0.5)' }}>
+                        {item.icon}
+                      </ListItemIcon>
+                      <ListItemText
+                        primary={item.label}
+                        primaryTypographyProps={{
+                          fontSize: '0.8rem',
+                          fontWeight: activeTab === item.index ? 600 : 400,
+                          color: activeTab === item.index ? '#fff' : 'rgba(255,255,255,0.7)',
+                        }}
+                      />
+                    </ListItemButton>
+                  )
+                )}
+              </List>
+            );
+          })()}
         </Drawer>
 
         {/* Main Content */}
@@ -1038,6 +1062,11 @@ function NewApp() {
         {/* Tab 6: PoC Management */}
         {activeTab === 6 && (
           <PocManagement dataVersion={dataVersion} />
+        )}
+
+        {/* Tab 8: Invoices */}
+        {activeTab === 8 && (
+          <Invoices />
         )}
 
         {/* Tab 7: Feedback */}
