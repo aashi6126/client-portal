@@ -2501,7 +2501,7 @@ def invoice_preview():
         if is_binding:
             for item in line_items:
                 item['premium'] = round((item.get('premium', 0) or 0) * 0.25, 2)
-                item['coverage'] = f"{item.get('coverage', '')} (Binding 25%)"
+                item['coverage'] = f"{item.get('coverage', '')} (Binder 25%)"
 
         invoice_number = InvoiceSequence.next_number(session)
 
@@ -2527,7 +2527,7 @@ def invoice_preview():
 
         session.commit()
 
-        prefix = 'Binding_Invoice' if is_binding else 'Invoice'
+        prefix = 'Binder_Invoice' if is_binding else 'Invoice'
         return send_file(
             pdf_buf,
             mimetype='application/pdf',
@@ -2578,12 +2578,12 @@ def invoice_send():
         if is_binding:
             for item in line_items:
                 item['premium'] = round((item.get('premium', 0) or 0) * 0.25, 2)
-                item['coverage'] = f"{item.get('coverage', '')} (Binding 25%)"
+                item['coverage'] = f"{item.get('coverage', '')} (Binder 25%)"
 
         invoice_number = InvoiceSequence.next_number(session)
 
         if not subject:
-            prefix = 'Binding Invoice' if is_binding else 'Invoice'
+            prefix = 'Binder Invoice' if is_binding else 'Invoice'
             subject = f'{prefix} #{invoice_number} — Edison General Insurance Service'
 
         # Build client address
@@ -2620,9 +2620,9 @@ def invoice_send():
             msg['Cc'] = cc_email
         msg['Subject'] = subject
 
-        invoice_type = 'binding invoice' if is_binding else 'invoice'
-        binding_note = ('\nThis is a binding invoice representing 25% of the total premium '
-                        'due as a deposit to bind coverage.\n') if is_binding else ''
+        invoice_type = 'binder invoice' if is_binding else 'invoice'
+        binding_note = ('\nThis is a binder invoice representing 25% of the total premium '
+                        'due as a binder deposit to bind coverage.\n') if is_binding else ''
         body = (
             f"Dear {client.client_name or 'Valued Client'},\n\n"
             f"Please find attached your {invoice_type} #{invoice_number} from Edison General Insurance Service.\n"

@@ -129,7 +129,7 @@ def generate_invoice_pdf(
     page_width = letter[0] - 1.0 * inch
 
     # --- HEADER ---
-    invoice_title = 'BINDING INVOICE' if is_binding else 'INVOICE'
+    invoice_title = 'BINDER INVOICE' if is_binding else 'INVOICE'
     header_data = [[
         Paragraph(f'<font color="white" size="16"><b>{COMPANY_NAME}</b></font>', styles['Normal']),
         Paragraph(f'<font color="white" size="18"><b>{invoice_title}</b></font>', styles['Normal']),
@@ -225,7 +225,7 @@ def generate_invoice_pdf(
         f'{COMPANY_ADDRESS_2.upper()}'
     )
     table_data.append(['', remit_text, ''])
-    subtotal_label = 'BINDING DEPOSIT (25% of Premium)' if is_binding else 'SUBTOTAL'
+    subtotal_label = 'BINDER DEPOSIT (25% of Premium)' if is_binding else 'SUBTOTAL'
     table_data.append(['', subtotal_label, f'${subtotal:,.2f}'])
 
     col_widths = [page_width * 0.15, page_width * 0.6, page_width * 0.25]
@@ -264,8 +264,8 @@ def generate_invoice_pdf(
         binding_style = ParagraphStyle('binding_note', parent=styles['Normal'], fontSize=9, leading=12, textColor=NAVY)
         elements.append(Spacer(1, 8))
         elements.append(Paragraph(
-            '<b>BINDING INVOICE</b> — This invoice represents 25% of the total annual premium '
-            'due as a deposit to bind coverage. The remaining balance will be invoiced separately.',
+            '<b>BINDER INVOICE</b> — This invoice represents 25% of the total annual premium '
+            'due as a binder deposit to bind coverage. The remaining balance will be invoiced separately.',
             binding_style
         ))
 

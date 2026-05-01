@@ -135,7 +135,7 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
     setIsBinding(checked);
     const name = commercial?.business_name || commercial?.client_name || '';
     setSubject(checked
-      ? `Binding Invoice - ${name}`.trim()
+      ? `Binder Invoice - ${name}`.trim()
       : `Invoice - ${name}`.trim()
     );
   };
@@ -266,7 +266,7 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
               </Box>
             )}
             <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1 }}>
-              <Typography variant="subtitle2">{isBinding ? 'Binding (25%)' : 'Subtotal'}</Typography>
+              <Typography variant="subtitle2">{isBinding ? 'Binder (25%)' : 'Subtotal'}</Typography>
               <Typography variant="subtitle2">{formatCurrency(subtotal)}</Typography>
             </Box>
           </Box>
@@ -281,8 +281,8 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
             size="small"
           />
           <Box>
-            <Typography variant="body2" sx={{ fontWeight: 500 }}>Binding Invoice</Typography>
-            <Typography variant="caption" color="text.secondary">Charge 25% of premium as binding deposit</Typography>
+            <Typography variant="body2" sx={{ fontWeight: 500 }}>Binder Invoice</Typography>
+            <Typography variant="caption" color="text.secondary">Charge 25% of premium as binder deposit</Typography>
           </Box>
         </Box>
 
