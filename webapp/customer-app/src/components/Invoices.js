@@ -21,7 +21,7 @@ const Invoices = () => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   };
-  const [selectedMonth, setSelectedMonth] = useState(getDefaultMonth());
+  const [selectedMonth, setSelectedMonth] = useState('');
 
   const fetchInvoices = async () => {
     try {

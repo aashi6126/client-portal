@@ -6,7 +6,8 @@ import logging
 import ipaddress
 from flask import Flask, jsonify, request, send_file, abort
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, timedelta, timezone
+_EST = timezone(timedelta(hours=-5))
 from sqlalchemy.orm import sessionmaker, subqueryload
 from sqlalchemy import create_engine, func, or_
 from dateutil.parser import parse
@@ -1231,7 +1232,7 @@ class Invoice(db.Model):
     payment_notes = db.Column(db.Text)
     policies_description = db.Column(db.Text)
     is_binding = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(_EST))
 
     client = db.relationship('Client', backref='invoices')
 
