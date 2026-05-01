@@ -75,7 +75,7 @@ export default function ChatBubble() {
 
   if (!open) {
     return (
-      <Box sx={{ position: 'fixed', bottom: 24, right: 24, zIndex: 1300 }}>
+      <Box sx={{ position: 'fixed', bottom: 64, right: 24, zIndex: 1300 }}>
         <Fab
           color="primary"
           onClick={() => setOpen(true)}
@@ -95,7 +95,7 @@ export default function ChatBubble() {
       elevation={8}
       sx={{
         position: 'fixed',
-        bottom: 24,
+        bottom: 64,
         right: 24,
         width: 420,
         height: 550,
