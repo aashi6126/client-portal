@@ -2645,18 +2645,7 @@ def invoice_send():
         attachment.add_header('Content-Disposition', f'attachment; filename="{filename}"')
         msg.attach(attachment)
 
-        # Send via SMTP
-        recipients = [to_email]
-        if cc_email:
-            recipients.append(cc_email)
-
-        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-            if SMTP_USE_TLS:
-                server.starttls()
-            if SMTP_USERNAME and SMTP_PASSWORD:
-                server.login(SMTP_USERNAME, SMTP_PASSWORD)
-            server.sendmail(SMTP_FROM, recipients, msg.as_string())
-
+        # Save invoice record BEFORE sending email so it's persisted regardless
         total_amount = sum(item.get('premium', 0) or 0 for item in line_items)
         policies_desc = ', '.join(item.get('coverage', '') for item in line_items if item.get('coverage'))
         invoice_record = Invoice(
@@ -2674,19 +2663,43 @@ def invoice_send():
         session.add(invoice_record)
         session.commit()
 
+        # Send via SMTP
+        email_error = None
+        try:
+            recipients = [to_email]
+            if cc_email:
+                recipients.append(cc_email)
+
+            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                if SMTP_USE_TLS:
+                    server.starttls()
+                if SMTP_USERNAME and SMTP_PASSWORD:
+                    server.login(SMTP_USERNAME, SMTP_PASSWORD)
+                server.sendmail(SMTP_FROM, recipients, msg.as_string())
+        except smtplib.SMTPException as e:
+            logging.error(f"SMTP error sending invoice #{invoice_number}: {e}")
+            email_error = str(e)
+        except Exception as e:
+            logging.error(f"Error sending invoice #{invoice_number} email: {e}")
+            email_error = str(e)
+
+        if email_error:
+            return jsonify({
+                'message': f'Invoice #{invoice_number} saved but email failed: {email_error}',
+                'invoice_number': invoice_number,
+                'invoice_id': invoice_record.id,
+                'email_error': email_error
+            }), 200
+
         return jsonify({
             'message': 'Invoice sent successfully',
             'invoice_number': invoice_number,
             'invoice_id': invoice_record.id
         }), 200
 
-    except smtplib.SMTPException as e:
-        session.rollback()
-        logging.error(f"SMTP error sending invoice: {e}")
-        return jsonify({'error': f'Email sending failed: {str(e)}'}), 500
     except Exception as e:
         session.rollback()
-        logging.error(f"Error sending invoice: {e}")
+        logging.error(f"Error creating invoice: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()
