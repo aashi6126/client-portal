@@ -13,6 +13,7 @@ const Invoices = () => {
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
   const [paymentDialog, setPaymentDialog] = useState({ open: false, invoiceId: null });
+  const [undoDialog, setUndoDialog] = useState({ open: false, invoiceId: null, invoiceNumber: null });
   const [paymentDate, setPaymentDate] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
 
@@ -78,9 +79,10 @@ const Invoices = () => {
     }
   };
 
-  const handleUndoPayment = async (invoiceId) => {
+  const handleUndoPayment = async () => {
     try {
-      await axios.delete(`/api/invoices/${invoiceId}/payment`);
+      await axios.delete(`/api/invoices/${undoDialog.invoiceId}/payment`);
+      setUndoDialog({ open: false, invoiceId: null, invoiceNumber: null });
       fetchInvoices();
     } catch (err) {
       console.error('Error undoing payment:', err);
@@ -188,7 +190,7 @@ const Invoices = () => {
                           size="small"
                           startIcon={<UndoIcon />}
                           color="warning"
-                          onClick={() => handleUndoPayment(inv.id)}
+                          onClick={() => setUndoDialog({ open: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number })}
                           sx={{ fontSize: '0.7rem' }}
                         >
                           Undo
@@ -202,6 +204,19 @@ const Invoices = () => {
           </TableContainer>
         )}
       </Paper>
+
+      <Dialog open={undoDialog.open} onClose={() => setUndoDialog({ open: false, invoiceId: null, invoiceNumber: null })}>
+        <DialogTitle>Undo Payment</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Are you sure you want to undo the payment for Invoice #{undoDialog.invoiceNumber}? This will mark it as pending again.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setUndoDialog({ open: false, invoiceId: null, invoiceNumber: null })}>Cancel</Button>
+          <Button onClick={handleUndoPayment} variant="contained" color="warning">Undo Payment</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={paymentDialog.open} onClose={() => setPaymentDialog({ open: false, invoiceId: null })}>
         <DialogTitle>Record Payment</DialogTitle>

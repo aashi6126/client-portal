@@ -2696,6 +2696,49 @@ def invoice_send():
 # INVOICE MANAGEMENT ENDPOINTS
 # ===========================================================================
 
+@app.route('/api/invoices', methods=['POST'])
+def create_invoice():
+    """Create an invoice record without sending email (for testing or manual entry)."""
+    session = Session()
+    try:
+        data = request.get_json()
+        tax_id = data.get('tax_id')
+        if not tax_id:
+            return jsonify({'error': 'tax_id is required'}), 400
+
+        client = session.query(Client).filter_by(tax_id=tax_id).first()
+        if not client:
+            return jsonify({'error': f'Client with tax_id {tax_id} not found'}), 404
+
+        invoice_number = InvoiceSequence.next_number(session)
+        is_binding = data.get('is_binding', False)
+        amount = data.get('amount', 0)
+        if is_binding:
+            amount = round(float(amount or 0) * 0.25, 2)
+
+        invoice = Invoice(
+            invoice_number=invoice_number,
+            tax_id=tax_id,
+            commercial_id=data.get('commercial_id'),
+            invoice_date=parse_date(data.get('invoice_date')) or datetime.now().date(),
+            amount=amount,
+            recipient_email=data.get('recipient_email'),
+            status='pending',
+            policies_description=data.get('policies_description'),
+            is_binding=is_binding
+        )
+        session.add(invoice)
+        session.commit()
+
+        return jsonify({'message': 'Invoice created', 'invoice': invoice.to_dict()}), 201
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error creating invoice: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
 @app.route('/api/invoices', methods=['GET'])
 def get_invoices():
     """Get all invoices, optionally filtered by status and month."""
