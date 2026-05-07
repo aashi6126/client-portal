@@ -1275,6 +1275,40 @@ class InvoiceSequence(db.Model):
         return seq.last_number
 
 
+class CobraCoverage(db.Model):
+    __tablename__ = 'cobra_coverages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    first_name = db.Column(db.String(200), nullable=False)
+    last_name = db.Column(db.String(200), nullable=False)
+    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'))
+    state = db.Column(db.String(50))
+    start_date = db.Column(db.Date)
+    end_date = db.Column(db.Date)
+    status = db.Column(db.String(50), default='active')
+    termination_date = db.Column(db.Date)
+    termination_reason = db.Column(db.Text)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(_EST))
+
+    client = db.relationship('Client', backref='cobra_coverages')
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'first_name': self.first_name,
+            'last_name': self.last_name,
+            'tax_id': self.tax_id,
+            'client_name': self.client.client_name if self.client else None,
+            'state': self.state,
+            'start_date': self.start_date.isoformat() if self.start_date else None,
+            'end_date': self.end_date.isoformat() if self.end_date else None,
+            'status': self.status,
+            'termination_date': self.termination_date.isoformat() if self.termination_date else None,
+            'termination_reason': self.termination_reason,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 # ===========================================================================
 # UTILITY FUNCTIONS
 # ===========================================================================
@@ -2826,6 +2860,96 @@ def undo_payment(invoice_id):
 
 
 # ===========================================================================
+# COBRA COVERAGE ENDPOINTS
+# ===========================================================================
+
+US_STATES = ['AL','AK','AZ','AR','CA','CO','CT','DE','FL','GA','HI','ID','IL','IN','IA','KS','KY','LA','ME','MD','MA','MI','MN','MS','MO','MT','NE','NV','NH','NJ','NM','NY','NC','ND','OH','OK','OR','PA','RI','SC','SD','TN','TX','UT','VT','VA','WA','WV','WI','WY','DC']
+
+@app.route('/api/cobra', methods=['GET'])
+def get_cobra_coverages():
+    session = Session()
+    try:
+        coverages = session.query(CobraCoverage).order_by(CobraCoverage.created_at.desc()).all()
+        return jsonify([c.to_dict() for c in coverages]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/cobra', methods=['POST'])
+def create_cobra_coverage():
+    session = Session()
+    try:
+        data = request.get_json()
+        if not data.get('first_name') or not data.get('last_name'):
+            return jsonify({'error': 'First name and last name are required'}), 400
+
+        coverage = CobraCoverage(
+            first_name=data.get('first_name'),
+            last_name=data.get('last_name'),
+            tax_id=data.get('tax_id') or None,
+            state=data.get('state') or None,
+            start_date=parse_date(data.get('start_date')),
+            end_date=parse_date(data.get('end_date')),
+        )
+        session.add(coverage)
+        session.commit()
+        return jsonify({'message': 'COBRA coverage created', 'coverage': coverage.to_dict()}), 201
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/cobra/<int:coverage_id>/terminate', methods=['PUT'])
+def terminate_cobra(coverage_id):
+    session = Session()
+    try:
+        coverage = session.query(CobraCoverage).filter_by(id=coverage_id).first()
+        if not coverage:
+            return jsonify({'error': 'Coverage not found'}), 404
+
+        data = request.get_json()
+        coverage.status = 'terminated'
+        coverage.termination_date = parse_date(data.get('termination_date')) or datetime.now(_EST).date()
+        coverage.termination_reason = data.get('termination_reason') or None
+        session.commit()
+        return jsonify({'message': 'Coverage terminated', 'coverage': coverage.to_dict()}), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/cobra/<int:coverage_id>/undo-terminate', methods=['PUT'])
+def undo_terminate_cobra(coverage_id):
+    session = Session()
+    try:
+        coverage = session.query(CobraCoverage).filter_by(id=coverage_id).first()
+        if not coverage:
+            return jsonify({'error': 'Coverage not found'}), 404
+
+        coverage.status = 'active'
+        coverage.termination_date = None
+        coverage.termination_reason = None
+        session.commit()
+        return jsonify({'message': 'Termination undone', 'coverage': coverage.to_dict()}), 200
+    except Exception as e:
+        session.rollback()
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/states', methods=['GET'])
+def get_states():
+    return jsonify(US_STATES), 200
+
+
+# ===========================================================================
 # INDIVIDUAL ENDPOINTS
 # ===========================================================================
 
@@ -4176,6 +4300,50 @@ def export_to_excel():
                     ws_personal.cell(row=row_idx, column=pc + fi, value=val)
                 pc += len(field_names)
 
+        # ========== INVOICES SHEET ==========
+        ws_invoices = wb.create_sheet("Invoices")
+        invoice_headers = ['Invoice Number', 'Tax ID', 'Client Name', 'Invoice Date', 'Amount',
+                           'Recipient Email', 'CC Email', 'Status', 'Payment Date', 'Payment Notes',
+                           'Policies', 'Is Binder', 'Created At']
+        for col, header in enumerate(invoice_headers, 1):
+            cell = ws_invoices.cell(row=2, column=col, value=header)
+            cell.font = header_font
+        invoices_list = session.query(Invoice).order_by(Invoice.invoice_date.desc()).all()
+        for row_idx, inv in enumerate(invoices_list, 3):
+            ws_invoices.cell(row=row_idx, column=1, value=inv.invoice_number)
+            ws_invoices.cell(row=row_idx, column=2, value=inv.tax_id)
+            ws_invoices.cell(row=row_idx, column=3, value=inv.client.client_name if inv.client else None)
+            ws_invoices.cell(row=row_idx, column=4, value=inv.invoice_date)
+            ws_invoices.cell(row=row_idx, column=5, value=float(inv.amount) if inv.amount else None)
+            ws_invoices.cell(row=row_idx, column=6, value=inv.recipient_email)
+            ws_invoices.cell(row=row_idx, column=7, value=inv.cc_email)
+            ws_invoices.cell(row=row_idx, column=8, value=inv.status)
+            ws_invoices.cell(row=row_idx, column=9, value=inv.payment_date)
+            ws_invoices.cell(row=row_idx, column=10, value=inv.payment_notes)
+            ws_invoices.cell(row=row_idx, column=11, value=inv.policies_description)
+            ws_invoices.cell(row=row_idx, column=12, value='Yes' if inv.is_binding else 'No')
+            ws_invoices.cell(row=row_idx, column=13, value=inv.created_at)
+
+        # ========== COBRA SHEET ==========
+        ws_cobra = wb.create_sheet("Cobra")
+        cobra_headers = ['First Name', 'Last Name', 'Tax ID', 'Client Name', 'State',
+                         'Start Date', 'End Date', 'Status', 'Termination Date', 'Termination Reason']
+        for col, header in enumerate(cobra_headers, 1):
+            cell = ws_cobra.cell(row=2, column=col, value=header)
+            cell.font = header_font
+        cobra_list = session.query(CobraCoverage).order_by(CobraCoverage.created_at.desc()).all()
+        for row_idx, cov in enumerate(cobra_list, 3):
+            ws_cobra.cell(row=row_idx, column=1, value=cov.first_name)
+            ws_cobra.cell(row=row_idx, column=2, value=cov.last_name)
+            ws_cobra.cell(row=row_idx, column=3, value=cov.tax_id)
+            ws_cobra.cell(row=row_idx, column=4, value=cov.client.client_name if cov.client else None)
+            ws_cobra.cell(row=row_idx, column=5, value=cov.state)
+            ws_cobra.cell(row=row_idx, column=6, value=cov.start_date)
+            ws_cobra.cell(row=row_idx, column=7, value=cov.end_date)
+            ws_cobra.cell(row=row_idx, column=8, value=cov.status)
+            ws_cobra.cell(row=row_idx, column=9, value=cov.termination_date)
+            ws_cobra.cell(row=row_idx, column=10, value=cov.termination_reason)
+
         # Save to BytesIO
         output = io.BytesIO()
         wb.save(output)
@@ -4218,13 +4386,15 @@ def import_from_excel():
         # Verify the file has the expected sheets and column headers BEFORE
         # deleting any data — uploading a random spreadsheet must not wipe
         # the database.
-        EXPECTED_SHEETS = ['Clients', 'Individuals', 'Employee Benefits', 'Commercial', 'Personal']
+        EXPECTED_SHEETS = ['Clients', 'Individuals', 'Employee Benefits', 'Commercial', 'Personal', 'Invoices', 'Cobra']
         REQUIRED_HEADERS = {
             'Clients': ['Tax ID', 'Client Name'],
             'Individuals': ['Individual ID', 'First Name', 'Last Name'],
             'Employee Benefits': ['Tax ID', 'Client Name'],
             'Commercial': ['Tax ID', 'Client Name'],
             'Personal': ['Individual ID', 'Individual Name'],
+            'Invoices': ['Invoice Number', 'Tax ID'],
+            'Cobra': ['First Name', 'Last Name'],
         }
 
         present_sheets = [s for s in EXPECTED_SHEETS if s in wb.sheetnames]
@@ -4324,6 +4494,8 @@ def import_from_excel():
 
         # ========== DELETE ALL EXISTING DATA ==========
         logging.info("[IMPORT] Clearing existing data...")
+        session.query(CobraCoverage).delete()
+        session.query(Invoice).delete()
         session.query(HomeownersPolicy).delete()
         session.query(BenefitPlan).delete()
         session.query(CommercialPlan).delete()
@@ -5053,12 +5225,65 @@ def import_from_excel():
 
         logging.info(f"[IMPORT] Personal done: {stats['personal_created']} records")
 
+        # ========== IMPORT INVOICES ==========
+        logging.info("[IMPORT] Starting Invoices sheet...")
+        if 'Invoices' in wb.sheetnames:
+            ws_inv = wb['Invoices']
+            for row_idx, row in enumerate(ws_inv.iter_rows(min_row=3, values_only=True), start=3):
+                if not row[0]:
+                    continue
+                try:
+                    inv = Invoice(
+                        invoice_number=int(row[0]),
+                        tax_id=str(row[1]).strip() if row[1] else None,
+                        invoice_date=parse_excel_date(row[3]) if len(row) > 3 else None,
+                        amount=safe_decimal(row[4]) if len(row) > 4 else None,
+                        recipient_email=row[5] if len(row) > 5 else None,
+                        cc_email=row[6] if len(row) > 6 else None,
+                        status=row[7] if len(row) > 7 and row[7] else 'pending',
+                        payment_date=parse_excel_date(row[8]) if len(row) > 8 else None,
+                        payment_notes=row[9] if len(row) > 9 else None,
+                        policies_description=row[10] if len(row) > 10 else None,
+                        is_binding=str(row[11]).strip().upper() == 'YES' if len(row) > 11 and row[11] else False,
+                    )
+                    session.add(inv)
+                    stats['invoices_created'] = stats.get('invoices_created', 0) + 1
+                except Exception as e:
+                    stats['errors'].append(f"Invoices row {row_idx}: {str(e)}")
+        logging.info(f"[IMPORT] Invoices done: {stats.get('invoices_created', 0)} records")
+
+        # ========== IMPORT COBRA ==========
+        logging.info("[IMPORT] Starting Cobra sheet...")
+        if 'Cobra' in wb.sheetnames:
+            ws_cobra = wb['Cobra']
+            for row_idx, row in enumerate(ws_cobra.iter_rows(min_row=3, values_only=True), start=3):
+                if not row[0] and not row[1]:
+                    continue
+                try:
+                    cov = CobraCoverage(
+                        first_name=row[0] if row[0] else None,
+                        last_name=row[1] if len(row) > 1 else None,
+                        tax_id=str(row[2]).strip() if len(row) > 2 and row[2] else None,
+                        state=row[4] if len(row) > 4 else None,
+                        start_date=parse_excel_date(row[5]) if len(row) > 5 else None,
+                        end_date=parse_excel_date(row[6]) if len(row) > 6 else None,
+                        status=row[7] if len(row) > 7 and row[7] else 'active',
+                        termination_date=parse_excel_date(row[8]) if len(row) > 8 else None,
+                        termination_reason=row[9] if len(row) > 9 else None,
+                    )
+                    session.add(cov)
+                    stats['cobra_created'] = stats.get('cobra_created', 0) + 1
+                except Exception as e:
+                    stats['errors'].append(f"Cobra row {row_idx}: {str(e)}")
+        logging.info(f"[IMPORT] Cobra done: {stats.get('cobra_created', 0)} records")
+
         session.commit()
         elapsed = _time.time() - _import_start
         logging.info(f"[IMPORT] Complete in {elapsed:.1f}s — "
                      f"clients={stats['clients_created']}, individuals={stats['individuals_created']}, "
                      f"benefits={stats['benefits_created']}, commercial={stats['commercial_created']}, "
-                     f"personal={stats['personal_created']}, errors={len(stats['errors'])}")
+                     f"personal={stats['personal_created']}, invoices={stats.get('invoices_created', 0)}, "
+                     f"cobra={stats.get('cobra_created', 0)}, errors={len(stats['errors'])}")
 
         # ========== BUILD ERRORS WORKBOOK ==========
         response_data = {

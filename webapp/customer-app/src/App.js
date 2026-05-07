@@ -49,6 +49,7 @@ import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ChatIcon from '@mui/icons-material/Chat';
+import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import Divider from '@mui/material/Divider';
 
 // Import new components
@@ -66,6 +67,7 @@ import IndividualModal from './components/IndividualModal';
 import PocManagement from './components/PocManagement';
 import ChatPanel from './components/ChatPanel';
 import Invoices from './components/Invoices';
+import CobraManagement from './components/CobraManagement';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
@@ -820,6 +822,7 @@ function NewApp() {
               { type: 'divider', label: 'INDIVIDUALS' },
               { label: 'Individuals', icon: <PeopleIcon fontSize="small" />, index: 2 },
               { label: 'Personal', icon: <PersonIcon fontSize="small" />, index: 5 },
+              { label: 'Cobra', icon: <LocalHospitalIcon fontSize="small" />, index: 10 },
               { type: 'divider', label: 'ADMIN' },
               { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
               { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
@@ -1070,6 +1073,11 @@ function NewApp() {
         {/* Tab 8: Invoices */}
         {activeTab === 8 && (
           <Invoices />
+        )}
+
+        {/* Tab 10: Cobra */}
+        {activeTab === 10 && (
+          <CobraManagement clients={clients} />
         )}
 
         {/* Tab 9: Chat */}
