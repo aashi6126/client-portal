@@ -2,11 +2,37 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Chip, Button, Dialog,
-  DialogTitle, DialogContent, DialogActions, TextField
+  DialogTitle, DialogContent, DialogActions, TextField, Tooltip
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import UndoIcon from '@mui/icons-material/Undo';
 import axios from 'axios';
+
+const COVERAGE_SHORT = {
+  'commercial general liability': 'GL',
+  'commercial property': 'Property',
+  'business owners policy': 'BOP',
+  'workers compensation': 'WC',
+  'commercial auto': 'Auto',
+  'epli': 'EPLI',
+  'nydbl': 'NYDBL',
+  'surety bond': 'Surety',
+  'product liability': 'Product',
+  'flood': 'Flood',
+  'directors & officers': 'D&O',
+  'fiduciary bond': 'Fiduciary',
+  'inland marine': 'Inland Marine',
+  'umbrella liability': 'Umbrella',
+  'professional or e&o': 'E&O',
+  'cyber liability': 'Cyber',
+  'crime or fidelity bond': 'Crime',
+};
+
+const shortCoverage = (name) => {
+  if (!name) return '';
+  const clean = name.replace(/\s*\(Binder 25%\)/i, '').trim();
+  return COVERAGE_SHORT[clean.toLowerCase()] || clean;
+};
 
 const Invoices = () => {
   const [invoices, setInvoices] = useState([]);
@@ -141,10 +167,11 @@ const Invoices = () => {
               <TableHead>
                 <TableRow>
                   <TableCell sx={{ fontWeight: 'bold' }}>Invoice #</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Policy Numbers</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Coverages</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Recipient</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Payment Date</TableCell>
@@ -155,11 +182,33 @@ const Invoices = () => {
                 {filteredInvoices.map((inv) => (
                   <TableRow key={inv.id} hover>
                     <TableCell>{inv.invoice_number}</TableCell>
+                    <TableCell>
+                      <Chip
+                        label={inv.is_binding ? 'Binder' : 'Annual'}
+                        size="small"
+                        variant="outlined"
+                        color={inv.is_binding ? 'warning' : 'primary'}
+                        sx={{ fontSize: '0.7rem' }}
+                      />
+                    </TableCell>
                     <TableCell><strong>{inv.client_name}</strong></TableCell>
                     <TableCell>{formatDate(inv.invoice_date)}</TableCell>
                     <TableCell>{formatCurrency(inv.amount)}</TableCell>
-                    <TableCell sx={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {inv.policies_description || '—'}
+                    <TableCell sx={{ maxWidth: 250 }}>
+                      {inv.policies_description ? (
+                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                          {inv.policies_description.split('|').map((entry, i) => {
+                            const [coverage, policyNum] = entry.split('::');
+                            const label = shortCoverage(coverage);
+                            if (!label) return null;
+                            return (
+                              <Tooltip key={i} title={policyNum ? `Policy #: ${policyNum}` : 'No policy number'} arrow>
+                                <Chip label={label} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22, cursor: 'help' }} />
+                              </Tooltip>
+                            );
+                          })}
+                        </Box>
+                      ) : '—'}
                     </TableCell>
                     <TableCell>{inv.recipient_email || '—'}</TableCell>
                     <TableCell>
