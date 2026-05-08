@@ -2682,7 +2682,7 @@ def invoice_send():
 
         # Save invoice record BEFORE sending email so it's persisted regardless
         total_amount = sum(item.get('premium', 0) or 0 for item in line_items)
-        policies_desc = ', '.join(item.get('coverage', '') for item in line_items if item.get('coverage'))
+        policies_desc = ', '.join(filter(None, (item.get('policy_number') for item in line_items)))
         invoice_record = Invoice(
             invoice_number=invoice_number,
             tax_id=client.tax_id,

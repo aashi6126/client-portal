@@ -144,7 +144,7 @@ const Invoices = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Policies</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Policy Numbers</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Recipient</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Payment Date</TableCell>
