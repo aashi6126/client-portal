@@ -2595,6 +2595,13 @@ def invoice_send():
         if not to_email:
             return jsonify({'error': 'to_email is required'}), 400
 
+        # Check for existing pending invoice for this client
+        comm_check = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
+        if comm_check and comm_check.client:
+            pending = session.query(Invoice).filter_by(tax_id=comm_check.client.tax_id, status='pending').first()
+            if pending:
+                return jsonify({'error': f'A pending invoice (#{pending.invoice_number}) already exists for this client. Please resolve it before creating a new one.'}), 409
+
         commercial = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
         if not commercial:
             return jsonify({'error': 'Commercial record not found'}), 404
@@ -2761,6 +2768,10 @@ def create_invoice():
         if not client:
             return jsonify({'error': f'Client with tax_id {tax_id} not found'}), 404
 
+        pending = session.query(Invoice).filter_by(tax_id=tax_id, status='pending').first()
+        if pending:
+            return jsonify({'error': f'A pending invoice (#{pending.invoice_number}) already exists for this client. Please resolve it before creating a new one.'}), 409
+
         invoice_number = InvoiceSequence.next_number(session)
         is_binding = data.get('is_binding', False)
         amount = data.get('amount', 0)
@@ -2834,6 +2845,29 @@ def record_payment(invoice_id):
     except Exception as e:
         session.rollback()
         logging.error(f"Error recording payment: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/invoices/<int:invoice_id>/void', methods=['PUT'])
+def void_invoice(invoice_id):
+    """Void an invoice."""
+    session = Session()
+    try:
+        invoice = session.query(Invoice).filter_by(id=invoice_id).first()
+        if not invoice:
+            return jsonify({'error': 'Invoice not found'}), 404
+
+        data = request.get_json() or {}
+        invoice.status = 'voided'
+        invoice.payment_notes = data.get('reason', 'Voided')
+        session.commit()
+
+        return jsonify({'message': 'Invoice voided', 'invoice': invoice.to_dict()}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error voiding invoice: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()

@@ -6,6 +6,7 @@ import {
 } from '@mui/material';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import UndoIcon from '@mui/icons-material/Undo';
+import BlockIcon from '@mui/icons-material/Block';
 import axios from 'axios';
 
 const COVERAGE_SHORT = {
@@ -40,6 +41,8 @@ const Invoices = () => {
   const [tab, setTab] = useState(0);
   const [paymentDialog, setPaymentDialog] = useState({ open: false, invoiceId: null });
   const [undoDialog, setUndoDialog] = useState({ open: false, invoiceId: null, invoiceNumber: null });
+  const [voidDialog, setVoidDialog] = useState({ open: false, invoiceId: null, invoiceNumber: null });
+  const [voidReason, setVoidReason] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
 
@@ -102,6 +105,17 @@ const Invoices = () => {
       fetchInvoices();
     } catch (err) {
       console.error('Error recording payment:', err);
+    }
+  };
+
+  const handleVoid = async () => {
+    try {
+      await axios.put(`/api/invoices/${voidDialog.invoiceId}/void`, { reason: voidReason || 'Voided' });
+      setVoidDialog({ open: false, invoiceId: null, invoiceNumber: null });
+      setVoidReason('');
+      fetchInvoices();
+    } catch (err) {
+      console.error('Error voiding invoice:', err);
     }
   };
 
@@ -175,7 +189,7 @@ const Invoices = () => {
                   <TableCell sx={{ fontWeight: 'bold' }}>Recipient</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Payment Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', width: 130 }}>Actions</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold', width: 160 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>
               <TableBody>
@@ -213,28 +227,41 @@ const Invoices = () => {
                     <TableCell>{inv.recipient_email || '—'}</TableCell>
                     <TableCell>
                       <Chip
-                        label={inv.status === 'paid' ? 'Paid' : 'Pending'}
+                        label={inv.status === 'paid' ? 'Paid' : inv.status === 'voided' ? 'Voided' : 'Pending'}
                         size="small"
-                        color={inv.status === 'paid' ? 'success' : 'warning'}
-                        sx={{ fontSize: '0.7rem' }}
+                        color={inv.status === 'paid' ? 'success' : inv.status === 'voided' ? 'default' : 'warning'}
+                        sx={{ fontSize: '0.7rem', ...(inv.status === 'voided' && { textDecoration: 'line-through' }) }}
                       />
                     </TableCell>
                     <TableCell>{inv.status === 'paid' ? formatDate(inv.payment_date) : '—'}</TableCell>
                     <TableCell>
-                      {inv.status === 'pending' ? (
-                        <Button
-                          size="small"
-                          startIcon={<CheckCircleIcon />}
-                          color="success"
-                          onClick={() => {
-                            setPaymentDialog({ open: true, invoiceId: inv.id });
-                            setPaymentDate(new Date().toISOString().split('T')[0]);
-                          }}
-                          sx={{ fontSize: '0.7rem' }}
-                        >
-                          Paid
-                        </Button>
-                      ) : (
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                      {inv.status === 'pending' && (
+                        <>
+                          <Button
+                            size="small"
+                            startIcon={<CheckCircleIcon />}
+                            color="success"
+                            onClick={() => {
+                              setPaymentDialog({ open: true, invoiceId: inv.id });
+                              setPaymentDate(new Date().toISOString().split('T')[0]);
+                            }}
+                            sx={{ fontSize: '0.7rem' }}
+                          >
+                            Paid
+                          </Button>
+                          <Button
+                            size="small"
+                            startIcon={<BlockIcon />}
+                            color="error"
+                            onClick={() => setVoidDialog({ open: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number })}
+                            sx={{ fontSize: '0.7rem' }}
+                          >
+                            Void
+                          </Button>
+                        </>
+                      )}
+                      {inv.status === 'paid' && (
                         <Button
                           size="small"
                           startIcon={<UndoIcon />}
@@ -245,6 +272,7 @@ const Invoices = () => {
                           Undo
                         </Button>
                       )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -253,6 +281,25 @@ const Invoices = () => {
           </TableContainer>
         )}
       </Paper>
+
+      <Dialog open={voidDialog.open} onClose={() => setVoidDialog({ open: false, invoiceId: null, invoiceNumber: null })}>
+        <DialogTitle>Void Invoice</DialogTitle>
+        <DialogContent sx={{ pt: 2, minWidth: 350 }}>
+          <Typography variant="body2" sx={{ mb: 2 }}>
+            Are you sure you want to void Invoice #{voidDialog.invoiceNumber}? This action cannot be undone.
+          </Typography>
+          <TextField
+            label="Reason (optional)"
+            value={voidReason}
+            onChange={(e) => setVoidReason(e.target.value)}
+            fullWidth size="small" multiline minRows={2}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setVoidDialog({ open: false, invoiceId: null, invoiceNumber: null })}>Cancel</Button>
+          <Button onClick={handleVoid} variant="contained" color="error">Void Invoice</Button>
+        </DialogActions>
+      </Dialog>
 
       <Dialog open={undoDialog.open} onClose={() => setUndoDialog({ open: false, invoiceId: null, invoiceNumber: null })}>
         <DialogTitle>Undo Payment</DialogTitle>
