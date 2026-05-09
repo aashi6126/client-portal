@@ -223,7 +223,8 @@ const getCommercialColumns = (onEdit) => [
     label: 'Tax ID',
     sticky: true,
     sortable: true,
-    minWidth: 90
+    minWidth: 110,
+    noWrap: true
   },
   {
     id: 'client_name',

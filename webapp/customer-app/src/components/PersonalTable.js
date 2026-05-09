@@ -239,7 +239,8 @@ const getPersonalColumns = (onEdit) => [
     label: 'Individual ID',
     sticky: true,
     sortable: true,
-    minWidth: 120
+    minWidth: 120,
+    noWrap: true
   },
   {
     id: 'individual_name',

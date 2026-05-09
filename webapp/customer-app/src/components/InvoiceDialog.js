@@ -110,7 +110,9 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
     return policies;
   }, [commercial]);
 
-  // Reset state when dialog opens
+  const [pendingCoverages, setPendingCoverages] = useState(new Set());
+
+  // Reset state when dialog opens — also fetch pending invoices for this client
   useEffect(() => {
     if (open) {
       const initial = {};
@@ -124,6 +126,33 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
       setSending(false);
       setPreviewing(false);
       setAlert(null);
+      setPendingCoverages(new Set());
+
+      // Fetch pending invoices to detect coverage overlap
+      if (commercial?.tax_id) {
+        axios.get('/api/invoices', { params: { status: 'pending' } }).then(res => {
+          const coverages = new Set();
+          (res.data || []).forEach(inv => {
+            if (inv.tax_id === commercial.tax_id && inv.policies_description) {
+              inv.policies_description.split('|').forEach(entry => {
+                const [coverage] = entry.split('::');
+                if (coverage) coverages.add(coverage.replace(/\s*\(Binder 25%\)/i, '').trim().toLowerCase());
+              });
+            }
+          });
+          setPendingCoverages(coverages);
+          // Auto-deselect policies that already have pending invoices
+          if (coverages.size > 0) {
+            setSelected(prev => {
+              const updated = { ...prev };
+              activePolicies.forEach(p => {
+                if (coverages.has(p.label.toLowerCase())) updated[p.key] = false;
+              });
+              return updated;
+            });
+          }
+        }).catch(() => {});
+      }
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -240,24 +269,29 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
           </Typography>
         ) : (
           <Box sx={{ mb: 2 }}>
-            {activePolicies.map((p) => (
+            {activePolicies.map((p) => {
+              const hasPending = pendingCoverages.has(p.label.toLowerCase());
+              return (
               <Box
                 key={p.key}
-                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
+                sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', opacity: hasPending ? 0.5 : 1 }}
               >
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                   <Checkbox
                     checked={!!selected[p.key]}
                     onChange={() => togglePolicy(p.key)}
                     size="small"
+                    disabled={hasPending}
                   />
                   <Typography variant="body2">{p.label}</Typography>
+                  {hasPending && <Typography variant="caption" color="error" sx={{ ml: 1 }}>(pending invoice)</Typography>}
                 </Box>
                 <Typography variant="body2" color="text.secondary">
                   {formatCurrency(p.premium)}
                 </Typography>
               </Box>
-            ))}
+              );
+            })}
             <Divider sx={{ my: 1 }} />
             {isBinding && (
               <Box sx={{ display: 'flex', justifyContent: 'space-between', px: 1, mb: 0.5 }}>

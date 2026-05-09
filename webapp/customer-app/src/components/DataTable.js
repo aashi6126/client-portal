@@ -265,15 +265,18 @@ const DataTable = ({
                 {columns.map((column) => (
                   <TableCell
                     key={column.id}
-                    sx={column.sticky ? {
-                      position: 'sticky',
-                      left: stickyOffsets[column.id],
-                      zIndex: 1,
-                      backgroundColor: 'white',
-                      ...(column.id === lastStickyId && {
-                        boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                    sx={{
+                      ...(column.noWrap && { whiteSpace: 'nowrap' }),
+                      ...(column.sticky && {
+                        position: 'sticky',
+                        left: stickyOffsets[column.id],
+                        zIndex: 1,
+                        backgroundColor: 'white',
+                        ...(column.id === lastStickyId && {
+                          boxShadow: '2px 0 5px rgba(0,0,0,0.1)'
+                        })
                       })
-                    } : undefined}
+                    }}
                   >
                     {renderCell(column, row)}
                   </TableCell>

@@ -584,79 +584,38 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
   return (
     <Box sx={{ p: 3 }}>
       {/* Header */}
-      <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 3 }}>
-        Dashboard Overview
+      <Typography variant="h5" gutterBottom sx={{ fontWeight: 'bold', mb: 2, color: '#1a1a2e' }}>
+        Dashboard
       </Typography>
 
       {/* Section 1: Summary Cards (full-width row) */}
       <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
-        <Card
-          sx={{ backgroundColor: '#e8f5e9', border: '1px solid #a5d6a7', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-          onClick={() => onNavigateToTab && onNavigateToTab(1)}
-        >
-          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Total Clients</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                  {clients.length}
-                </Typography>
+        {[
+          { label: 'Total Clients', value: clients.length, icon: <BusinessIcon />, gradient: 'linear-gradient(135deg, #2f9e44, #40c057)', bg: '#e6fcf5', tab: 1 },
+          { label: 'Employee Benefits', value: benefits.length, icon: <HealthAndSafetyIcon />, gradient: 'linear-gradient(135deg, #e67700, #f59f00)', bg: '#fff9db', tab: 3 },
+          { label: 'Commercial Policies', value: commercial.length, icon: <SecurityIcon />, gradient: 'linear-gradient(135deg, #3b5bdb, #5c7cfa)', bg: '#edf2ff', tab: 4 },
+          { label: 'Personal Policies', value: personal.length, icon: <PersonIcon />, gradient: 'linear-gradient(135deg, #845ef7, #9775fa)', bg: '#f3f0ff', tab: 5 },
+        ].map((card, i) => (
+          <Card
+            key={i}
+            sx={{ flex: 1, cursor: 'pointer', transition: 'all 0.2s', '&:hover': { transform: 'translateY(-2px)', boxShadow: 3 } }}
+            onClick={() => onNavigateToTab && onNavigateToTab(card.tab)}
+          >
+            <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Box>
+                  <Typography variant="caption" sx={{ color: '#6b7280', fontWeight: 500 }}>{card.label}</Typography>
+                  <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#1a1a2e' }}>
+                    {card.value}
+                  </Typography>
+                </Box>
+                <Box sx={{ width: 40, height: 40, borderRadius: 2, background: card.gradient, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', '& svg': { fontSize: 22 } }}>
+                  {card.icon}
+                </Box>
               </Box>
-              <BusinessIcon sx={{ fontSize: 36, color: '#4caf50', opacity: 0.6 }} />
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card
-          sx={{ backgroundColor: '#fff3e0', border: '1px solid #ffcc80', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-          onClick={() => onNavigateToTab && onNavigateToTab(3)}
-        >
-          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Employee Benefits</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                  {benefits.length}
-                </Typography>
-              </Box>
-              <HealthAndSafetyIcon sx={{ fontSize: 36, color: '#fb8c00', opacity: 0.6 }} />
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card
-          sx={{ backgroundColor: '#e3f2fd', border: '1px solid #90caf9', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-          onClick={() => onNavigateToTab && onNavigateToTab(4)}
-        >
-          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Commercial Policies</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                  {commercial.length}
-                </Typography>
-              </Box>
-              <SecurityIcon sx={{ fontSize: 36, color: '#1976d2', opacity: 0.6 }} />
-            </Box>
-          </CardContent>
-        </Card>
-
-        <Card
-          sx={{ backgroundColor: '#f3e5f5', border: '1px solid #ce93d8', cursor: 'pointer', '&:hover': { boxShadow: 4 }, flex: 1 }}
-          onClick={() => onNavigateToTab && onNavigateToTab(5)}
-        >
-          <CardContent sx={{ py: 1.5, '&:last-child': { pb: 1.5 } }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Box>
-                <Typography variant="caption" color="text.secondary">Personal Policies</Typography>
-                <Typography variant="h4" sx={{ fontWeight: 'bold', color: '#37474f' }}>
-                  {personal.length}
-                </Typography>
-              </Box>
-              <PersonIcon sx={{ fontSize: 36, color: '#9c27b0', opacity: 0.6 }} />
-            </Box>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        ))}
       </Box>
 
       {/* Renewals Chart (full-width) */}
@@ -685,9 +644,9 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       labelFormatter={formatMonth}
                       formatter={(value, name) => [value, name === 'benefits' ? 'Benefits' : name === 'personal' ? 'Personal' : 'Commercial']}
                     />
-                    <Bar dataKey="benefits" stackId="a" fill="#fb8c00" />
-                    <Bar dataKey="commercial" stackId="a" fill="#1976d2" />
-                    <Bar dataKey="personal" stackId="a" fill="#9c27b0" />
+                    <Bar dataKey="benefits" stackId="a" fill="#f59f00" radius={[0,0,0,0]} />
+                    <Bar dataKey="commercial" stackId="a" fill="#5c7cfa" radius={[0,0,0,0]} />
+                    <Bar dataKey="personal" stackId="a" fill="#9775fa" radius={[2,2,0,0]} />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -865,7 +824,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           {!clientsWithPolicies.has(item.tax_id) && (
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#fb8c00', flexShrink: 0 }} title="No policies" />
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#e67700', flexShrink: 0 }} title="No policies" />
                           )}
                           <strong>{item.client_name}</strong>
                         </Box>
@@ -920,7 +879,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       <TableCell>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                           {!clientsWithPolicies.has(client.tax_id) && (
-                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#fb8c00', flexShrink: 0 }} title="No policies" />
+                            <Box sx={{ width: 8, height: 8, borderRadius: '50%', backgroundColor: '#e67700', flexShrink: 0 }} title="No policies" />
                           )}
                           <strong>{client.client_name}</strong>
                         </Box>
@@ -1183,7 +1142,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                     tickFormatter={(v) => v.length > 20 ? v.slice(0, 19) + '…' : v}
                   />
                   <Tooltip formatter={(value) => [value, 'Policies']} />
-                  <Bar dataKey="count" fill="#4caf50" label={{ position: 'right', fontSize: 10, fill: '#555' }} />
+                  <Bar dataKey="count" fill="#2f9e44" radius={[0,4,4,0]} label={{ position: 'right', fontSize: 10, fill: '#6b7280' }} />
                 </BarChart>
               </ResponsiveContainer>
             </Box>
@@ -1233,16 +1192,16 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                     iconType="square"
                     wrapperStyle={{ fontSize: 11 }}
                     payload={[
-                      { value: 'Employee Benefits', type: 'square', color: '#fb8c00' },
-                      { value: 'Commercial', type: 'square', color: '#1976d2' },
-                      { value: 'Personal', type: 'square', color: '#9c27b0' }
+                      { value: 'Employee Benefits', type: 'square', color: '#f59f00' },
+                      { value: 'Commercial', type: 'square', color: '#5c7cfa' },
+                      { value: 'Personal', type: 'square', color: '#9775fa' }
                     ]}
                   />
                   <Bar dataKey="count" label={{ position: 'right', fontSize: 10, fill: '#555' }}>
                     {policyAgg.by_coverage_type.map((entry, idx) => (
                       <Cell
                         key={`cov-${idx}`}
-                        fill={entry.category === 'benefits' ? '#fb8c00' : entry.category === 'commercial' ? '#1976d2' : '#9c27b0'}
+                        fill={entry.category === 'benefits' ? '#f59f00' : entry.category === 'commercial' ? '#5c7cfa' : '#9775fa'}
                       />
                     ))}
                   </Bar>
@@ -1300,7 +1259,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                               <Box sx={{
                                 width: `${barPct}%`,
                                 height: '100%',
-                                backgroundColor: isOther ? '#b0bec5' : '#00796b'
+                                backgroundColor: isOther ? '#cbd5e1' : '#3b5bdb'
                               }} />
                             </Box>
                           </Box>

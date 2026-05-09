@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
-  Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Chip, Button, Dialog,
+  Box, Typography, Paper, Tabs, Tab, Chip, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, Tooltip
 } from '@mui/material';
+import { DataGrid } from '@mui/x-data-grid';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import UndoIcon from '@mui/icons-material/Undo';
 import BlockIcon from '@mui/icons-material/Block';
@@ -169,117 +169,105 @@ const Invoices = () => {
           <Tab label={`Pending (${pendingCount})`} />
         </Tabs>
 
-        {loading ? (
-          <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>Loading...</Typography>
-        ) : filteredInvoices.length === 0 ? (
-          <Typography color="text.secondary" sx={{ textAlign: 'center', py: 4 }}>
-            {tab === 1 ? 'No pending invoices' : 'No invoices found'}{selectedMonth ? ` for ${selectedMonth}` : ''}
-          </Typography>
-        ) : (
-          <TableContainer sx={{ maxHeight: 'calc(100vh - 280px)' }}>
-            <Table stickyHeader size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Invoice #</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Amount</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Coverages</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Recipient</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Payment Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold', width: 160 }}>Actions</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {filteredInvoices.map((inv) => (
-                  <TableRow key={inv.id} hover>
-                    <TableCell>{inv.invoice_number}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={inv.is_binding ? 'Binder' : 'Annual'}
-                        size="small"
-                        variant="outlined"
-                        color={inv.is_binding ? 'warning' : 'primary'}
-                        sx={{ fontSize: '0.7rem' }}
-                      />
-                    </TableCell>
-                    <TableCell><strong>{inv.client_name}</strong></TableCell>
-                    <TableCell>{formatDate(inv.invoice_date)}</TableCell>
-                    <TableCell>{formatCurrency(inv.amount)}</TableCell>
-                    <TableCell sx={{ maxWidth: 250 }}>
-                      {inv.policies_description ? (
-                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                          {inv.policies_description.split('|').map((entry, i) => {
-                            const [coverage, policyNum] = entry.split('::');
-                            const label = shortCoverage(coverage);
-                            if (!label) return null;
-                            return (
-                              <Tooltip key={i} title={policyNum ? `Policy #: ${policyNum}` : 'No policy number'} arrow>
-                                <Chip label={label} size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 22, cursor: 'help' }} />
-                              </Tooltip>
-                            );
-                          })}
-                        </Box>
-                      ) : '—'}
-                    </TableCell>
-                    <TableCell>{inv.recipient_email || '—'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        label={inv.status === 'paid' ? 'Paid' : inv.status === 'voided' ? 'Voided' : 'Pending'}
-                        size="small"
-                        color={inv.status === 'paid' ? 'success' : inv.status === 'voided' ? 'default' : 'warning'}
-                        sx={{ fontSize: '0.7rem', ...(inv.status === 'voided' && { textDecoration: 'line-through' }) }}
-                      />
-                    </TableCell>
-                    <TableCell>{inv.status === 'paid' ? formatDate(inv.payment_date) : '—'}</TableCell>
-                    <TableCell>
-                      <Box sx={{ display: 'flex', gap: 0.5 }}>
-                      {inv.status === 'pending' && (
-                        <>
-                          <Button
-                            size="small"
-                            startIcon={<CheckCircleIcon />}
-                            color="success"
-                            onClick={() => {
-                              setPaymentDialog({ open: true, invoiceId: inv.id });
-                              setPaymentDate(new Date().toISOString().split('T')[0]);
-                            }}
-                            sx={{ fontSize: '0.7rem' }}
-                          >
-                            Paid
-                          </Button>
-                          <Button
-                            size="small"
-                            startIcon={<BlockIcon />}
-                            color="error"
-                            onClick={() => setVoidDialog({ open: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number })}
-                            sx={{ fontSize: '0.7rem' }}
-                          >
-                            Void
-                          </Button>
-                        </>
-                      )}
-                      {inv.status === 'paid' && (
-                        <Button
-                          size="small"
-                          startIcon={<UndoIcon />}
-                          color="warning"
-                          onClick={() => setUndoDialog({ open: true, invoiceId: inv.id, invoiceNumber: inv.invoice_number })}
-                          sx={{ fontSize: '0.7rem' }}
-                        >
-                          Undo
-                        </Button>
-                      )}
-                      </Box>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        )}
+        <DataGrid
+          rows={filteredInvoices}
+          columns={[
+            { field: 'invoice_number', headerName: 'Invoice #', width: 100 },
+            {
+              field: 'type', headerName: 'Type', width: 90,
+              renderCell: (params) => (
+                <Chip label={params.row.is_binding ? 'Binder' : 'Annual'} size="small" variant="outlined"
+                  color={params.row.is_binding ? 'warning' : 'primary'} sx={{ fontSize: '0.7rem' }} />
+              ),
+              sortComparator: (v1, v2, p1, p2) => (p1.api.getRow(p1.id).is_binding ? 1 : 0) - (p2.api.getRow(p2.id).is_binding ? 1 : 0),
+            },
+            { field: 'client_name', headerName: 'Client', flex: 1, minWidth: 150,
+              renderCell: (params) => <strong>{params.value}</strong> },
+            { field: 'invoice_date', headerName: 'Date', width: 110,
+              valueFormatter: (value) => formatDate(value) },
+            { field: 'amount', headerName: 'Amount', width: 110,
+              valueFormatter: (value) => formatCurrency(value) },
+            {
+              field: 'coverages', headerName: 'Coverages', width: 220, sortable: false,
+              renderCell: (params) => {
+                const desc = params.row.policies_description;
+                if (!desc) return '—';
+                return (
+                  <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.3, py: 0.5 }}>
+                    {desc.split('|').map((entry, i) => {
+                      const [coverage, policyNum] = entry.split('::');
+                      const label = shortCoverage(coverage);
+                      if (!label) return null;
+                      return (
+                        <Tooltip key={i} title={policyNum ? `Policy #: ${policyNum}` : 'No policy number'} arrow>
+                          <Chip label={label} size="small" variant="outlined" sx={{ fontSize: '0.6rem', height: 20, cursor: 'help' }} />
+                        </Tooltip>
+                      );
+                    })}
+                  </Box>
+                );
+              },
+            },
+            { field: 'recipient_email', headerName: 'Recipient', width: 160 },
+            {
+              field: 'status', headerName: 'Status', width: 100,
+              renderCell: (params) => (
+                <Chip
+                  label={params.value === 'paid' ? 'Paid' : params.value === 'voided' ? 'Voided' : 'Pending'}
+                  size="small"
+                  color={params.value === 'paid' ? 'success' : params.value === 'voided' ? 'default' : 'warning'}
+                  sx={{ fontSize: '0.7rem', ...(params.value === 'voided' && { textDecoration: 'line-through' }) }}
+                />
+              ),
+            },
+            { field: 'payment_date', headerName: 'Payment Date', width: 120,
+              valueFormatter: (value) => value ? formatDate(value) : '—' },
+            {
+              field: 'actions', headerName: 'Actions', width: 160, sortable: false, filterable: false,
+              renderCell: (params) => (
+                <Box sx={{ display: 'flex', gap: 0.5 }}>
+                  {params.row.status === 'pending' && (
+                    <>
+                      <Button size="small" startIcon={<CheckCircleIcon />} color="success"
+                        onClick={() => { setPaymentDialog({ open: true, invoiceId: params.row.id }); setPaymentDate(new Date().toISOString().split('T')[0]); }}
+                        sx={{ fontSize: '0.65rem', minWidth: 0 }}>Paid</Button>
+                      <Button size="small" startIcon={<BlockIcon />} color="error"
+                        onClick={() => setVoidDialog({ open: true, invoiceId: params.row.id, invoiceNumber: params.row.invoice_number })}
+                        sx={{ fontSize: '0.65rem', minWidth: 0 }}>Void</Button>
+                    </>
+                  )}
+                  {params.row.status === 'paid' && (
+                    <Button size="small" startIcon={<UndoIcon />} color="warning"
+                      onClick={() => setUndoDialog({ open: true, invoiceId: params.row.id, invoiceNumber: params.row.invoice_number })}
+                      sx={{ fontSize: '0.65rem', minWidth: 0 }}>Undo</Button>
+                  )}
+                </Box>
+              ),
+            },
+          ]}
+          autoHeight
+          density="compact"
+          disableRowSelectionOnClick
+          pageSizeOptions={[10, 25, 50]}
+          initialState={{ pagination: { paginationModel: { pageSize: 25 } } }}
+          sx={{
+            border: 'none',
+            '& .MuiDataGrid-columnHeader': {
+              backgroundColor: '#f8f9fc',
+              fontSize: '0.75rem',
+              fontWeight: 600,
+              textTransform: 'uppercase',
+              letterSpacing: 0.5,
+              color: '#4a5568',
+              borderBottom: '2px solid #eef0f6',
+            },
+            '& .MuiDataGrid-columnHeaderRow': { mb: 1 },
+            '& .MuiDataGrid-cell': { fontSize: '0.8125rem', borderColor: '#f0f0f5', py: 1 },
+            '& .MuiDataGrid-row:hover': { backgroundColor: '#f8f9fc' },
+          }}
+          loading={loading}
+          getRowHeight={() => 'auto'}
+        />
       </Paper>
 
       <Dialog open={voidDialog.open} onClose={() => setVoidDialog({ open: false, invoiceId: null, invoiceNumber: null })}>

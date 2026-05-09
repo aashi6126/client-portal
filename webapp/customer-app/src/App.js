@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import {
@@ -78,39 +79,86 @@ const API_PERSONAL = '/api/personal';
 const API_FEEDBACK = '/api/feedback';
 
 const theme = createTheme({
+  palette: {
+    primary: { main: '#3b5bdb', light: '#5c7cfa', dark: '#364fc7' },
+    secondary: { main: '#845ef7', light: '#9775fa', dark: '#7048e8' },
+    success: { main: '#2f9e44', light: '#40c057' },
+    warning: { main: '#e67700', light: '#f59f00' },
+    error: { main: '#e03131', light: '#f03e3e' },
+    info: { main: '#1c7ed6', light: '#339af0' },
+    background: { default: '#f1f3f9', paper: '#ffffff' },
+    text: { primary: '#1a1a2e', secondary: '#6b7280' },
+  },
   typography: {
     fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
     fontSize: 13,
     h3: { fontWeight: 700 },
-    h4: { fontWeight: 700 },
-    h5: { fontWeight: 700 },
-    h6: { fontWeight: 600 },
+    h4: { fontWeight: 700, letterSpacing: -0.5 },
+    h5: { fontWeight: 700, letterSpacing: -0.3 },
+    h6: { fontWeight: 600, letterSpacing: -0.2 },
     subtitle1: { fontWeight: 600 },
     subtitle2: { fontWeight: 600 },
     body2: { fontSize: '0.8125rem' },
-    caption: { fontSize: '0.7rem' },
+    caption: { fontSize: '0.7rem', color: '#6b7280' },
     button: { fontWeight: 600, textTransform: 'none' },
   },
+  shape: { borderRadius: 10 },
+  shadows: [
+    'none',
+    '0 1px 3px rgba(0,0,0,0.04), 0 1px 2px rgba(0,0,0,0.06)',
+    '0 2px 6px rgba(0,0,0,0.06), 0 1px 3px rgba(0,0,0,0.08)',
+    '0 4px 12px rgba(0,0,0,0.08), 0 2px 4px rgba(0,0,0,0.06)',
+    '0 6px 16px rgba(0,0,0,0.1), 0 3px 6px rgba(0,0,0,0.06)',
+    ...Array(20).fill('0 8px 24px rgba(0,0,0,0.12)')
+  ],
   components: {
     MuiTableCell: {
       styleOverrides: {
-        root: { fontSize: '0.8125rem' },
-        head: { fontWeight: 600 },
+        root: { fontSize: '0.8125rem', borderColor: '#f0f0f5' },
+        head: { fontWeight: 600, backgroundColor: '#f8f9fc', color: '#4a5568', fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: 0.5 },
       },
     },
     MuiButton: {
       styleOverrides: {
-        root: { textTransform: 'none', borderRadius: 6 },
+        root: { textTransform: 'none', borderRadius: 8, fontWeight: 600 },
+        contained: { boxShadow: '0 1px 3px rgba(0,0,0,0.12)' },
       },
     },
     MuiPaper: {
+      defaultProps: { elevation: 1 },
       styleOverrides: {
-        root: { borderRadius: 8 },
+        root: { borderRadius: 12, border: '1px solid #eef0f6' },
       },
     },
     MuiCard: {
       styleOverrides: {
-        root: { borderRadius: 8 },
+        root: { borderRadius: 12, border: '1px solid #eef0f6' },
+      },
+    },
+    MuiChip: {
+      styleOverrides: {
+        root: { fontWeight: 500 },
+        sizeSmall: { height: 24, fontSize: '0.72rem' },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: { textTransform: 'none', fontWeight: 500, fontSize: '0.85rem', minHeight: 40 },
+      },
+    },
+    MuiTabs: {
+      styleOverrides: {
+        root: { minHeight: 40 },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: { borderRadius: 14 },
+      },
+    },
+    MuiTextField: {
+      styleOverrides: {
+        root: { '& .MuiOutlinedInput-root': { borderRadius: 8 } },
       },
     },
   },
@@ -728,7 +776,7 @@ function NewApp() {
   return (
     <ThemeProvider theme={theme}>
     <CssBaseline />
-    <Box sx={{ backgroundColor: '#1a1a2e', minHeight: '100vh' }}>
+    <Box sx={{ backgroundColor: '#0f1629', minHeight: '100vh' }}>
       {/* Hidden file input for import */}
       <input
         type="file"
@@ -739,9 +787,9 @@ function NewApp() {
       />
 
       {/* Header */}
-      <AppBar position="static" elevation={0} sx={{ background: '#1a1a2e', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-        <Toolbar variant="dense" sx={{ minHeight: 44, px: 2 }}>
-          <Typography variant="subtitle1" sx={{ fontWeight: 700, letterSpacing: 0.5, mr: 3 }}>
+      <AppBar position="static" elevation={0} sx={{ background: 'linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        <Toolbar sx={{ minHeight: 52, px: 2 }}>
+          <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: 0.3, mr: 3 }}>
             Client Hub
           </Typography>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -805,8 +853,8 @@ function NewApp() {
               top: 'auto',
               position: 'relative',
               border: 'none',
-              backgroundColor: '#1a1a2e',
-              height: 'calc(100vh - 56px)',
+              backgroundColor: '#0f1629',
+              height: 'calc(100vh - 52px)',
               overflow: 'auto',
             },
           }}
@@ -850,15 +898,16 @@ function NewApp() {
                       sx={{
                         py: 0.7,
                         my: 0.2,
-                        borderRadius: 0.5,
-                        '&:hover': { backgroundColor: 'rgba(255,255,255,0.08)' },
+                        borderRadius: 1,
+                        '&:hover': { backgroundColor: 'rgba(92,124,250,0.1)' },
                         '&.Mui-selected': {
-                          backgroundColor: 'rgba(255,255,255,0.12)',
-                          '&:hover': { backgroundColor: 'rgba(255,255,255,0.18)' },
+                          backgroundColor: 'rgba(92,124,250,0.15)',
+                          borderLeft: '3px solid #5c7cfa',
+                          '&:hover': { backgroundColor: 'rgba(92,124,250,0.22)' },
                         },
                       }}
                     >
-                      <ListItemIcon sx={{ minWidth: 32, color: activeTab === item.index ? '#90caf9' : 'rgba(255,255,255,0.5)' }}>
+                      <ListItemIcon sx={{ minWidth: 32, color: activeTab === item.index ? '#5c7cfa' : 'rgba(255,255,255,0.45)' }}>
                         {item.icon}
                       </ListItemIcon>
                       <ListItemText
@@ -878,7 +927,15 @@ function NewApp() {
         </Drawer>
 
         {/* Main Content */}
-        <Box sx={{ flexGrow: 1, px: 3, py: 1, overflow: 'auto', height: 'calc(100vh - 44px)', backgroundColor: '#f5f6fa' }}>
+        <Box sx={{ flexGrow: 1, px: 3, py: 1.5, overflow: 'auto', height: 'calc(100vh - 58px)', mt: 0.75, backgroundColor: '#f1f3f9', borderTopLeftRadius: 14, borderTopRightRadius: 14 }}>
+        <AnimatePresence mode="wait">
+        <motion.div
+          key={activeTab}
+          initial={{ opacity: 0, y: 8 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -8 }}
+          transition={{ duration: 0.15 }}
+        >
 
         {/* Tab 0: Dashboard */}
         {activeTab === 0 && (
@@ -1177,6 +1234,8 @@ function NewApp() {
           </Box>
         )}
 
+        </motion.div>
+        </AnimatePresence>
         </Box>
       </Box>
 

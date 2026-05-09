@@ -8,7 +8,8 @@ export const individualColumns = [
     label: 'Individual ID',
     sticky: true,
     sortable: true,
-    minWidth: 120
+    minWidth: 120,
+    noWrap: true
   },
   {
     id: 'first_name',
