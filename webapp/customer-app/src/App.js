@@ -1129,7 +1129,7 @@ function NewApp() {
 
         {/* Tab 8: Invoices */}
         {activeTab === 8 && (
-          <Invoices />
+          <Invoices isAdmin={isAdmin} />
         )}
 
         {/* Tab 10: Cobra */}

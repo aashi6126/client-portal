@@ -7,6 +7,7 @@ import { DataGrid } from '@mui/x-data-grid';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import UndoIcon from '@mui/icons-material/Undo';
 import BlockIcon from '@mui/icons-material/Block';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
 const COVERAGE_SHORT = {
@@ -35,13 +36,14 @@ const shortCoverage = (name) => {
   return COVERAGE_SHORT[clean.toLowerCase()] || clean;
 };
 
-const Invoices = () => {
+const Invoices = ({ isAdmin = false }) => {
   const [invoices, setInvoices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
   const [paymentDialog, setPaymentDialog] = useState({ open: false, invoiceId: null });
   const [undoDialog, setUndoDialog] = useState({ open: false, invoiceId: null, invoiceNumber: null });
   const [voidDialog, setVoidDialog] = useState({ open: false, invoiceId: null, invoiceNumber: null });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, invoiceId: null, invoiceNumber: null });
   const [voidReason, setVoidReason] = useState('');
   const [paymentDate, setPaymentDate] = useState('');
   const [paymentNotes, setPaymentNotes] = useState('');
@@ -116,6 +118,16 @@ const Invoices = () => {
       fetchInvoices();
     } catch (err) {
       console.error('Error voiding invoice:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`/api/invoices/${deleteDialog.invoiceId}`);
+      setDeleteDialog({ open: false, invoiceId: null, invoiceNumber: null });
+      fetchInvoices();
+    } catch (err) {
+      console.error('Error deleting invoice:', err);
     }
   };
 
@@ -223,7 +235,7 @@ const Invoices = () => {
             { field: 'payment_date', headerName: 'Payment Date', width: 120,
               valueFormatter: (value) => value ? formatDate(value) : '—' },
             {
-              field: 'actions', headerName: 'Actions', width: 160, sortable: false, filterable: false,
+              field: 'actions', headerName: 'Actions', width: isAdmin ? 200 : 160, sortable: false, filterable: false,
               renderCell: (params) => (
                 <Box sx={{ display: 'flex', gap: 0.5 }}>
                   {params.row.status === 'pending' && (
@@ -240,6 +252,11 @@ const Invoices = () => {
                     <Button size="small" startIcon={<UndoIcon />} color="warning"
                       onClick={() => setUndoDialog({ open: true, invoiceId: params.row.id, invoiceNumber: params.row.invoice_number })}
                       sx={{ fontSize: '0.65rem', minWidth: 0 }}>Undo</Button>
+                  )}
+                  {isAdmin && (
+                    <Button size="small" startIcon={<DeleteIcon />} color="error"
+                      onClick={() => setDeleteDialog({ open: true, invoiceId: params.row.id, invoiceNumber: params.row.invoice_number })}
+                      sx={{ fontSize: '0.65rem', minWidth: 0 }}>Delete</Button>
                   )}
                 </Box>
               ),
@@ -286,6 +303,19 @@ const Invoices = () => {
         <DialogActions>
           <Button onClick={() => setVoidDialog({ open: false, invoiceId: null, invoiceNumber: null })}>Cancel</Button>
           <Button onClick={handleVoid} variant="contained" color="error">Void Invoice</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, invoiceId: null, invoiceNumber: null })}>
+        <DialogTitle>Delete Invoice</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Permanently delete Invoice #{deleteDialog.invoiceNumber}? This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, invoiceId: null, invoiceNumber: null })}>Cancel</Button>
+          <Button onClick={handleDelete} variant="contained" color="error">Delete</Button>
         </DialogActions>
       </Dialog>
 

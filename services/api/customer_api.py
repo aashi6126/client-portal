@@ -19,9 +19,9 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 try:
-    from api.invoice import generate_invoice_pdf, _collect_line_items
+    from api.invoice import generate_invoice_pdf, _collect_line_items, POLICY_LABELS
 except ImportError:
-    from invoice import generate_invoice_pdf, _collect_line_items
+    from invoice import generate_invoice_pdf, _collect_line_items, POLICY_LABELS
 try:
     from api.chat import chat_with_ollama
 except ImportError:
@@ -2536,7 +2536,7 @@ def invoice_preview():
         if is_binding:
             for item in line_items:
                 item['premium'] = round((item.get('premium', 0) or 0) * 0.25, 2)
-                item['coverage'] = f"{item.get('coverage', '')} (Binder 25%)"
+                item['label'] = f"{item.get('label', '')} (Binder 25%)"
 
         invoice_number = InvoiceSequence.next_number(session)
 
@@ -2595,12 +2595,24 @@ def invoice_send():
         if not to_email:
             return jsonify({'error': 'to_email is required'}), 400
 
-        # Check for existing pending invoice for this client
+        # Check for pending invoices with overlapping coverages
         comm_check = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
         if comm_check and comm_check.client:
-            pending = session.query(Invoice).filter_by(tax_id=comm_check.client.tax_id, status='pending').first()
-            if pending:
-                return jsonify({'error': f'A pending invoice (#{pending.invoice_number}) already exists for this client. Please resolve it before creating a new one.'}), 409
+            requested = set(policy_types)
+            pending_invoices = session.query(Invoice).filter_by(tax_id=comm_check.client.tax_id, status='pending').all()
+            for pending in pending_invoices:
+                if pending.policies_description:
+                    existing_coverages = set()
+                    for entry in pending.policies_description.split('|'):
+                        coverage = entry.split('::')[0].strip() if '::' in entry else entry.strip()
+                        if coverage:
+                            existing_coverages.add(coverage.replace(' (Binder 25%)', '').lower())
+                    # Match requested policy_types against stored coverage names
+                    requested_labels = {POLICY_LABELS.get(pt, pt).lower() for pt in requested}
+                    overlap = requested_labels & existing_coverages
+                    if overlap:
+                        overlap_names = ', '.join(sorted(overlap))
+                        return jsonify({'error': f'Pending invoice #{pending.invoice_number} already covers: {overlap_names}. Resolve it before creating a new invoice for these coverages.'}), 409
 
         commercial = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
         if not commercial:
@@ -2620,7 +2632,7 @@ def invoice_send():
         if is_binding:
             for item in line_items:
                 item['premium'] = round((item.get('premium', 0) or 0) * 0.25, 2)
-                item['coverage'] = f"{item.get('coverage', '')} (Binder 25%)"
+                item['label'] = f"{item.get('label', '')} (Binder 25%)"
 
         invoice_number = InvoiceSequence.next_number(session)
 
@@ -2688,7 +2700,7 @@ def invoice_send():
         # Save invoice record BEFORE sending email so it's persisted regardless
         total_amount = sum(item.get('premium', 0) or 0 for item in line_items)
         policies_desc = '|'.join(
-            f"{item.get('coverage', '')}::{item.get('policy_number', '')}"
+            f"{item.get('label', '')}::{item.get('policy_number', '')}"
             for item in line_items
         )
         invoice_record = Invoice(
@@ -2768,10 +2780,6 @@ def create_invoice():
         client = session.query(Client).filter_by(tax_id=tax_id).first()
         if not client:
             return jsonify({'error': f'Client with tax_id {tax_id} not found'}), 404
-
-        pending = session.query(Invoice).filter_by(tax_id=tax_id, status='pending').first()
-        if pending:
-            return jsonify({'error': f'A pending invoice (#{pending.invoice_number}) already exists for this client. Please resolve it before creating a new one.'}), 409
 
         invoice_number = InvoiceSequence.next_number(session)
         is_binding = data.get('is_binding', False)
@@ -2892,6 +2900,27 @@ def undo_payment(invoice_id):
     except Exception as e:
         session.rollback()
         logging.error(f"Error undoing payment: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+@app.route('/api/invoices/<int:invoice_id>', methods=['DELETE'])
+def delete_invoice(invoice_id):
+    """Permanently delete an invoice (admin only)."""
+    session = Session()
+    try:
+        invoice = session.query(Invoice).filter_by(id=invoice_id).first()
+        if not invoice:
+            return jsonify({'error': 'Invoice not found'}), 404
+
+        logging.info(f"[ADMIN] Deleting invoice #{invoice.invoice_number} (id={invoice_id})")
+        session.delete(invoice)
+        session.commit()
+        return jsonify({'message': f'Invoice #{invoice.invoice_number} deleted'}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error deleting invoice: {e}")
         return jsonify({'error': str(e)}), 500
     finally:
         session.close()

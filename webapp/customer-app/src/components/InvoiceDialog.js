@@ -125,6 +125,7 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
       setIsBinding(false);
       setSending(false);
       setPreviewing(false);
+      setSent(false);
       setAlert(null);
       setPendingCoverages(new Set());
 
@@ -223,11 +224,13 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
     }
   };
 
+  const [sent, setSent] = useState(false);
+
   const handleSend = async () => {
     setSending(true);
     setAlert(null);
     try {
-      await axios.post('/api/invoice/send', {
+      const resp = await axios.post('/api/invoice/send', {
         commercial_id: commercial.id,
         policy_types: buildPolicyTypes(),
         invoice_date: invoiceDate,
@@ -236,7 +239,9 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
         subject: subject.trim(),
         is_binding: isBinding
       });
-      setAlert({ severity: 'success', message: 'Invoice sent successfully!' });
+      const invNum = resp.data?.invoice_number || '';
+      setAlert({ severity: 'success', message: `Invoice #${invNum} sent successfully!` });
+      setSent(true);
     } catch (err) {
       const message = err.response?.data?.error || 'Failed to send invoice';
       setAlert({ severity: 'error', message });
@@ -357,22 +362,28 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
       </DialogContent>
 
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
-        <Button
-          onClick={handlePreview}
-          disabled={!canPreview || previewing}
-          startIcon={previewing ? <CircularProgress size={18} /> : null}
-        >
-          Preview PDF
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSend}
-          disabled={!canSend || sending}
-          startIcon={sending ? <CircularProgress size={18} color="inherit" /> : null}
-        >
-          Send Invoice
-        </Button>
+        {sent ? (
+          <Button variant="contained" onClick={onClose}>Close</Button>
+        ) : (
+          <>
+            <Button onClick={onClose}>Cancel</Button>
+            <Button
+              onClick={handlePreview}
+              disabled={!canPreview || previewing}
+              startIcon={previewing ? <CircularProgress size={18} /> : null}
+            >
+              Preview PDF
+            </Button>
+            <Button
+              variant="contained"
+              onClick={handleSend}
+              disabled={!canSend || sending}
+              startIcon={sending ? <CircularProgress size={18} color="inherit" /> : null}
+            >
+              Send Invoice
+            </Button>
+          </>
+        )}
       </DialogActions>
     </Dialog>
   );
