@@ -3449,7 +3449,8 @@ def get_dashboard_renewals():
                         'renewal_date': plan.renewal_date.isoformat(),
                         'client_name': comm.client.client_name if comm.client else None,
                         'tax_id': comm.tax_id,
-                        'carrier': plan.carrier
+                        'carrier': plan.carrier,
+                        'premium': float(plan.premium) if plan.premium else None
                     })
 
             # Single-plan types: read from flat fields
@@ -3472,13 +3473,15 @@ def get_dashboard_renewals():
             for field_name, policy_type in single_plan_fields:
                 renewal_date = getattr(comm, field_name)
                 if renewal_date and start_date <= renewal_date <= end_date:
+                    premium_val = getattr(comm, field_name.replace('_renewal_date', '_premium'), None)
                     renewals.append({
                         'type': 'commercial',
                         'policy_type': policy_type,
                         'renewal_date': renewal_date.isoformat(),
                         'client_name': comm.client.client_name if comm.client else None,
                         'tax_id': comm.tax_id,
-                        'carrier': getattr(comm, field_name.replace('_renewal_date', '_carrier'), None)
+                        'carrier': getattr(comm, field_name.replace('_renewal_date', '_carrier'), None),
+                        'premium': float(premium_val) if premium_val else None
                     })
 
         # Get personal insurance renewals

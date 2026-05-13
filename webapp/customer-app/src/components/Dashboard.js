@@ -191,7 +191,8 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       grouped[key].policies.push({
         policy_type: renewal.policy_type,
         carrier: renewal.carrier,
-        renewal_date: renewal.renewal_date
+        renewal_date: renewal.renewal_date,
+        premium: renewal.premium || null
       });
       // Track earliest renewal date for this client/type combo
       if (parseDate(renewal.renewal_date) < parseDate(grouped[key].earliest_date)) {
@@ -721,6 +722,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                   <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Policies Renewing</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Earliest Date</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Premium</TableCell>
                   <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
                 </TableRow>
               </TableHead>
@@ -763,6 +765,12 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       {isUrgent(client.earliest_date) && (
                         <Chip label="Urgent" size="small" color="warning" sx={{ ml: 1 }} />
                       )}
+                    </TableCell>
+                    <TableCell>
+                      {client.type === 'commercial' ? (() => {
+                        const total = client.policies.reduce((sum, p) => sum + (p.premium || 0), 0);
+                        return total > 0 ? `$${total.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}` : '—';
+                      })() : '—'}
                     </TableCell>
                     <TableCell>
                       <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
