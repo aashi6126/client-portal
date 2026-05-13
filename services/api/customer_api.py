@@ -1319,7 +1319,7 @@ def parse_date(date_str):
         return None
     try:
         return parse(date_str).date()
-    except:
+    except (ValueError, TypeError, AttributeError, OverflowError):
         return None
 
 

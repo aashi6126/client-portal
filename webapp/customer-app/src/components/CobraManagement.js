@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Chip, Button, Dialog,
-  DialogTitle, DialogContent, DialogActions, TextField, MenuItem
+  DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import CancelIcon from '@mui/icons-material/Cancel';
@@ -56,14 +56,17 @@ const CobraManagement = ({ clients = [] }) => {
   const activeCount = coverages.filter(c => c.status === 'active').length;
   const terminatedCount = coverages.filter(c => c.status === 'terminated').length;
 
+  const [error, setError] = useState(null);
+
   const handleAdd = async () => {
     try {
+      setError(null);
       await axios.post('/api/cobra', form);
       setAddDialog(false);
       setForm({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '' });
       fetchCoverages();
     } catch (err) {
-      console.error('Error adding COBRA coverage:', err);
+      setError(err.response?.data?.error || 'Failed to add coverage');
     }
   };
 
@@ -203,7 +206,8 @@ const CobraManagement = ({ clients = [] }) => {
       <Dialog open={addDialog} onClose={() => setAddDialog(false)} maxWidth="sm" fullWidth>
         <DialogTitle>Add COBRA Coverage</DialogTitle>
         <DialogContent sx={{ pt: 2 }}>
-          <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: 1 }}>
+          {error && <Alert severity="error" sx={{ mb: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: error ? 0 : 1 }}>
             <TextField label="First Name" value={form.first_name} onChange={(e) => setForm({ ...form, first_name: e.target.value })} size="small" fullWidth required />
             <TextField label="Last Name" value={form.last_name} onChange={(e) => setForm({ ...form, last_name: e.target.value })} size="small" fullWidth required />
           </Box>
