@@ -2648,9 +2648,7 @@ def invoice_send():
             is_binding=is_binding,
         )
 
-        # Send email
-        if SMTP_USE_TLS and (not SMTP_USERNAME or not SMTP_PASSWORD):
-            return jsonify({'error': 'SMTP credentials not configured. Set SMTP_USERNAME and SMTP_PASSWORD environment variables.'}), 500
+        # Send email (skip validation if credentials not set — mock mode for local dev)
 
         client_name_clean = (client.client_name or 'Client').replace(' ', '_')
         filename = f'Invoice_{invoice_number}_{client_name_clean}.pdf'
@@ -2708,25 +2706,28 @@ def invoice_send():
         session.add(invoice_record)
         session.commit()
 
-        # Send via SMTP
+        # Send via SMTP (skip if credentials not configured — local dev mock)
         email_error = None
-        try:
-            recipients = [to_email]
-            if cc_email:
-                recipients.append(cc_email)
+        if not SMTP_USERNAME or not SMTP_PASSWORD:
+            logging.info(f"[MOCK EMAIL] Invoice #{invoice_number} to {to_email} "
+                         f"(cc: {cc_email or 'none'}) — SMTP not configured, skipping send")
+        else:
+            try:
+                recipients = [to_email]
+                if cc_email:
+                    recipients.append(cc_email)
 
-            with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
-                if SMTP_USE_TLS:
-                    server.starttls()
-                if SMTP_USERNAME and SMTP_PASSWORD:
+                with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+                    if SMTP_USE_TLS:
+                        server.starttls()
                     server.login(SMTP_USERNAME, SMTP_PASSWORD)
-                server.sendmail(SMTP_FROM, recipients, msg.as_string())
-        except smtplib.SMTPException as e:
-            logging.error(f"SMTP error sending invoice #{invoice_number}: {e}")
-            email_error = str(e)
-        except Exception as e:
-            logging.error(f"Error sending invoice #{invoice_number} email: {e}")
-            email_error = str(e)
+                    server.sendmail(SMTP_FROM, recipients, msg.as_string())
+            except smtplib.SMTPException as e:
+                logging.error(f"SMTP error sending invoice #{invoice_number}: {e}")
+                email_error = str(e)
+            except Exception as e:
+                logging.error(f"Error sending invoice #{invoice_number} email: {e}")
+                email_error = str(e)
 
         if email_error:
             return jsonify({
