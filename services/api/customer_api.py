@@ -3011,6 +3011,27 @@ def undo_terminate_cobra(coverage_id):
         session.close()
 
 
+@app.route('/api/cobra/<int:coverage_id>', methods=['DELETE'])
+def delete_cobra(coverage_id):
+    """Permanently delete a COBRA coverage (admin only)."""
+    session = Session()
+    try:
+        coverage = session.query(CobraCoverage).filter_by(id=coverage_id).first()
+        if not coverage:
+            return jsonify({'error': 'Coverage not found'}), 404
+
+        logging.info(f"[ADMIN] Deleting COBRA coverage id={coverage_id} ({coverage.first_name} {coverage.last_name})")
+        session.delete(coverage)
+        session.commit()
+        return jsonify({'message': 'COBRA coverage deleted'}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error deleting COBRA coverage: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
 @app.route('/api/states', methods=['GET'])
 def get_states():
     return jsonify(US_STATES), 200

@@ -7,9 +7,10 @@ import {
 import AddIcon from '@mui/icons-material/Add';
 import CancelIcon from '@mui/icons-material/Cancel';
 import UndoIcon from '@mui/icons-material/Undo';
+import DeleteIcon from '@mui/icons-material/Delete';
 import axios from 'axios';
 
-const CobraManagement = ({ clients = [] }) => {
+const CobraManagement = ({ clients = [], isAdmin = false }) => {
   const [coverages, setCoverages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState(0);
@@ -17,6 +18,7 @@ const CobraManagement = ({ clients = [] }) => {
   const [addDialog, setAddDialog] = useState(false);
   const [terminateDialog, setTerminateDialog] = useState({ open: false, id: null, name: '' });
   const [undoDialog, setUndoDialog] = useState({ open: false, id: null, name: '' });
+  const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
   const [form, setForm] = useState({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '' });
   const [termForm, setTermForm] = useState({ termination_date: '', termination_reason: '' });
   const [search, setSearch] = useState('');
@@ -78,6 +80,16 @@ const CobraManagement = ({ clients = [] }) => {
       fetchCoverages();
     } catch (err) {
       console.error('Error terminating coverage:', err);
+    }
+  };
+
+  const handleDelete = async () => {
+    try {
+      await axios.delete(`/api/cobra/${deleteDialog.id}`);
+      setDeleteDialog({ open: false, id: null, name: '' });
+      fetchCoverages();
+    } catch (err) {
+      console.error('Error deleting coverage:', err);
     }
   };
 
@@ -169,30 +181,43 @@ const CobraManagement = ({ clients = [] }) => {
                       {cov.termination_reason || '—'}
                     </TableCell>
                     <TableCell>
-                      {cov.status === 'active' ? (
-                        <Button
-                          size="small"
-                          startIcon={<CancelIcon />}
-                          color="error"
-                          onClick={() => {
-                            setTerminateDialog({ open: true, id: cov.id, name: `${cov.first_name} ${cov.last_name}` });
-                            setTermForm({ termination_date: new Date().toISOString().split('T')[0], termination_reason: '' });
-                          }}
-                          sx={{ fontSize: '0.7rem' }}
-                        >
-                          Terminate
-                        </Button>
-                      ) : (
-                        <Button
-                          size="small"
-                          startIcon={<UndoIcon />}
-                          color="warning"
-                          onClick={() => setUndoDialog({ open: true, id: cov.id, name: `${cov.first_name} ${cov.last_name}` })}
-                          sx={{ fontSize: '0.7rem' }}
-                        >
-                          Undo
-                        </Button>
-                      )}
+                      <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        {cov.status === 'active' ? (
+                          <Button
+                            size="small"
+                            startIcon={<CancelIcon />}
+                            color="error"
+                            onClick={() => {
+                              setTerminateDialog({ open: true, id: cov.id, name: `${cov.first_name} ${cov.last_name}` });
+                              setTermForm({ termination_date: new Date().toISOString().split('T')[0], termination_reason: '' });
+                            }}
+                            sx={{ fontSize: '0.7rem' }}
+                          >
+                            Terminate
+                          </Button>
+                        ) : (
+                          <Button
+                            size="small"
+                            startIcon={<UndoIcon />}
+                            color="warning"
+                            onClick={() => setUndoDialog({ open: true, id: cov.id, name: `${cov.first_name} ${cov.last_name}` })}
+                            sx={{ fontSize: '0.7rem' }}
+                          >
+                            Undo
+                          </Button>
+                        )}
+                        {isAdmin && (
+                          <Button
+                            size="small"
+                            startIcon={<DeleteIcon />}
+                            color="error"
+                            onClick={() => setDeleteDialog({ open: true, id: cov.id, name: `${cov.first_name} ${cov.last_name}` })}
+                            sx={{ fontSize: '0.7rem' }}
+                          >
+                            Delete
+                          </Button>
+                        )}
+                      </Box>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -289,6 +314,20 @@ const CobraManagement = ({ clients = [] }) => {
         <DialogActions>
           <Button onClick={() => setUndoDialog({ open: false, id: null, name: '' })}>Cancel</Button>
           <Button onClick={handleUndoTerminate} variant="contained" color="warning">Undo Termination</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Delete Dialog */}
+      <Dialog open={deleteDialog.open} onClose={() => setDeleteDialog({ open: false, id: null, name: '' })}>
+        <DialogTitle>Delete COBRA Coverage</DialogTitle>
+        <DialogContent>
+          <Typography variant="body2">
+            Permanently delete COBRA coverage for <strong>{deleteDialog.name}</strong>? This cannot be undone.
+          </Typography>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setDeleteDialog({ open: false, id: null, name: '' })}>Cancel</Button>
+          <Button onClick={handleDelete} variant="contained" color="error">Delete</Button>
         </DialogActions>
       </Dialog>
     </Box>

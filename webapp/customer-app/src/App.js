@@ -1134,7 +1134,7 @@ function NewApp() {
 
         {/* Tab 10: Cobra */}
         {activeTab === 10 && (
-          <CobraManagement clients={clients} />
+          <CobraManagement clients={clients} isAdmin={isAdmin} />
         )}
 
         {/* Tab 9: Chat */}
