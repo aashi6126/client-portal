@@ -133,7 +133,13 @@ const getNextRenewal = (row) => {
 const getTotalPremium = (row) => {
   let total = 0;
   Object.keys(PERSONAL_PRODUCTS).forEach(key => {
-    total += parseFloat(row[`${key}_premium`]) || 0;
+    if (key === 'homeowners' && Array.isArray(row.homeowners_policies_list) && row.homeowners_policies_list.length > 0) {
+      row.homeowners_policies_list.forEach(policy => {
+        total += parseFloat(policy.premium) || 0;
+      });
+    } else {
+      total += parseFloat(row[`${key}_premium`]) || 0;
+    }
   });
   return total;
 };

@@ -4,7 +4,7 @@ import {
   TableContainer, TableHead, TableRow, Button, TextField,
   Autocomplete, Chip, Alert, Snackbar, Dialog,
   DialogTitle, DialogContent, DialogContentText, DialogActions,
-  Checkbox
+  Checkbox, FormControl, InputLabel, Select, MenuItem, Stack
 } from '@mui/material';
 import SwapHorizIcon from '@mui/icons-material/SwapHoriz';
 import axios from 'axios';
@@ -21,6 +21,8 @@ const PocManagement = ({ dataVersion }) => {
   const [pocRecords, setPocRecords] = useState([]);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [loadingRecords, setLoadingRecords] = useState(false);
+  const [recordSearch, setRecordSearch] = useState('');
+  const [renewalMonth, setRenewalMonth] = useState('all');
 
   const fetchPocSummary = async () => {
     try {
@@ -44,6 +46,8 @@ const PocManagement = ({ dataVersion }) => {
     setSelectedItem(item);
     setTargetPoc('');
     setSelectedIds(new Set());
+    setRecordSearch('');
+    setRenewalMonth('all');
     // Fetch the actual records for this PoC
     setLoadingRecords(true);
     try {
@@ -51,9 +55,11 @@ const PocManagement = ({ dataVersion }) => {
       const records = (res.data.benefits || []).filter(
         b => b.enrollment_poc === item.poc
       );
-      setPocRecords(records);
-      // Default: all selected
-      setSelectedIds(new Set(records.map(r => r.id)));
+      const sorted = [...records].sort((a, b) =>
+        (a.client_name || a.tax_id || '').localeCompare(b.client_name || b.tax_id || '', undefined, { sensitivity: 'base' })
+      );
+      setPocRecords(sorted);
+      setSelectedIds(new Set());
     } catch (err) {
       console.error('Error fetching records:', err);
       setPocRecords([]);
@@ -67,7 +73,29 @@ const PocManagement = ({ dataVersion }) => {
     setTargetPoc('');
     setPocRecords([]);
     setSelectedIds(new Set());
+    setRecordSearch('');
+    setRenewalMonth('all');
   };
+
+  const filteredRecords = pocRecords.filter(r => {
+    if (recordSearch.trim()) {
+      const q = recordSearch.trim().toLowerCase();
+      const matches = (r.client_name || '').toLowerCase().includes(q) ||
+        (r.tax_id || '').toLowerCase().includes(q);
+      if (!matches) return false;
+    }
+    if (renewalMonth !== 'all') {
+      if (!r.renewal_date) return false;
+      const m = parseInt(r.renewal_date.slice(5, 7), 10);
+      if (m !== parseInt(renewalMonth, 10)) return false;
+    }
+    return true;
+  });
+
+  const MONTHS = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
 
   const toggleRecord = (id) => {
     setSelectedIds(prev => {
@@ -79,11 +107,17 @@ const PocManagement = ({ dataVersion }) => {
   };
 
   const toggleAll = () => {
-    if (selectedIds.size === pocRecords.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(pocRecords.map(r => r.id)));
-    }
+    const visibleIds = filteredRecords.map(r => r.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every(id => selectedIds.has(id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allVisibleSelected) {
+        visibleIds.forEach(id => next.delete(id));
+      } else {
+        visibleIds.forEach(id => next.add(id));
+      }
+      return next;
+    });
   };
 
   const handleReassign = async () => {
@@ -185,47 +219,82 @@ const PocManagement = ({ dataVersion }) => {
           {loadingRecords ? (
             <Typography sx={{ textAlign: 'center', py: 2 }}>Loading records...</Typography>
           ) : (
-            <TableContainer sx={{ maxHeight: 300, mb: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
-              <Table stickyHeader size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell padding="checkbox" sx={{ backgroundColor: '#f5f5f5' }}>
-                      <Checkbox
-                        checked={selectedIds.size === pocRecords.length && pocRecords.length > 0}
-                        indeterminate={selectedIds.size > 0 && selectedIds.size < pocRecords.length}
-                        onChange={toggleAll}
-                        size="small"
-                      />
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Client Name</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Status</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Renewal Date</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {pocRecords.map((record) => (
-                    <TableRow
-                      key={record.id}
-                      hover
-                      onClick={() => toggleRecord(record.id)}
-                      sx={{ cursor: 'pointer' }}
-                      selected={selectedIds.has(record.id)}
-                    >
-                      <TableCell padding="checkbox">
-                        <Checkbox checked={selectedIds.has(record.id)} size="small" />
+            <>
+              <Stack direction="row" spacing={1} sx={{ mb: 1 }}>
+                <TextField
+                  size="small"
+                  fullWidth
+                  placeholder="Search client name or tax ID..."
+                  value={recordSearch}
+                  onChange={(e) => setRecordSearch(e.target.value)}
+                />
+                <FormControl size="small" sx={{ minWidth: 160 }}>
+                  <InputLabel>Renewal Month</InputLabel>
+                  <Select
+                    value={renewalMonth}
+                    label="Renewal Month"
+                    onChange={(e) => setRenewalMonth(e.target.value)}
+                  >
+                    <MenuItem value="all">All Months</MenuItem>
+                    {MONTHS.map((name, idx) => (
+                      <MenuItem key={idx + 1} value={String(idx + 1)}>{name}</MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Stack>
+              <TableContainer sx={{ maxHeight: 300, mb: 2, border: '1px solid #e0e0e0', borderRadius: 1 }}>
+                <Table stickyHeader size="small">
+                  <TableHead>
+                    <TableRow>
+                      <TableCell padding="checkbox" sx={{ backgroundColor: '#f5f5f5' }}>
+                        <Checkbox
+                          checked={filteredRecords.length > 0 && filteredRecords.every(r => selectedIds.has(r.id))}
+                          indeterminate={
+                            filteredRecords.some(r => selectedIds.has(r.id)) &&
+                            !filteredRecords.every(r => selectedIds.has(r.id))
+                          }
+                          onChange={toggleAll}
+                          size="small"
+                        />
                       </TableCell>
-                      <TableCell>{record.client_name || record.tax_id}</TableCell>
-                      <TableCell>
-                        {record.status ? (
-                          <Chip label={record.status} size="small" color={record.status === 'Active' ? 'success' : 'warning'} />
-                        ) : '—'}
-                      </TableCell>
-                      <TableCell>{formatDate(record.renewal_date)}</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Client Name</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Status</TableCell>
+                      <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Renewal Date</TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
+                  </TableHead>
+                  <TableBody>
+                    {filteredRecords.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                          No matching records
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      filteredRecords.map((record) => (
+                        <TableRow
+                          key={record.id}
+                          hover
+                          onClick={() => toggleRecord(record.id)}
+                          sx={{ cursor: 'pointer' }}
+                          selected={selectedIds.has(record.id)}
+                        >
+                          <TableCell padding="checkbox">
+                            <Checkbox checked={selectedIds.has(record.id)} size="small" />
+                          </TableCell>
+                          <TableCell>{record.client_name || record.tax_id}</TableCell>
+                          <TableCell>
+                            {record.status ? (
+                              <Chip label={record.status} size="small" color={record.status === 'Active' ? 'success' : 'warning'} />
+                            ) : '—'}
+                          </TableCell>
+                          <TableCell>{formatDate(record.renewal_date)}</TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </TableContainer>
+            </>
           )}
 
           <Typography variant="body2" sx={{ mb: 1 }}>
