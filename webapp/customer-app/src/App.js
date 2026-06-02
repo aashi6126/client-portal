@@ -51,7 +51,18 @@ import FeedbackIcon from '@mui/icons-material/Feedback';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ChatIcon from '@mui/icons-material/Chat';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
+import LogoutIcon from '@mui/icons-material/Logout';
+import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
+import VpnKeyIcon from '@mui/icons-material/VpnKey';
 import Divider from '@mui/material/Divider';
+import CircularProgress from '@mui/material/CircularProgress';
+
+import { useAuth } from './AuthContext';
+import Login from './components/Login';
+import UserManagement from './components/UserManagement';
+import ChangePasswordDialog from './components/ChangePasswordDialog';
+import ForcedPasswordChange from './components/ForcedPasswordChange';
+import AcceptInvitePage from './components/AcceptInvitePage';
 
 // Import new components
 import Dashboard from './components/Dashboard';
@@ -164,7 +175,12 @@ const theme = createTheme({
   },
 });
 
-function NewApp() {
+function AppShell() {
+  const { user, isAdmin, logout, loginEnabled, authDisabled } = useAuth();
+
+  // Change-password dialog
+  const [changePasswordOpen, setChangePasswordOpen] = useState(false);
+
   // Tab state
   const [activeTab, setActiveTab] = useState(0);
 
@@ -229,9 +245,6 @@ function NewApp() {
   const [benefitsSearch, setBenefitsSearch] = useState('');
   const [commercialSearch, setCommercialSearch] = useState('');
   const [personalSearch, setPersonalSearch] = useState('');
-
-  // Admin mode — enable via ?admin=true in URL
-  const isAdmin = new URLSearchParams(window.location.search).get('admin') === 'true';
 
   // Import/Export states
   const [importing, setImporting] = useState(false);
@@ -788,6 +801,15 @@ function NewApp() {
 
       {/* Header */}
       <AppBar position="static" elevation={0} sx={{ background: 'linear-gradient(135deg, #0f1629 0%, #1a1f3a 100%)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+        {authDisabled ? (
+          <Box sx={{ backgroundColor: '#b54708', color: '#fff', textAlign: 'center', py: 0.3, fontSize: '0.72rem', fontWeight: 600 }}>
+            Authentication is disabled at the server (AUTH_DISABLED=true) — everyone has admin access.
+          </Box>
+        ) : !loginEnabled ? (
+          <Box sx={{ backgroundColor: '#b54708', color: '#fff', textAlign: 'center', py: 0.3, fontSize: '0.72rem', fontWeight: 600 }}>
+            Login is disabled — non-admin users are blocked.
+          </Box>
+        ) : null}
         <Toolbar sx={{ minHeight: 52, px: 2 }}>
           <Typography variant="h6" sx={{ fontWeight: 700, letterSpacing: 0.3, mr: 3 }}>
             Client Hub
@@ -836,6 +858,27 @@ function NewApp() {
             >
               Export
             </Button>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 1, pl: 1.5, borderLeft: '1px solid rgba(255,255,255,0.12)' }}>
+              <Chip
+                label={`${user?.username || ''}${user?.role === 'admin' ? ' • admin' : ''}`}
+                size="small"
+                sx={{ backgroundColor: 'rgba(255,255,255,0.08)', color: '#fff', fontSize: '0.7rem' }}
+              />
+              {!authDisabled && (
+                <>
+                  <Tooltip title="Change password">
+                    <IconButton size="small" color="inherit" onClick={() => setChangePasswordOpen(true)} sx={{ opacity: 0.8 }}>
+                      <VpnKeyIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Sign out">
+                    <IconButton size="small" color="inherit" onClick={logout} sx={{ opacity: 0.8 }}>
+                      <LogoutIcon sx={{ fontSize: '1rem' }} />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              )}
+            </Box>
           </Stack>
         </Toolbar>
       </AppBar>
@@ -874,6 +917,7 @@ function NewApp() {
               { type: 'divider', label: 'ADMIN' },
               { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
               { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
+              ...(isAdmin ? [{ label: 'Users', icon: <ManageAccountsIcon fontSize="small" />, index: 11 }] : []),
               { type: 'divider' },
               { label: 'Chat', icon: <ChatIcon fontSize="small" />, index: 9 },
             ];
@@ -1137,6 +1181,11 @@ function NewApp() {
           <CobraManagement clients={clients} isAdmin={isAdmin} />
         )}
 
+        {/* Tab 11: User Management (admin only) */}
+        {activeTab === 11 && isAdmin && (
+          <UserManagement />
+        )}
+
         {/* Tab 9: Chat */}
         {activeTab === 9 && (
           <ChatPanel />
@@ -1373,9 +1422,76 @@ function NewApp() {
           </Button>
         </DialogActions>
       </Dialog>
+
+      <ChangePasswordDialog
+        open={changePasswordOpen}
+        onClose={() => setChangePasswordOpen(false)}
+      />
     </Box>
     </ThemeProvider>
   );
+}
+
+function NewApp() {
+  const { loading: authLoading, isAuthenticated, mustChangePassword, authDisabled, refresh } = useAuth();
+  const inviteToken = new URLSearchParams(window.location.search).get('invite');
+
+  // If any API call returns 401, treat the session as gone and re-bootstrap auth.
+  useEffect(() => {
+    const id = axios.interceptors.response.use(
+      (resp) => resp,
+      (err) => {
+        if (err.response?.status === 401) {
+          refresh();
+        }
+        return Promise.reject(err);
+      }
+    );
+    return () => axios.interceptors.response.eject(id);
+  }, [refresh]);
+
+  if (authLoading) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Box sx={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', backgroundColor: '#0f1629' }}>
+          <CircularProgress sx={{ color: '#5c7cfa' }} />
+        </Box>
+      </ThemeProvider>
+    );
+  }
+
+  // An invite link takes precedence over the login screen — anyone clicking
+  // their invite goes straight to the signup flow even if they were already
+  // logged in as someone else (they need to be signed out first, see screen).
+  if (inviteToken && !isAuthenticated) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <AcceptInvitePage token={inviteToken} />
+      </ThemeProvider>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <Login />
+      </ThemeProvider>
+    );
+  }
+
+  if (mustChangePassword && !authDisabled) {
+    return (
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <ForcedPasswordChange />
+      </ThemeProvider>
+    );
+  }
+
+  return <AppShell />;
 }
 
 export default NewApp;

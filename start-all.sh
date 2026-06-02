@@ -6,6 +6,22 @@
 echo "🚀 Starting Client Portal Services..."
 echo ""
 
+# Load config.env if present so env vars (DATABASE_URI, AUTH_DISABLED, etc.)
+# are picked up by every child process started below. Copy config.env.example
+# to config.env to use it.
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+if [ -f "$SCRIPT_DIR/config.env" ]; then
+    echo "⚙️  Loading config from config.env"
+    set -a
+    # shellcheck disable=SC1091
+    source "$SCRIPT_DIR/config.env"
+    set +a
+    echo ""
+else
+    echo "ℹ️  No config.env found (using shell environment defaults). See config.env.example."
+    echo ""
+fi
+
 # Kill any existing instances
 echo "🔄 Stopping any existing services..."
 pkill -f "customer_api.py" 2>/dev/null

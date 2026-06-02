@@ -4,8 +4,12 @@ import re
 import base64
 import logging
 import ipaddress
-from flask import Flask, jsonify, request, send_file, abort
+import hashlib
+import secrets
+from functools import wraps
+from flask import Flask, jsonify, request, send_file, abort, session as flask_session
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date, timedelta, timezone
 _EST = timezone(timedelta(hours=-5))
 from sqlalchemy.orm import sessionmaker, subqueryload
@@ -110,6 +114,543 @@ def restrict_to_local_network():
 
 
 # ===========================================================================
+# AUTHENTICATION
+# ===========================================================================
+# Deployment-level kill switch. When AUTH_DISABLED=true the API skips auth
+# entirely — every request is treated as a synthetic 'system' admin user.
+# This is separate from the in-app login_enabled toggle (which only affects
+# non-admin users at runtime).
+AUTH_DISABLED = os.environ.get('AUTH_DISABLED', 'false').lower() == 'true'
+if AUTH_DISABLED:
+    logging.warning("AUTH_DISABLED=true — authentication is bypassed; every request is treated as admin.")
+
+
+class _SyntheticAdmin:
+    """Stand-in user object returned by _current_user() when AUTH_DISABLED is on.
+    Has the same attribute surface as a User row but isn't bound to a DB session."""
+    id = None
+    username = 'system'
+    role = 'admin'
+    full_name = 'System (auth disabled)'
+    email = None
+    is_active = True
+    must_change_password = False
+    last_login_at = None
+    created_at = None
+
+    @staticmethod
+    def to_dict():
+        return {
+            'id': None,
+            'username': 'system',
+            'role': 'admin',
+            'full_name': 'System (auth disabled)',
+            'email': '',
+            'is_active': True,
+            'must_change_password': False,
+            'created_at': None,
+            'last_login_at': None,
+        }
+
+
+# Paths that don't require login (everything else under /api/* does).
+PUBLIC_API_PATHS = {
+    '/api/login',
+    '/api/logout',
+    '/api/me',
+    '/api/health',
+    '/api/invitations/lookup',
+    '/api/invitations/accept',
+}
+
+# Invitation settings
+APP_BASE_URL = os.environ.get('APP_BASE_URL', 'http://localhost:3000').rstrip('/')
+INVITE_EXPIRY_DAYS = int(os.environ.get('INVITE_EXPIRY_DAYS', '7'))
+
+
+def _hash_token(token):
+    return hashlib.sha256(token.encode('utf-8')).hexdigest()
+
+
+def _send_invitation_email(to_email, accept_url, invited_by_username, role):
+    """Send an invitation email via SMTP. Falls back to a mock log when SMTP
+    credentials are not configured (matches the invoice-send behavior)."""
+    subject = 'You have been invited to Client Hub'
+    body = (
+        f"Hello,\n\n"
+        f"{invited_by_username or 'An administrator'} has invited you to create a Client Hub "
+        f"account with the role '{role}'.\n\n"
+        f"To finish signing up, open this link in your browser and choose a username "
+        f"and password:\n\n"
+        f"  {accept_url}\n\n"
+        f"This link expires in {INVITE_EXPIRY_DAYS} day(s) and can only be used once.\n\n"
+        f"If you weren't expecting this invitation you can safely ignore this email.\n"
+    )
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        logging.info(f"[MOCK EMAIL] Invitation to {to_email}: {accept_url}")
+        return None  # success in mock mode
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_FROM
+        msg['To'] = to_email
+        msg['Subject'] = subject
+        msg.attach(MIMEText(body, 'plain'))
+        with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
+            if SMTP_USE_TLS:
+                server.starttls()
+            server.login(SMTP_USERNAME, SMTP_PASSWORD)
+            server.sendmail(SMTP_FROM, [to_email], msg.as_string())
+        return None
+    except Exception as e:
+        logging.error(f"Error sending invitation email to {to_email}: {e}")
+        return str(e)
+
+# Small embedded list of the most-guessed passwords. Lightweight defence —
+# not a substitute for a full breach-list check.
+_COMMON_PASSWORDS = frozenset(p.lower() for p in [
+    'password', 'password1', 'password12', 'password123', 'password!', 'passw0rd',
+    '123456', '1234567', '12345678', '123456789', '1234567890', '0123456789',
+    'qwerty', 'qwerty123', 'qwertyuiop', 'qwerty1234', 'asdfgh', 'asdfghjkl',
+    'abc12345', 'abc123456', 'a1b2c3d4', 'a1b2c3d4e5',
+    'letmein', 'letmein1', 'letmein123', 'letmein!',
+    'welcome', 'welcome1', 'welcome123', 'welcome!', 'changeme', 'changeme1', 'changeme123',
+    'admin', 'admin1', 'admin12', 'admin123', 'admin1234', 'administrator',
+    'root1234', 'rootroot', 'login123', 'guest123', 'user1234',
+    'test1234', 'test12345', 'testtest', 'test1test',
+    'monkey123', 'dragon123', 'master123', 'shadow123', 'superman1', 'batman123',
+    'sunshine1', 'sunshine123', 'iloveyou', 'iloveyou1', 'iloveyou123',
+    'princess1', 'princess123', 'football1', 'football123', 'baseball1', 'baseball123',
+    'starwars1', 'pokemon123', 'hello1234', 'hellothere', 'helloworld',
+    'qazwsxedc', 'zaq12wsx', '1qaz2wsx', 'trustno1!', 'whatever1', 'freedom1',
+    'azerty123', 'p@ssw0rd', 'p@ssword1', 'pa$$word1', 'passw0rd1', 'passw0rd!',
+    'qweqweqwe', 'qweasdzxc', 'asdasdasd', '11111111', '00000000',
+    '12121212', '11223344', '147258369', '987654321', '696969696',
+    'computer1', 'internet1', 'company123', 'business1', 'office123',
+    'january1', 'february1', 'september1',
+    'summer2024', 'summer2025', 'summer2026', 'winter2025', 'winter2026',
+    'spring2025', 'spring2026', 'autumn2025',
+    'clienthub', 'clienthub1', 'clientportal', 'njgroups1',
+])
+
+
+def _validate_password(password, username=None):
+    """Return None if the password meets policy, else a user-facing error string."""
+    if not password:
+        return 'Password is required'
+    if len(password) < 10:
+        return 'Password must be at least 10 characters long'
+    if not any(c.isalpha() for c in password):
+        return 'Password must contain at least one letter'
+    if not any(c.isdigit() for c in password):
+        return 'Password must contain at least one digit'
+    if username and password.lower() == username.lower():
+        return 'Password cannot be the same as the username'
+    if password.lower() in _COMMON_PASSWORDS:
+        return 'Password is too common — please choose another'
+    return None
+
+
+def _current_user():
+    if AUTH_DISABLED:
+        return _SyntheticAdmin()
+    uid = flask_session.get('user_id')
+    if not uid:
+        return None
+    return db.session.get(User, uid)
+
+
+@app.before_request
+def require_login_for_api():
+    """Require an active session for any /api/* call except the public ones."""
+    if request.method == 'OPTIONS':
+        return None  # let CORS preflight through
+    path = request.path or ''
+    if not path.startswith('/api/'):
+        return None
+    if AUTH_DISABLED:
+        request.current_user = _SyntheticAdmin()
+        return None
+    if path in PUBLIC_API_PATHS:
+        return None
+    user = _current_user()
+    if not user or not user.is_active:
+        return jsonify({'error': 'Authentication required'}), 401
+    # Lockdown: when login is disabled, kick out non-admin sessions on every
+    # request so an admin toggle takes effect immediately. Admins stay in so
+    # they can flip the switch back.
+    if not is_login_enabled() and user.role != 'admin':
+        flask_session.clear()
+        return jsonify({
+            'error': 'Login is currently disabled by an administrator',
+            'login_disabled': True,
+        }), 503
+    # Stash on request scope for downstream handlers if needed
+    request.current_user = user
+    return None
+
+
+def require_admin(fn):
+    """Decorator for endpoints that require admin role."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if AUTH_DISABLED:
+            return fn(*args, **kwargs)
+        user = getattr(request, 'current_user', None) or _current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        if user.role != 'admin':
+            return jsonify({'error': 'Admin privileges required'}), 403
+        return fn(*args, **kwargs)
+    return wrapper
+
+
+@app.route('/api/login', methods=['POST'])
+def api_login():
+    if AUTH_DISABLED:
+        return jsonify({
+            'user': _SyntheticAdmin.to_dict(),
+            'login_enabled': True,
+            'auth_disabled': True,
+        }), 200
+    data = request.get_json(silent=True) or {}
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+    if not username or not password:
+        return jsonify({'error': 'username and password are required'}), 400
+    user = User.query.filter_by(username=username).first()
+    if not user or not user.is_active or not user.check_password(password):
+        return jsonify({'error': 'Invalid username or password'}), 401
+    # Lockdown applies to everyone except admins so the toggle can be reversed.
+    if not is_login_enabled() and user.role != 'admin':
+        return jsonify({
+            'error': 'Login is currently disabled by an administrator',
+            'login_disabled': True,
+        }), 503
+    flask_session.clear()
+    flask_session['user_id'] = user.id
+    flask_session.permanent = True
+    user.last_login_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'user': user.to_dict(), 'login_enabled': is_login_enabled()}), 200
+
+
+@app.route('/api/logout', methods=['POST'])
+def api_logout():
+    flask_session.clear()
+    return jsonify({'message': 'Logged out'}), 200
+
+
+@app.route('/api/me', methods=['GET'])
+def api_me():
+    if AUTH_DISABLED:
+        return jsonify({
+            'user': _SyntheticAdmin.to_dict(),
+            'login_enabled': True,
+            'auth_disabled': True,
+        }), 200
+    user = _current_user()
+    login_enabled = is_login_enabled()
+    if not user or not user.is_active:
+        return jsonify({'user': None, 'login_enabled': login_enabled, 'auth_disabled': False}), 200
+    return jsonify({'user': user.to_dict(), 'login_enabled': login_enabled, 'auth_disabled': False}), 200
+
+
+# ===========================================================================
+# USER MANAGEMENT (admin only)
+# ===========================================================================
+
+@app.route('/api/users', methods=['GET'])
+@require_admin
+def list_users():
+    users = User.query.order_by(User.username.asc()).all()
+    return jsonify({'users': [u.to_dict() for u in users]}), 200
+
+
+@app.route('/api/users', methods=['POST'])
+@require_admin
+def create_user():
+    data = request.get_json(silent=True) or {}
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+    role = (data.get('role') or 'user').strip().lower()
+    full_name = (data.get('full_name') or '').strip()
+    email = (data.get('email') or '').strip()
+    if not username or not password:
+        return jsonify({'error': 'username and password are required'}), 400
+    if role not in ('admin', 'user'):
+        return jsonify({'error': "role must be 'admin' or 'user'"}), 400
+    pw_err = _validate_password(password, username=username)
+    if pw_err:
+        return jsonify({'error': pw_err}), 400
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already exists'}), 409
+    u = User(username=username, role=role, full_name=full_name or None, email=email or None)
+    u.set_password(password)
+    db.session.add(u)
+    db.session.commit()
+    return jsonify({'user': u.to_dict()}), 201
+
+
+@app.route('/api/users/<int:user_id>', methods=['PUT'])
+@require_admin
+def update_user(user_id):
+    u = db.session.get(User, user_id)
+    if not u:
+        return jsonify({'error': 'User not found'}), 404
+    data = request.get_json(silent=True) or {}
+    if 'role' in data:
+        role = (data['role'] or '').strip().lower()
+        if role not in ('admin', 'user'):
+            return jsonify({'error': "role must be 'admin' or 'user'"}), 400
+        # Prevent removing the last admin
+        if u.role == 'admin' and role != 'admin':
+            other_admins = User.query.filter(User.role == 'admin', User.id != u.id, User.is_active == True).count()
+            if other_admins == 0:
+                return jsonify({'error': 'Cannot demote the last active admin'}), 400
+        u.role = role
+    if 'is_active' in data:
+        new_active = bool(data['is_active'])
+        if u.is_active and not new_active and u.role == 'admin':
+            other_admins = User.query.filter(User.role == 'admin', User.id != u.id, User.is_active == True).count()
+            if other_admins == 0:
+                return jsonify({'error': 'Cannot deactivate the last active admin'}), 400
+        u.is_active = new_active
+    if 'full_name' in data:
+        u.full_name = (data['full_name'] or '').strip() or None
+    if 'email' in data:
+        u.email = (data['email'] or '').strip() or None
+    if data.get('password'):
+        pw_err = _validate_password(data['password'], username=u.username)
+        if pw_err:
+            return jsonify({'error': pw_err}), 400
+        u.set_password(data['password'])
+        # Force the user to set their own password on next login, unless an
+        # admin is updating their own account.
+        current = _current_user()
+        if not current or current.id != u.id:
+            u.must_change_password = True
+    db.session.commit()
+    return jsonify({'user': u.to_dict()}), 200
+
+
+@app.route('/api/me/password', methods=['POST'])
+def change_my_password():
+    if AUTH_DISABLED:
+        return jsonify({'error': 'Authentication is disabled — no password to change'}), 400
+    user = _current_user()
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+    data = request.get_json(silent=True) or {}
+    current = data.get('current_password') or ''
+    new = data.get('new_password') or ''
+    if not current or not new:
+        return jsonify({'error': 'current_password and new_password are required'}), 400
+    if not user.check_password(current):
+        return jsonify({'error': 'Current password is incorrect'}), 400
+    if new == current:
+        return jsonify({'error': 'New password must be different from current password'}), 400
+    pw_err = _validate_password(new, username=user.username)
+    if pw_err:
+        return jsonify({'error': pw_err}), 400
+    user.set_password(new)
+    user.must_change_password = False
+    db.session.commit()
+    return jsonify({'message': 'Password updated', 'user': user.to_dict()}), 200
+
+
+@app.route('/api/users/<int:user_id>', methods=['DELETE'])
+@require_admin
+def delete_user(user_id):
+    u = db.session.get(User, user_id)
+    if not u:
+        return jsonify({'error': 'User not found'}), 404
+    current = _current_user()
+    if current and current.id == u.id:
+        return jsonify({'error': 'You cannot delete your own account'}), 400
+    if u.role == 'admin':
+        other_admins = User.query.filter(User.role == 'admin', User.id != u.id, User.is_active == True).count()
+        if other_admins == 0:
+            return jsonify({'error': 'Cannot delete the last active admin'}), 400
+    db.session.delete(u)
+    db.session.commit()
+    return jsonify({'message': 'User deleted'}), 200
+
+
+# ===========================================================================
+# SYSTEM SETTINGS
+# ===========================================================================
+
+@app.route('/api/settings/login', methods=['GET'])
+@require_admin
+def get_login_setting():
+    return jsonify({'login_enabled': is_login_enabled()}), 200
+
+
+@app.route('/api/settings/login', methods=['PUT'])
+@require_admin
+def set_login_setting():
+    data = request.get_json(silent=True) or {}
+    if 'enabled' not in data:
+        return jsonify({'error': "'enabled' is required"}), 400
+    enabled = bool(data['enabled'])
+    set_setting('login_enabled', 'true' if enabled else 'false', user_id=_current_user().id)
+    logging.warning(
+        f"Login {'ENABLED' if enabled else 'DISABLED'} by {_current_user().username}"
+    )
+    return jsonify({'login_enabled': enabled}), 200
+
+
+# ===========================================================================
+# INVITATIONS
+# ===========================================================================
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+def _build_accept_url(token):
+    return f"{APP_BASE_URL}/?invite={token}"
+
+
+@app.route('/api/invitations', methods=['GET'])
+@require_admin
+def list_invitations():
+    invites = Invitation.query.order_by(Invitation.created_at.desc()).limit(200).all()
+    return jsonify({'invitations': [i.to_dict() for i in invites]}), 200
+
+
+@app.route('/api/invitations', methods=['POST'])
+@require_admin
+def create_invitation():
+    data = request.get_json(silent=True) or {}
+    email = (data.get('email') or '').strip().lower()
+    role = (data.get('role') or 'user').strip().lower()
+    if not email or not _EMAIL_RE.match(email):
+        return jsonify({'error': 'A valid email address is required'}), 400
+    if role not in ('admin', 'user'):
+        return jsonify({'error': "role must be 'admin' or 'user'"}), 400
+    if User.query.filter(func.lower(User.email) == email).first():
+        return jsonify({'error': 'A user with that email already exists'}), 409
+    # Revoke any prior pending invitations for this email so only one is active.
+    Invitation.query.filter(
+        func.lower(Invitation.email) == email,
+        Invitation.accepted_at.is_(None),
+    ).delete(synchronize_session=False)
+
+    token = secrets.token_urlsafe(32)
+    inv = Invitation(
+        email=email,
+        role=role,
+        token_hash=_hash_token(token),
+        invited_by_user_id=_current_user().id,
+        expires_at=datetime.utcnow() + timedelta(days=INVITE_EXPIRY_DAYS),
+    )
+    db.session.add(inv)
+    db.session.commit()
+
+    accept_url = _build_accept_url(token)
+    email_error = _send_invitation_email(email, accept_url, _current_user().username, role)
+    payload = {'invitation': inv.to_dict()}
+    if email_error:
+        payload['email_error'] = email_error
+    # In dev (no SMTP configured) expose the accept URL so the admin can copy it.
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        payload['accept_url'] = accept_url
+    return jsonify(payload), 201
+
+
+@app.route('/api/invitations/<int:invitation_id>/resend', methods=['POST'])
+@require_admin
+def resend_invitation(invitation_id):
+    inv = db.session.get(Invitation, invitation_id)
+    if not inv:
+        return jsonify({'error': 'Invitation not found'}), 404
+    if inv.accepted_at:
+        return jsonify({'error': 'Invitation already accepted'}), 400
+    # Rotate the token so old links stop working.
+    token = secrets.token_urlsafe(32)
+    inv.token_hash = _hash_token(token)
+    inv.expires_at = datetime.utcnow() + timedelta(days=INVITE_EXPIRY_DAYS)
+    db.session.commit()
+    accept_url = _build_accept_url(token)
+    email_error = _send_invitation_email(inv.email, accept_url, _current_user().username, inv.role)
+    payload = {'invitation': inv.to_dict()}
+    if email_error:
+        payload['email_error'] = email_error
+    if not SMTP_USERNAME or not SMTP_PASSWORD:
+        payload['accept_url'] = accept_url
+    return jsonify(payload), 200
+
+
+@app.route('/api/invitations/<int:invitation_id>', methods=['DELETE'])
+@require_admin
+def revoke_invitation(invitation_id):
+    inv = db.session.get(Invitation, invitation_id)
+    if not inv:
+        return jsonify({'error': 'Invitation not found'}), 404
+    if inv.accepted_at:
+        return jsonify({'error': 'Cannot revoke an accepted invitation'}), 400
+    db.session.delete(inv)
+    db.session.commit()
+    return jsonify({'message': 'Invitation revoked'}), 200
+
+
+@app.route('/api/invitations/lookup', methods=['GET'])
+def lookup_invitation():
+    token = request.args.get('token') or ''
+    if not token:
+        return jsonify({'error': 'token is required'}), 400
+    inv = Invitation.query.filter_by(token_hash=_hash_token(token)).first()
+    if not inv:
+        return jsonify({'error': 'Invalid invitation link'}), 404
+    if inv.accepted_at:
+        return jsonify({'error': 'This invitation has already been used', 'status': 'accepted'}), 410
+    if inv.expires_at and inv.expires_at < datetime.utcnow():
+        return jsonify({'error': 'This invitation has expired', 'status': 'expired'}), 410
+    return jsonify({
+        'email': inv.email,
+        'role': inv.role,
+        'expires_at': inv.expires_at.isoformat() if inv.expires_at else None,
+    }), 200
+
+
+@app.route('/api/invitations/accept', methods=['POST'])
+def accept_invitation():
+    data = request.get_json(silent=True) or {}
+    token = (data.get('token') or '').strip()
+    username = (data.get('username') or '').strip()
+    password = data.get('password') or ''
+    full_name = (data.get('full_name') or '').strip()
+    if not token or not username or not password:
+        return jsonify({'error': 'token, username and password are required'}), 400
+    inv = Invitation.query.filter_by(token_hash=_hash_token(token)).first()
+    if not inv:
+        return jsonify({'error': 'Invalid invitation link'}), 404
+    if inv.accepted_at:
+        return jsonify({'error': 'This invitation has already been used'}), 410
+    if inv.expires_at and inv.expires_at < datetime.utcnow():
+        return jsonify({'error': 'This invitation has expired'}), 410
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already taken'}), 409
+    pw_err = _validate_password(password, username=username)
+    if pw_err:
+        return jsonify({'error': pw_err}), 400
+    u = User(
+        username=username,
+        role=inv.role,
+        full_name=full_name or None,
+        email=inv.email,
+        is_active=True,
+        must_change_password=False,  # they just chose this password themselves
+    )
+    u.set_password(password)
+    db.session.add(u)
+    db.session.flush()
+    inv.accepted_at = datetime.utcnow()
+    inv.accepted_user_id = u.id
+    db.session.commit()
+    return jsonify({'message': 'Account created — please sign in', 'username': u.username}), 201
+
+
+# ===========================================================================
 # CORS CONFIGURATION
 # ===========================================================================
 def is_allowed_origin(origin):
@@ -160,8 +701,127 @@ Session = sessionmaker(bind=engine)
 logging.info(f"Database URI: {db_uri}")
 
 # ===========================================================================
+# SESSION / AUTH CONFIGURATION
+# ===========================================================================
+_default_secret = 'dev-secret-change-me-in-production'
+app.secret_key = os.environ.get('FLASK_SECRET_KEY', _default_secret)
+if app.secret_key == _default_secret:
+    logging.warning("FLASK_SECRET_KEY not set — using insecure default. Set this env var in production.")
+app.config.update(
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE='Lax',
+    PERMANENT_SESSION_LIFETIME=timedelta(days=7),
+)
+
+# ===========================================================================
 # DATABASE MODELS
 # ===========================================================================
+
+
+class User(db.Model):
+    __tablename__ = 'users'
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(100), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
+    role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' or 'user'
+    full_name = db.Column(db.String(200))
+    email = db.Column(db.String(200))
+    is_active = db.Column(db.Boolean, default=True)
+    # When True, the next time this user logs in they must change their password
+    # before they can use the rest of the app. New accounts and the seeded admin
+    # default to True. Cleared by /api/me/password.
+    must_change_password = db.Column(db.Boolean, nullable=False, default=True, server_default='0')
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    last_login_at = db.Column(db.DateTime)
+
+    def set_password(self, password):
+        # Pin to pbkdf2:sha256 — werkzeug's scrypt default fails on Python
+        # builds linked against LibreSSL (e.g. macOS system Python).
+        self.password_hash = generate_password_hash(password, method='pbkdf2:sha256')
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'username': self.username,
+            'role': self.role,
+            'full_name': self.full_name or '',
+            'email': self.email or '',
+            'is_active': bool(self.is_active),
+            'must_change_password': bool(self.must_change_password),
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'last_login_at': self.last_login_at.isoformat() if self.last_login_at else None,
+        }
+
+
+class SystemSetting(db.Model):
+    __tablename__ = 'system_settings'
+
+    key = db.Column(db.String(100), primary_key=True)
+    value = db.Column(db.Text)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    updated_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+
+
+def get_setting(key, default=None):
+    s = db.session.get(SystemSetting, key)
+    return s.value if s and s.value is not None else default
+
+
+def set_setting(key, value, user_id=None):
+    s = db.session.get(SystemSetting, key)
+    if s is None:
+        s = SystemSetting(key=key)
+        db.session.add(s)
+    s.value = None if value is None else str(value)
+    s.updated_by_user_id = user_id
+    db.session.commit()
+
+
+def is_login_enabled():
+    return get_setting('login_enabled', 'true').lower() != 'false'
+
+
+class Invitation(db.Model):
+    __tablename__ = 'invitations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(200), nullable=False, index=True)
+    role = db.Column(db.String(20), nullable=False, default='user')
+    # SHA-256 hex of the raw token. The raw token is delivered via email only.
+    token_hash = db.Column(db.String(64), nullable=False, unique=True, index=True)
+    invited_by_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    expires_at = db.Column(db.DateTime, nullable=False)
+    accepted_at = db.Column(db.DateTime)
+    accepted_user_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    invited_by = db.relationship('User', foreign_keys=[invited_by_user_id])
+    accepted_user = db.relationship('User', foreign_keys=[accepted_user_id])
+
+    def status(self):
+        if self.accepted_at:
+            return 'accepted'
+        if self.expires_at and self.expires_at < datetime.utcnow():
+            return 'expired'
+        return 'pending'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'email': self.email,
+            'role': self.role,
+            'invited_by': self.invited_by.username if self.invited_by else None,
+            'expires_at': self.expires_at.isoformat() if self.expires_at else None,
+            'accepted_at': self.accepted_at.isoformat() if self.accepted_at else None,
+            'accepted_username': self.accepted_user.username if self.accepted_user else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'status': self.status(),
+        }
+
 
 class Client(db.Model):
     __tablename__ = 'clients'
@@ -2906,6 +3566,7 @@ def undo_payment(invoice_id):
 
 
 @app.route('/api/invoices/<int:invoice_id>', methods=['DELETE'])
+@require_admin
 def delete_invoice(invoice_id):
     """Permanently delete an invoice (admin only)."""
     session = Session()
@@ -3012,6 +3673,7 @@ def undo_terminate_cobra(coverage_id):
 
 
 @app.route('/api/cobra/<int:coverage_id>', methods=['DELETE'])
+@require_admin
 def delete_cobra(coverage_id):
     """Permanently delete a COBRA coverage (admin only)."""
     session = Session()
@@ -3896,6 +4558,7 @@ def get_policy_aggregations():
 # ===========================================================================
 
 @app.route('/api/export', methods=['GET'])
+@require_admin
 def export_to_excel():
     """Export all data to Excel in the same format as Data Sheet.xlsx."""
     session = Session()
@@ -4454,6 +5117,7 @@ def export_to_excel():
 
 
 @app.route('/api/import', methods=['POST'])
+@require_admin
 def import_from_excel():
     """Import data from an Excel file matching the Data Sheet.xlsx format."""
     session = Session()
@@ -5752,7 +6416,45 @@ def serve_react(path):
 
 # Create tables (runs on import so schema applies regardless of entry point)
 with app.app_context():
+    # Lightweight column migration: if an older version of this app already
+    # created the `users` table without `must_change_password`, add it now.
+    # db.create_all() only creates missing tables — it does not ALTER existing ones.
+    from sqlalchemy import inspect as _sa_inspect
+    try:
+        _inspector = _sa_inspect(engine)
+        if 'users' in _inspector.get_table_names():
+            _existing_cols = {c['name'] for c in _inspector.get_columns('users')}
+            if 'must_change_password' not in _existing_cols:
+                with engine.begin() as _conn:
+                    _conn.execute(db.text(
+                        "ALTER TABLE users ADD COLUMN must_change_password "
+                        "BOOLEAN NOT NULL DEFAULT FALSE"
+                    ))
+                logging.info("Added users.must_change_password column to existing table.")
+    except Exception as _e:
+        logging.warning(f"Could not run users-table column migration: {_e}")
+
     db.create_all()
+
+    # Seed a default admin if no users exist yet, so a fresh install can be logged into.
+    # Credentials can be overridden via DEFAULT_ADMIN_USERNAME / DEFAULT_ADMIN_PASSWORD env vars.
+    if User.query.count() == 0:
+        default_admin_username = os.environ.get('DEFAULT_ADMIN_USERNAME', 'admin')
+        default_admin_password = os.environ.get('DEFAULT_ADMIN_PASSWORD', 'admin')
+        seed_admin = User(
+            username=default_admin_username,
+            role='admin',
+            full_name='Default Admin',
+            is_active=True,
+            must_change_password=True,
+        )
+        seed_admin.set_password(default_admin_password)
+        db.session.add(seed_admin)
+        db.session.commit()
+        logging.warning(
+            f"Seeded default admin user '{default_admin_username}'. "
+            "You will be forced to change the password on first login."
+        )
 
 if __name__ == '__main__':
     # Run app (host/port configurable via env vars)
