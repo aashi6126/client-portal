@@ -1,4 +1,4 @@
-# Client Portal — PostgreSQL backup script (Windows)
+# Client Portal - PostgreSQL backup script (Windows)
 #
 # Produces a timestamped pg_dump custom-format archive that can be restored with:
 #   pg_restore --clean --if-exists -d client_portal <backup file>
@@ -48,7 +48,7 @@ function Find-PgDump {
 
 # ----- Header -----
 Write-Host ("=" * 60)
-Write-Host "CLIENT PORTAL — DATABASE BACKUP"
+Write-Host "CLIENT PORTAL - DATABASE BACKUP"
 Write-Host ("=" * 60)
 
 $pgDump = Find-PgDump
@@ -81,12 +81,18 @@ $pgDumpArgs = @(
     $DbName
 )
 
-$proc = Start-Process -FilePath $pgDump -ArgumentList $pgDumpArgs `
-    -NoNewWindow -Wait -PassThru `
-    -RedirectStandardError $logFile
+$startArgs = @{
+    FilePath              = $pgDump
+    ArgumentList          = $pgDumpArgs
+    NoNewWindow           = $true
+    Wait                  = $true
+    PassThru              = $true
+    RedirectStandardError = $logFile
+}
+$proc = Start-Process @startArgs
 
 if ($proc.ExitCode -ne 0) {
-    Write-Host "FAILED — pg_dump exit code $($proc.ExitCode). Log:" -ForegroundColor Red
+    Write-Host "FAILED - pg_dump exit code $($proc.ExitCode). Log:" -ForegroundColor Red
     if (Test-Path $logFile) { Get-Content $logFile | Select-Object -Last 30 | Write-Host }
     if (Test-Path $outFile) { Remove-Item $outFile -Force }
     exit 1
@@ -94,13 +100,13 @@ if ($proc.ExitCode -ne 0) {
 
 # ----- Verify -----
 if (-not (Test-Path $outFile) -or (Get-Item $outFile).Length -eq 0) {
-    Write-Host "FAILED — output file is missing or empty." -ForegroundColor Red
+    Write-Host "FAILED - output file is missing or empty." -ForegroundColor Red
     exit 1
 }
 
 $sizeKB = [math]::Round((Get-Item $outFile).Length / 1KB, 1)
 Write-Host ("-" * 60)
-Write-Host "SUCCESS — $outFile  (${sizeKB} KB)"  -ForegroundColor Green
+Write-Host "SUCCESS - $outFile  (${sizeKB} KB)"  -ForegroundColor Green
 
 # ----- Retention: prune old backups -----
 if ($RetainDays -gt 0) {

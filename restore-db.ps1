@@ -1,4 +1,4 @@
-# Client Portal — PostgreSQL restore script (Windows)
+# Client Portal - PostgreSQL restore script (Windows)
 #
 # Restores a pg_dump custom-format archive (produced by backup-db.ps1) into a
 # PostgreSQL database. By default, runs interactively: lists available backups,
@@ -19,7 +19,7 @@
 #     powershell.exe -ExecutionPolicy Bypass -File restore-db.ps1 -File <path> -Force
 #
 # AUTHENTICATION
-#   Set $env:PGPASSWORD or use %APPDATA%\postgresql\pgpass.conf — same as backup-db.ps1.
+#   Set $env:PGPASSWORD or use %APPDATA%\postgresql\pgpass.conf - same as backup-db.ps1.
 
 param(
     [string]$File         = "",          # specific .dump file; empty = interactive picker
@@ -64,7 +64,7 @@ $pgRestore = Find-PgTool -ToolName "pg_restore.exe" -Override $PgRestoreExe
 $psql      = Find-PgTool -ToolName "psql.exe"       -Override $PsqlExe
 
 Write-Host ("=" * 60)
-Write-Host "CLIENT PORTAL — DATABASE RESTORE"
+Write-Host "CLIENT PORTAL - DATABASE RESTORE"
 Write-Host ("=" * 60)
 Write-Host "pg_restore: $pgRestore"
 Write-Host "Target:     $TargetDb on ${DbHost}:${DbPort} (user: $DbUser)"
@@ -88,8 +88,8 @@ if (-not $File) {
         $d = $dumps[$i]
         $sizeKB = [math]::Round($d.Length / 1KB, 1)
         $age    = [math]::Round(((Get-Date) - $d.LastWriteTime).TotalHours, 1)
-        Write-Host ("  [{0,2}] {1,-50} {2,10} KB   {3} ({4}h ago)" -f `
-            $i, $d.Name, $sizeKB, $d.LastWriteTime.ToString("yyyy-MM-dd HH:mm"), $age)
+        $line = "  [{0,2}] {1,-50} {2,10} KB   {3} ({4}h ago)" -f $i, $d.Name, $sizeKB, $d.LastWriteTime.ToString("yyyy-MM-dd HH:mm"), $age
+        Write-Host $line
     }
     Write-Host ""
 
@@ -132,7 +132,7 @@ if ($LASTEXITCODE -eq 0) {
 
 if ($activeConns -gt 0) {
     Write-Host ""
-    Write-Host "Found $activeConns active connection(s) to '$TargetDb' — pg_restore will block." -ForegroundColor Yellow
+    Write-Host "Found $activeConns active connection(s) to '$TargetDb' - pg_restore will block." -ForegroundColor Yellow
     if (Confirm-Action -Prompt "Terminate them now?") {
         $termArgs = @(
             "--host=$DbHost", "--port=$DbPort", "--username=$DbUser",
@@ -162,13 +162,19 @@ $restoreArgs = @(
 )
 
 $logFile = "$File.restore.log"
-$proc = Start-Process -FilePath $pgRestore -ArgumentList $restoreArgs `
-    -NoNewWindow -Wait -PassThru `
-    -RedirectStandardError $logFile
+$startArgs = @{
+    FilePath              = $pgRestore
+    ArgumentList          = $restoreArgs
+    NoNewWindow           = $true
+    Wait                  = $true
+    PassThru              = $true
+    RedirectStandardError = $logFile
+}
+$proc = Start-Process @startArgs
 
 if ($proc.ExitCode -ne 0) {
     Write-Host ("-" * 60)
-    Write-Host "FAILED — pg_restore exit code $($proc.ExitCode). Last 30 log lines:" -ForegroundColor Red
+    Write-Host "FAILED - pg_restore exit code $($proc.ExitCode). Last 30 log lines:" -ForegroundColor Red
     if (Test-Path $logFile) { Get-Content $logFile | Select-Object -Last 30 | Write-Host }
     Write-Host ""
     Write-Host "Full log: $logFile"
@@ -176,7 +182,7 @@ if ($proc.ExitCode -ne 0) {
 }
 
 Write-Host ("-" * 60)
-Write-Host "SUCCESS — restored $File into database '$TargetDb'" -ForegroundColor Green
+Write-Host "SUCCESS - restored $File into database '$TargetDb'" -ForegroundColor Green
 Write-Host "Log: $logFile"
 
 # Note: pg_restore often prints harmless warnings to stderr (e.g. role does not exist).
