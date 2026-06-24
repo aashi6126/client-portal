@@ -13,6 +13,25 @@
 
 ---
 
+## Intro (30 sec)
+
+**Narration:**
+
+> "Running an insurance brokerage means juggling dozens of clients, hundreds of policies, and renewal dates that never stop coming.
+>
+> That's why we built Client Hub — a single platform where brokers track everything from employee benefits and commercial lines to personal insurance, COBRA, and billing.
+>
+> No spreadsheet sprawl. No missed renewals. No hunting for last year's outstanding items.
+>
+> In the next few minutes, I'll walk you through how Client Hub fits into a broker's day — managing clients, tracking renewals, generating invoices, and staying on top of every action item.
+>
+> Let's dive in."
+
+**Actions:**
+1. Open with the Client Hub logo / login screen, or a clean Dashboard view as the camera fades in
+
+---
+
 ## Scene 1: Dashboard Overview (1 min)
 
 **Narration:** "This is Client Hub — a centralized platform for managing insurance clients, policies, renewals, and invoicing."
