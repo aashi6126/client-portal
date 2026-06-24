@@ -17,6 +17,9 @@ API_URL = os.environ.get('BACKUP_API_URL', f'http://127.0.0.1:{API_PORT}/api/exp
 BACKUP_DIR = os.environ.get('BACKUP_DIR',
     os.path.join(os.path.dirname(os.path.abspath(__file__)), '..', 'backups'))
 MAX_BACKUPS = int(os.environ.get('BACKUP_MAX_COUNT', '30'))
+# Shared secret read by customer_api.py; lets this trusted local process
+# call admin-only endpoints without a user session.
+BACKUP_API_TOKEN = os.environ.get('BACKUP_API_TOKEN', '').strip()
 
 logging.basicConfig(
     level=logging.INFO,
@@ -55,6 +58,8 @@ def run_backup():
     try:
         logging.info("Starting scheduled backup...")
         req = urllib.request.Request(API_URL)
+        if BACKUP_API_TOKEN:
+            req.add_header('X-Backup-Token', BACKUP_API_TOKEN)
         with urllib.request.urlopen(req, timeout=60) as response:
             data = response.read()
 
@@ -104,6 +109,10 @@ def main():
     logging.info(f"Backups will be saved to: {os.path.abspath(BACKUP_DIR)}")
     logging.info(f"Schedule: 12:00 AM, 12:00 PM, and 6:00 PM daily")
     logging.info(f"Heartbeat file: {os.path.abspath(HEARTBEAT_FILE)}")
+    if BACKUP_API_TOKEN:
+        logging.info("BACKUP_API_TOKEN configured — will send X-Backup-Token header.")
+    else:
+        logging.warning("BACKUP_API_TOKEN not set — requests to /api/export will be unauthenticated and will fail unless AUTH_DISABLED=true.")
 
     write_heartbeat()
     last_heartbeat = time.time()

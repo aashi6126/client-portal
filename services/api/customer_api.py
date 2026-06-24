@@ -124,6 +124,13 @@ AUTH_DISABLED = os.environ.get('AUTH_DISABLED', 'false').lower() == 'true'
 if AUTH_DISABLED:
     logging.warning("AUTH_DISABLED=true — authentication is bypassed; every request is treated as admin.")
 
+# Shared-secret token for trusted local processes (e.g. backup_scheduler.py)
+# that need to call admin-only endpoints without a session cookie. When set,
+# requests carrying header `X-Backup-Token: <value>` are treated as admin.
+BACKUP_API_TOKEN = os.environ.get('BACKUP_API_TOKEN', '').strip()
+if BACKUP_API_TOKEN:
+    logging.info("BACKUP_API_TOKEN set — trusted-token bypass enabled for X-Backup-Token header.")
+
 
 class _SyntheticAdmin:
     """Stand-in user object returned by _current_user() when AUTH_DISABLED is on.
@@ -272,6 +279,12 @@ def require_login_for_api():
         return None
     if path in PUBLIC_API_PATHS:
         return None
+    # Trusted-token bypass for local automation (backup_scheduler, etc.)
+    if BACKUP_API_TOKEN:
+        supplied = request.headers.get('X-Backup-Token', '')
+        if supplied and secrets.compare_digest(supplied, BACKUP_API_TOKEN):
+            request.current_user = _SyntheticAdmin()
+            return None
     user = _current_user()
     if not user or not user.is_active:
         return jsonify({'error': 'Authentication required'}), 401
