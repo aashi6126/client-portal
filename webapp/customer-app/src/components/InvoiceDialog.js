@@ -178,15 +178,12 @@ export default function InvoiceDialog({ open, onClose, commercial, clientEmail }
 
   const subtotal = isBinding ? fullSubtotal * 0.25 : fullSubtotal;
 
-  // Build policy_types array for the API (collapse multi-plan keys back)
+  // Build policy_types array for the API. Keys for multi-plan coverages
+  // carry the plan index (e.g. 'umbrella:0'); the backend resolves them per-plan.
   const buildPolicyTypes = () => {
-    const types = new Set();
-    activePolicies.forEach((p) => {
-      if (selected[p.key]) {
-        types.add(p.ptype || p.key);
-      }
-    });
-    return Array.from(types);
+    return activePolicies
+      .filter((p) => selected[p.key])
+      .map((p) => p.key);
   };
 
   const selectedCount = activePolicies.filter((p) => selected[p.key]).length;

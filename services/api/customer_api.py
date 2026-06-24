@@ -23,9 +23,9 @@ from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
 try:
-    from api.invoice import generate_invoice_pdf, _collect_line_items, POLICY_LABELS
+    from api.invoice import generate_invoice_pdf, _collect_line_items, coverage_labels_for_key
 except ImportError:
-    from invoice import generate_invoice_pdf, _collect_line_items, POLICY_LABELS
+    from invoice import generate_invoice_pdf, _collect_line_items, coverage_labels_for_key
 try:
     from api.chat import chat_with_ollama
 except ImportError:
@@ -3268,10 +3268,16 @@ def invoice_send():
         if not to_email:
             return jsonify({'error': 'to_email is required'}), 400
 
-        # Check for pending invoices with overlapping coverages
+        # Check for pending invoices with overlapping coverages. Granular keys
+        # (e.g. 'umbrella:0') resolve to the same per-plan label used when the
+        # invoice was originally persisted, so the comparison stays exact.
         comm_check = session.query(CommercialInsurance).filter_by(id=commercial_id).first()
         if comm_check and comm_check.client:
-            requested = set(policy_types)
+            comm_data_for_overlap = comm_check.to_dict()
+            requested_labels = set()
+            for pt in policy_types:
+                for lbl in coverage_labels_for_key(pt, comm_data_for_overlap):
+                    requested_labels.add(lbl.lower())
             pending_invoices = session.query(Invoice).filter_by(tax_id=comm_check.client.tax_id, status='pending').all()
             for pending in pending_invoices:
                 if pending.policies_description:
@@ -3280,8 +3286,6 @@ def invoice_send():
                         coverage = entry.split('::')[0].strip() if '::' in entry else entry.strip()
                         if coverage:
                             existing_coverages.add(coverage.replace(' (Binder 25%)', '').lower())
-                    # Match requested policy_types against stored coverage names
-                    requested_labels = {POLICY_LABELS.get(pt, pt).lower() for pt in requested}
                     overlap = requested_labels & existing_coverages
                     if overlap:
                         overlap_names = ', '.join(sorted(overlap))

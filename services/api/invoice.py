@@ -44,43 +44,84 @@ POLICY_LABELS = {
 MULTI_PLAN_TYPES = {'umbrella', 'professional_eo', 'cyber', 'crime'}
 
 
+def _parse_coverage_key(raw):
+    """A coverage selection is either '<ptype>' (legacy: every plan of that
+    type) or '<ptype>:<index>' (specific plan within a multi-plan coverage)."""
+    s = str(raw)
+    if ':' in s:
+        ptype, _, idx_str = s.partition(':')
+        try:
+            return ptype, int(idx_str)
+        except (TypeError, ValueError):
+            return ptype, None
+    return s, None
+
+
 def _collect_line_items(commercial_data, policy_types):
-    """Collect invoice line items from commercial data for the given policy types."""
+    """Collect invoice line items from commercial data for the given coverage keys.
+
+    Keys may be bare policy types (e.g. 'umbrella' = all umbrella plans) or
+    indexed for multi-plan coverages (e.g. 'umbrella:0' = the first plan only)."""
     items = []
     plans = commercial_data.get('plans', {})
 
-    for ptype in policy_types:
+    for raw in policy_types:
+        ptype, idx = _parse_coverage_key(raw)
         label = POLICY_LABELS.get(ptype, ptype.replace('_', ' ').title())
 
         if ptype in MULTI_PLAN_TYPES:
-            for plan in plans.get(ptype, []):
+            entries = plans.get(ptype, [])
+            targets = (
+                [(idx, entries[idx])]
+                if idx is not None and 0 <= idx < len(entries)
+                else list(enumerate(entries))
+            )
+            for i, plan in targets:
                 carrier = plan.get('carrier') or ''
                 premium = plan.get('premium') or 0
-                policy_number = plan.get('policy_number') or ''
-                renewal_date = plan.get('renewal_date') or ''
                 if carrier or premium:
+                    suffix = f' #{i + 1}' if len(entries) > 1 else ''
                     items.append({
-                        'label': label, 'carrier': carrier,
-                        'policy_number': policy_number,
+                        'label': f'{label}{suffix}',
+                        'carrier': carrier,
+                        'policy_number': plan.get('policy_number') or '',
                         'premium': float(premium) if premium else 0,
-                        'renewal_date': renewal_date,
+                        'renewal_date': plan.get('renewal_date') or '',
                         'insured_entities': plan.get('insured_entities') or '',
                     })
         else:
             carrier = commercial_data.get(f'{ptype}_carrier') or ''
             premium = commercial_data.get(f'{ptype}_premium') or 0
-            policy_number = commercial_data.get(f'{ptype}_policy_number') or ''
-            renewal_date = commercial_data.get(f'{ptype}_renewal_date') or ''
             if carrier or premium:
                 items.append({
-                    'label': label, 'carrier': carrier,
-                    'policy_number': policy_number,
+                    'label': label,
+                    'carrier': carrier,
+                    'policy_number': commercial_data.get(f'{ptype}_policy_number') or '',
                     'premium': float(premium) if premium else 0,
-                    'renewal_date': renewal_date,
+                    'renewal_date': commercial_data.get(f'{ptype}_renewal_date') or '',
                     'insured_entities': commercial_data.get(f'{ptype}_insured_entities') or '',
                 })
 
     return items
+
+
+def coverage_labels_for_key(raw, commercial_data):
+    """Labels a given coverage key would resolve to, matching what ends up in
+    policies_description. Used for the pending-invoice overlap check so the
+    comparison stays exact even after per-plan selection landed."""
+    ptype, idx = _parse_coverage_key(raw)
+    base = POLICY_LABELS.get(ptype, ptype.replace('_', ' ').title())
+
+    if ptype not in MULTI_PLAN_TYPES:
+        return [base]
+
+    entries = (commercial_data.get('plans') or {}).get(ptype, [])
+    if idx is not None and 0 <= idx < len(entries):
+        suffix = f' #{idx + 1}' if len(entries) > 1 else ''
+        return [f'{base}{suffix}']
+    # Bare key for a multi-plan type = every plan of that type
+    return [f'{base}{(" #" + str(i + 1)) if len(entries) > 1 else ""}'
+            for i in range(len(entries))]
 
 
 def _format_date(date_str):
