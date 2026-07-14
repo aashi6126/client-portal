@@ -60,6 +60,7 @@ import CircularProgress from '@mui/material/CircularProgress';
 import { useAuth } from './AuthContext';
 import Login from './components/Login';
 import UserManagement from './components/UserManagement';
+import TaxIdRemap from './components/TaxIdRemap';
 import ChangePasswordDialog from './components/ChangePasswordDialog';
 import ForcedPasswordChange from './components/ForcedPasswordChange';
 import AcceptInvitePage from './components/AcceptInvitePage';
@@ -918,6 +919,7 @@ function AppShell() {
               { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
               { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
               ...(isAdmin ? [{ label: 'Users', icon: <ManageAccountsIcon fontSize="small" />, index: 11 }] : []),
+              ...(isAdmin ? [{ label: 'Tax ID Remap', icon: <ManageAccountsIcon fontSize="small" />, index: 12 }] : []),
               { type: 'divider' },
               { label: 'Chat', icon: <ChatIcon fontSize="small" />, index: 9 },
             ];
@@ -1184,6 +1186,11 @@ function AppShell() {
         {/* Tab 11: User Management (admin only) */}
         {activeTab === 11 && isAdmin && (
           <UserManagement />
+        )}
+
+        {/* Tab 12: Tax ID Remap (admin only) */}
+        {activeTab === 12 && isAdmin && (
+          <TaxIdRemap onApplied={() => { fetchAllData(); setDataVersion(v => v + 1); }} />
         )}
 
         {/* Tab 9: Chat */}

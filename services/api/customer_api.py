@@ -2304,14 +2304,11 @@ def update_client(client_id):
             if existing:
                 return jsonify({'error': f'Tax ID {new_tax_id} is already assigned to another client'}), 400
 
-            # Update tax_id in associated employee benefits
-            session.query(EmployeeBenefit).filter_by(tax_id=old_tax_id).update(
-                {'tax_id': new_tax_id}, synchronize_session='fetch'
-            )
-            # Update tax_id in associated commercial insurance
-            session.query(CommercialInsurance).filter_by(tax_id=old_tax_id).update(
-                {'tax_id': new_tax_id}, synchronize_session='fetch'
-            )
+            # Ensure the four FKs referencing clients.tax_id are ON UPDATE
+            # CASCADE, then let Postgres propagate the tax_id change to
+            # employee_benefits / commercial_insurance / invoices /
+            # cobra_coverages. Idempotent; no-op after first invocation.
+            _ensure_taxid_cascade(session)
 
         client.tax_id = new_tax_id
         client.client_name = data.get('client_name', client.client_name)
@@ -2363,6 +2360,154 @@ def update_client(client_id):
         session.rollback()
         logging.error(f"Error updating client: {e}")
         return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
+_TAXID_FKS = (
+    ('employee_benefits',    'employee_benefits_tax_id_fkey'),
+    ('commercial_insurance', 'commercial_insurance_tax_id_fkey'),
+    ('invoices',             'invoices_tax_id_fkey'),
+    ('cobra_coverages',      'cobra_coverages_tax_id_fkey'),
+)
+
+
+def _ensure_taxid_cascade(session):
+    """Idempotently upgrade the four FKs referencing clients.tax_id to
+    ON UPDATE CASCADE. Postgres FKs default to NO ACTION, which makes any
+    tax_id rename impossible when the client has related records (the child
+    UPDATE fires the FK before the parent can move — no legal ordering).
+    This helper detects that state and repairs it in place.
+
+    Called from update_client and bulk_remap_tax_ids so the schema
+    self-heals on any DB (dev or prod) the first time either code path
+    runs. Idempotent — subsequent calls are a single SELECT that returns
+    immediately when all four FKs are already 'c' (CASCADE).
+    """
+    conn = session.connection()
+    row = conn.execute(db.text(
+        "SELECT COUNT(*) FROM pg_constraint "
+        "WHERE contype='f' AND confupdtype<>'c' "
+        "AND conname IN ('employee_benefits_tax_id_fkey',"
+        " 'commercial_insurance_tax_id_fkey',"
+        " 'invoices_tax_id_fkey',"
+        " 'cobra_coverages_tax_id_fkey')"
+    )).scalar()
+    if not row:
+        return False
+    for table, constraint in _TAXID_FKS:
+        conn.execute(db.text(f'ALTER TABLE {table} DROP CONSTRAINT IF EXISTS {constraint}'))
+        conn.execute(db.text(
+            f'ALTER TABLE {table} ADD CONSTRAINT {constraint} '
+            f'FOREIGN KEY (tax_id) REFERENCES clients(tax_id) ON UPDATE CASCADE'
+        ))
+    logging.info(f"Upgraded {row} tax_id FK(s) to ON UPDATE CASCADE.")
+    return True
+
+
+@app.route('/api/admin/tax-id-remap', methods=['POST'])
+@require_admin
+def bulk_remap_tax_ids():
+    """Bulk-rename client tax IDs, cascading to every FK-carrying child table.
+
+    Request: {"mappings": [{"old": "12-3456789", "new": "98-7654321"}, ...],
+              "dry_run": true|false}
+
+    Every row is validated (format, collision, existence, cross-batch
+    duplicates) before any writes. If ANY row would fail, no changes are
+    committed — this is transactional. Child rows in employee_benefits,
+    commercial_insurance, invoices, cobra_coverages are updated
+    automatically via ON UPDATE CASCADE (helper _ensure_taxid_cascade
+    guarantees the FKs are in that mode).
+    """
+    data = request.get_json(silent=True) or {}
+    mappings = data.get('mappings') or []
+    dry_run = bool(data.get('dry_run', True))
+
+    if not isinstance(mappings, list) or not mappings:
+        return jsonify({'error': 'mappings must be a non-empty list'}), 400
+    if len(mappings) > 500:
+        return jsonify({'error': 'Max 500 mappings per request'}), 400
+
+    session = Session()
+    results = []
+    try:
+        _ensure_taxid_cascade(session)
+
+        # First pass: build results by validating everything. No writes yet.
+        new_ids_seen = set()
+        for m in mappings:
+            old = (m.get('old') or '').strip()
+            new = (m.get('new') or '').strip()
+            entry = {'old': old, 'new': new, 'status': 'error',
+                     'message': '', 'cascaded': None}
+
+            if not old or not new:
+                entry['message'] = 'Both old and new tax_id are required'
+                results.append(entry); continue
+            if old == new:
+                entry['status'] = 'skipped'
+                entry['message'] = 'old == new; no change'
+                results.append(entry); continue
+            if not re.match(r'^\d{2}-\d{7}$', new):
+                entry['message'] = 'New tax_id must be in ##-####### format'
+                results.append(entry); continue
+            if new in new_ids_seen:
+                entry['message'] = f'Duplicate target tax_id in this batch: {new}'
+                results.append(entry); continue
+            new_ids_seen.add(new)
+
+            src = session.query(Client).filter_by(tax_id=old).first()
+            if not src:
+                entry['message'] = f'No client found with tax_id {old}'
+                results.append(entry); continue
+            collision = session.query(Client).filter(
+                Client.tax_id == new, Client.id != src.id
+            ).first()
+            if collision:
+                entry['message'] = (
+                    f'Target tax_id {new} is already assigned to client '
+                    f'"{collision.client_name}" (id={collision.id})'
+                )
+                results.append(entry); continue
+
+            entry['status'] = 'ok'
+            entry['client_name'] = src.client_name
+            entry['client_id'] = src.id
+            results.append(entry)
+
+        summary = {
+            'total': len(results),
+            'ok': sum(1 for r in results if r['status'] == 'ok'),
+            'skipped': sum(1 for r in results if r['status'] == 'skipped'),
+            'errors': sum(1 for r in results if r['status'] == 'error'),
+        }
+
+        if dry_run or summary['errors'] > 0 or summary['ok'] == 0:
+            return jsonify({'dry_run': True, 'results': results, 'summary': summary}), 200
+
+        # Second pass: apply in a single transaction. Cascade is handled by
+        # Postgres; we count child rows here just for the response payload.
+        for entry in results:
+            if entry['status'] != 'ok':
+                continue
+            old, new = entry['old'], entry['new']
+            cascaded = {
+                'benefits':   session.query(EmployeeBenefit).filter_by(tax_id=old).count(),
+                'commercial': session.query(CommercialInsurance).filter_by(tax_id=old).count(),
+                'invoices':   session.query(Invoice).filter_by(tax_id=old).count(),
+                'cobra':      session.query(CobraCoverage).filter_by(tax_id=old).count(),
+            }
+            client = session.query(Client).filter_by(id=entry['client_id']).first()
+            client.tax_id = new
+            entry['cascaded'] = cascaded
+        session.commit()
+        return jsonify({'dry_run': False, 'results': results, 'summary': summary}), 200
+
+    except Exception as e:
+        session.rollback()
+        logging.error(f"tax-id-remap failed: {e}")
+        return jsonify({'error': str(e), 'results': results}), 500
     finally:
         session.close()
 
