@@ -139,7 +139,12 @@ def _format_date(date_str):
 
 
 def _end_date(date_str):
-    """Get date + 1 year for effective date range."""
+    """Get date + 1 year for effective date range, formatted M/D/YY.
+
+    Uses manual formatting rather than strftime('%-m/%-d/%y') because the
+    Unix `%-` flag is not recognised on Windows and raises ValueError,
+    which used to silently produce an empty end date on the Windows box.
+    """
     if not date_str:
         return ''
     try:
@@ -148,7 +153,7 @@ def _end_date(date_str):
         else:
             dt = date_str
         end = dt.replace(year=dt.year + 1)
-        return end.strftime('%-m/%-d/%y')
+        return f'{end.month}/{end.day}/{end.strftime("%y")}'
     except (ValueError, TypeError):
         return ''
 
