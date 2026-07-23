@@ -158,6 +158,43 @@ def _end_date(date_str):
         return ''
 
 
+def _fmt(dt):
+    """Format a date object as M/D/YY without leading zeros (cross-platform)."""
+    return f'{dt.month}/{dt.day}/{dt.strftime("%y")}'
+
+
+def _effective_range(date_str):
+    """Return (start_str, end_str) for the invoice effective-date cell.
+
+    The rule is anchored on the renewal date:
+      * renewal_date in the future  -> the current policy period is
+        (renewal_date - 1 year) to renewal_date; invoice covers that period.
+      * renewal_date today or past  -> the new policy period is
+        renewal_date to (renewal_date + 1 year); invoice covers that period.
+
+    Returns ('', '') if the date can't be parsed.
+    """
+    if not date_str:
+        return '', ''
+    try:
+        if isinstance(date_str, str):
+            dt = datetime.strptime(date_str[:10], '%Y-%m-%d').date()
+        else:
+            dt = date_str
+            if hasattr(dt, 'date'):
+                dt = dt.date()
+        today = datetime.now().date()
+        if dt > today:
+            start = dt.replace(year=dt.year - 1)
+            end = dt
+        else:
+            start = dt
+            end = dt.replace(year=dt.year + 1)
+        return _fmt(start), _fmt(end)
+    except (ValueError, TypeError):
+        return '', ''
+
+
 def generate_invoice_pdf(
     invoice_number, invoice_date, client_name, client_address, client_tax_id, line_items,
     is_binding=False,
@@ -249,8 +286,7 @@ def generate_invoice_pdf(
     desc_style = ParagraphStyle('desc_cell', parent=styles['Normal'], fontSize=9, leading=11)
 
     for item in line_items:
-        date_start = _format_date(item['renewal_date'])
-        date_end = _end_date(item['renewal_date'])
+        date_start, date_end = _effective_range(item['renewal_date'])
         date_cell = f'{date_start}\nto\n{date_end}' if date_start else ''
         desc_parts = [item['label']]
         if item['policy_number']:
