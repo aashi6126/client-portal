@@ -1961,6 +1961,8 @@ class CobraCoverage(db.Model):
     status = db.Column(db.String(50), default='active')
     termination_date = db.Column(db.Date)
     termination_reason = db.Column(db.Text)
+    # 'employer' or 'carrier'. Nullable so pre-existing rows stay valid.
+    administration_type = db.Column(db.String(20))
     created_at = db.Column(db.DateTime, default=lambda: datetime.now(_EST))
 
     client = db.relationship('Client', backref='cobra_coverages')
@@ -1978,6 +1980,7 @@ class CobraCoverage(db.Model):
             'status': self.status,
             'termination_date': self.termination_date.isoformat() if self.termination_date else None,
             'termination_reason': self.termination_reason,
+            'administration_type': self.administration_type,
             'created_at': self.created_at.isoformat() if self.created_at else None,
         }
 
@@ -3775,6 +3778,9 @@ def create_cobra_coverage():
         if not data.get('first_name') or not data.get('last_name'):
             return jsonify({'error': 'First name and last name are required'}), 400
 
+        admin_type = (data.get('administration_type') or '').strip().lower() or None
+        if admin_type and admin_type not in ('employer', 'carrier'):
+            return jsonify({'error': "administration_type must be 'employer' or 'carrier'"}), 400
         coverage = CobraCoverage(
             first_name=data.get('first_name'),
             last_name=data.get('last_name'),
@@ -3782,6 +3788,7 @@ def create_cobra_coverage():
             state=data.get('state') or None,
             start_date=parse_date(data.get('start_date')),
             end_date=parse_date(data.get('end_date')),
+            administration_type=admin_type,
         )
         session.add(coverage)
         session.commit()
@@ -6582,19 +6589,30 @@ with app.app_context():
     # created the `users` table without `must_change_password`, add it now.
     # db.create_all() only creates missing tables — it does not ALTER existing ones.
     from sqlalchemy import inspect as _sa_inspect
+
+    # Lightweight column migrations for tables that pre-date a new column.
+    # db.create_all() below only creates missing tables — it does not ALTER
+    # existing ones. Each entry: (table, column, ALTER TABLE snippet).
+    _RUNTIME_COLUMN_PATCHES = [
+        ('users', 'must_change_password',
+         'ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT FALSE'),
+        ('cobra_coverages', 'administration_type',
+         'ALTER TABLE cobra_coverages ADD COLUMN administration_type VARCHAR(20)'),
+    ]
     try:
         _inspector = _sa_inspect(engine)
-        if 'users' in _inspector.get_table_names():
-            _existing_cols = {c['name'] for c in _inspector.get_columns('users')}
-            if 'must_change_password' not in _existing_cols:
-                with engine.begin() as _conn:
-                    _conn.execute(db.text(
-                        "ALTER TABLE users ADD COLUMN must_change_password "
-                        "BOOLEAN NOT NULL DEFAULT FALSE"
-                    ))
-                logging.info("Added users.must_change_password column to existing table.")
+        _existing_tables = set(_inspector.get_table_names())
+        for _table, _column, _ddl in _RUNTIME_COLUMN_PATCHES:
+            if _table not in _existing_tables:
+                continue
+            _existing_cols = {c['name'] for c in _inspector.get_columns(_table)}
+            if _column in _existing_cols:
+                continue
+            with engine.begin() as _conn:
+                _conn.execute(db.text(_ddl))
+            logging.info(f"Added {_table}.{_column} column to existing table.")
     except Exception as _e:
-        logging.warning(f"Could not run users-table column migration: {_e}")
+        logging.warning(f"Could not run runtime column migration: {_e}")
 
     db.create_all()
 

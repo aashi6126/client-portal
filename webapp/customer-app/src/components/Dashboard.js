@@ -63,6 +63,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
   const [policyAgg, setPolicyAgg] = useState({ by_industry: [], by_coverage_type: [], by_carrier: [] });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [mainTab, setMainTab] = useState(0);
   const [renewalTab, setRenewalTab] = useState(0);
   const [renewalTypeFilter, setRenewalTypeFilter] = useState('all');
   const [outstandingTab, setOutstandingTab] = useState(0);
@@ -619,6 +620,16 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         ))}
       </Box>
 
+      {/* Tab bar for the four dashboard sections */}
+      <Tabs value={mainTab} onChange={(e, v) => setMainTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
+        <Tab label="Renewals" />
+        <Tab label="Actions" />
+        <Tab label="Opportunities" />
+        <Tab label="Analytics" />
+      </Tabs>
+
+      {/* ---------- Tab 0: Renewals ---------- */}
+      {mainTab === 0 && (<>
       {/* Renewals Chart (full-width) */}
       <Box sx={{ mb: 4 }}>
         <Paper sx={{ p: 2, height: 200, display: 'flex', flexDirection: 'column' }}>
@@ -789,7 +800,11 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         )}
       </Paper>
 
-      {/* Section 4: Outstanding Items & Prospect Clients (tabbed) */}
+      </>)}
+
+      {/* ---------- Tab 1: Actions ---------- */}
+      {mainTab === 1 && (
+      /* Section 4: Outstanding Items & Prospect Clients (tabbed) */
       <Paper sx={{ p: 3, mb: 4 }}>
         <Typography variant="h6" gutterBottom sx={{ fontWeight: 'bold', mb: 2 }}>
           Action Items
@@ -908,6 +923,10 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         )}
       </Paper>
 
+      )}
+
+      {/* ---------- Tab 2: Opportunities ---------- */}
+      {mainTab === 2 && (<>
       {/* Section 6: Cross-Sell & Within-Product Opportunities */}
       <Paper sx={{ p: 3, mb: 4 }}>
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 1 }}>
@@ -1120,6 +1139,10 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         )}
       </Paper>
 
+      </>)}
+
+      {/* ---------- Tab 3: Analytics ---------- */}
+      {mainTab === 3 && (<>
       {/* Policy Aggregations: by Industry + by Coverage Type — wrapped for margin */}
       <Box sx={{ display: 'flex', gap: 3, mb: 4 }}>
         <Paper sx={{ p: 2, flex: 1, overflow: 'hidden' }}>
@@ -1285,6 +1308,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           </Typography>
         )}
       </Paper>
+      </>)}
     </Box>
   );
 };

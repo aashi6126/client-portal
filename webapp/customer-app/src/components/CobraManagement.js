@@ -19,7 +19,7 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
   const [terminateDialog, setTerminateDialog] = useState({ open: false, id: null, name: '' });
   const [undoDialog, setUndoDialog] = useState({ open: false, id: null, name: '' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
-  const [form, setForm] = useState({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '' });
+  const [form, setForm] = useState({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '', administration_type: '' });
   const [termForm, setTermForm] = useState({ termination_date: '', termination_reason: '' });
   const [search, setSearch] = useState('');
 
@@ -65,7 +65,7 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
       setError(null);
       await axios.post('/api/cobra', form);
       setAddDialog(false);
-      setForm({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '' });
+      setForm({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '', administration_type: '' });
       fetchCoverages();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add coverage');
@@ -153,6 +153,7 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
                   <TableCell sx={{ fontWeight: 'bold' }}>State</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Start Date</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>End Date</TableCell>
+                  <TableCell sx={{ fontWeight: 'bold' }}>Administered By</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Termination Date</TableCell>
                   <TableCell sx={{ fontWeight: 'bold' }}>Reason</TableCell>
@@ -168,6 +169,13 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
                     <TableCell>{cov.state || '—'}</TableCell>
                     <TableCell>{formatDate(cov.start_date)}</TableCell>
                     <TableCell>{formatDate(cov.end_date)}</TableCell>
+                    <TableCell>
+                      {cov.administration_type === 'employer' ? (
+                        <Chip label="Employer" size="small" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                      ) : cov.administration_type === 'carrier' ? (
+                        <Chip label="Carrier" size="small" color="info" variant="outlined" sx={{ fontSize: '0.7rem' }} />
+                      ) : '—'}
+                    </TableCell>
                     <TableCell>
                       <Chip
                         label={cov.status === 'active' ? 'Active' : 'Terminated'}
@@ -250,20 +258,33 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
               <MenuItem key={c.tax_id} value={c.tax_id}>{c.client_name} ({c.tax_id})</MenuItem>
             ))}
           </TextField>
-          <TextField
-            label="State"
-            select
-            value={form.state}
-            onChange={(e) => setForm({ ...form, state: e.target.value })}
-            size="small"
-            fullWidth
-            sx={{ mb: 2 }}
-          >
-            <MenuItem value="">— None —</MenuItem>
-            {states.map((s) => (
-              <MenuItem key={s} value={s}>{s}</MenuItem>
-            ))}
-          </TextField>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              label="State"
+              select
+              value={form.state}
+              onChange={(e) => setForm({ ...form, state: e.target.value })}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">— None —</MenuItem>
+              {states.map((s) => (
+                <MenuItem key={s} value={s}>{s}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Administered By"
+              select
+              value={form.administration_type}
+              onChange={(e) => setForm({ ...form, administration_type: e.target.value })}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">— Unspecified —</MenuItem>
+              <MenuItem value="employer">Employer Administered</MenuItem>
+              <MenuItem value="carrier">Carrier Administered</MenuItem>
+            </TextField>
+          </Box>
           <Box sx={{ display: 'flex', gap: 2 }}>
             <TextField label="Start Date" type="date" value={form.start_date} onChange={(e) => setForm({ ...form, start_date: e.target.value })} size="small" fullWidth InputLabelProps={{ shrink: true }} />
             <TextField label="End Date" type="date" value={form.end_date} onChange={(e) => setForm({ ...form, end_date: e.target.value })} size="small" fullWidth InputLabelProps={{ shrink: true }} />
