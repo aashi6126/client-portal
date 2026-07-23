@@ -8,6 +8,11 @@
 #   Regular deploy:
 #     powershell.exe -ExecutionPolicy Bypass -File deploy.ps1
 #
+#   Dry-run - describes every step without touching the box.
+#   Prints which processes would be killed, which commits would land,
+#   and whether pip / npm would run. Nothing is stopped, pulled, or started:
+#     powershell.exe -ExecutionPolicy Bypass -File deploy.ps1 -DryRun
+#
 #   Skip DB backup (fast redeploy after a small tweak):
 #     powershell.exe -ExecutionPolicy Bypass -File deploy.ps1 -SkipBackup
 #
@@ -28,6 +33,7 @@ param(
     [switch]$SkipHealthCheck,
     [switch]$ForcePipInstall,
     [switch]$NoRollback,
+    [switch]$DryRun,
     [string]$Branch          = "main",
     [string]$Remote          = "origin",
     [int]   $HealthTimeoutSec = 90
@@ -39,6 +45,7 @@ Set-Location $PSScriptRoot
 function Say($msg) { Write-Host $msg -ForegroundColor Cyan }
 function OK($msg)  { Write-Host "  [OK] $msg" -ForegroundColor Green }
 function Warn($msg){ Write-Host "  [!!] $msg" -ForegroundColor Yellow }
+function DryNote($msg) { Write-Host "  [DRY] $msg" -ForegroundColor Magenta }
 function Die($msg, $code = 1) {
     Write-Host ""
     Write-Host "  [FAIL] $msg" -ForegroundColor Red
@@ -47,7 +54,12 @@ function Die($msg, $code = 1) {
 
 Write-Host ""
 Write-Host "======================================================" -ForegroundColor Cyan
-Write-Host "  Client Portal Deploy - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Cyan
+$banner = if ($DryRun) { "Client Portal Deploy DRY-RUN - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" }
+          else         { "Client Portal Deploy - $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" }
+Write-Host "  $banner" -ForegroundColor Cyan
+if ($DryRun) {
+    Write-Host "  Every destructive step will be described, not executed." -ForegroundColor Magenta
+}
 Write-Host "======================================================" -ForegroundColor Cyan
 
 # ------------------------------------------------------------------
@@ -75,31 +87,57 @@ if ($config['DATABASE_URI'] -and $config['DATABASE_URI'] -match '/([^/?]+)(\?|$)
 Say ""
 Say "[1/4] Stopping services..."
 
-$pidsFile = Join-Path $PSScriptRoot ".pids"
-if (Test-Path $pidsFile) {
-    Get-Content $pidsFile | ForEach-Object {
-        if ($_ -match '^\s*[A-Z_]+=(\d+)\s*$') {
-            $procId = [int]$Matches[1]
-            Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+if ($DryRun) {
+    $pidsFile = Join-Path $PSScriptRoot ".pids"
+    if (Test-Path $pidsFile) {
+        DryNote "would kill PIDs listed in $pidsFile"
+        Get-Content $pidsFile | ForEach-Object { DryNote "  $_" }
+    } else {
+        DryNote "no .pids file present"
+    }
+    foreach ($port in @($apiPort, 3000)) {
+        $procs = Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue |
+                 Select-Object -ExpandProperty OwningProcess -Unique
+        if ($procs) {
+            DryNote "would kill listener(s) on port ${port}: $($procs -join ', ')"
+        } else {
+            DryNote "port $port is idle"
         }
     }
-    Remove-Item $pidsFile -Force -ErrorAction SilentlyContinue
+    $cmdlineHits = Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue |
+                   Where-Object { $_.CommandLine -match 'customer_api\.py|backup_scheduler\.py' } |
+                   Select-Object -ExpandProperty ProcessId
+    if ($cmdlineHits) {
+        DryNote "would kill python.exe by command-line match: $($cmdlineHits -join ', ')"
+    }
+    OK "stop step described"
+} else {
+    $pidsFile = Join-Path $PSScriptRoot ".pids"
+    if (Test-Path $pidsFile) {
+        Get-Content $pidsFile | ForEach-Object {
+            if ($_ -match '^\s*[A-Z_]+=(\d+)\s*$') {
+                $procId = [int]$Matches[1]
+                Stop-Process -Id $procId -Force -ErrorAction SilentlyContinue
+            }
+        }
+        Remove-Item $pidsFile -Force -ErrorAction SilentlyContinue
+    }
+
+    # Nuclear fallback: whatever is on the API port + React dev server port
+    foreach ($port in @($apiPort, 3000)) {
+        Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty OwningProcess -Unique |
+            ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
+    }
+
+    # Also catch anything by command line
+    Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue |
+        Where-Object { $_.CommandLine -match 'customer_api\.py|backup_scheduler\.py' } |
+        ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
+
+    Start-Sleep -Seconds 2
+    OK "services stopped"
 }
-
-# Nuclear fallback: whatever is on the API port + React dev server port
-foreach ($port in @($apiPort, 3000)) {
-    Get-NetTCPConnection -LocalPort $port -ErrorAction SilentlyContinue |
-        Select-Object -ExpandProperty OwningProcess -Unique |
-        ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
-}
-
-# Also catch anything by command line
-Get-CimInstance Win32_Process -Filter "Name = 'python.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'customer_api\.py|backup_scheduler\.py' } |
-    ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }
-
-Start-Sleep -Seconds 2
-OK "services stopped"
 
 # ==================================================================
 # STEP 2 - BACKUP database
@@ -107,6 +145,17 @@ OK "services stopped"
 Say ""
 if ($SkipBackup) {
     Say "[2/4] DB backup skipped (-SkipBackup flag was passed)"
+} elseif ($DryRun) {
+    Say "[2/4] Backing up database ($dbName)..."
+    $backupScript = Join-Path $PSScriptRoot "backup-db.ps1"
+    if (-not (Test-Path $backupScript)) {
+        DryNote "backup-db.ps1 NOT FOUND at $backupScript — real deploy would abort here"
+    } else {
+        DryNote "would run: & '$backupScript' -DbName $dbName"
+        $bkDir = if ($config['BACKUP_DIR']) { $config['BACKUP_DIR'] } else { 'C:\backups\client_portal' }
+        DryNote "backups typically land in $bkDir"
+    }
+    OK "backup step described"
 } else {
     Say "[2/4] Backing up database ($dbName)..."
     $backupScript = Join-Path $PSScriptRoot "backup-db.ps1"
@@ -128,11 +177,39 @@ if (-not $preCommit) { Die "git rev-parse HEAD failed. Is this a git checkout?" 
 git fetch $Remote $Branch
 if ($LASTEXITCODE -ne 0) { Die "git fetch failed. Aborting." }
 
-# Use reset --hard rather than pull so we survive force-pushes (like today's revert).
-git reset --hard "$Remote/$Branch"
-if ($LASTEXITCODE -ne 0) { Die "git reset --hard failed. Aborting." }
-
-$postCommit = (git rev-parse HEAD).Trim()
+if ($DryRun) {
+    $targetCommit = (git rev-parse "$Remote/$Branch").Trim()
+    DryNote "would: git reset --hard $Remote/$Branch"
+    DryNote "  local  : $($preCommit.Substring(0,7))"
+    DryNote "  target : $($targetCommit.Substring(0,7))"
+    if ($preCommit -eq $targetCommit) {
+        DryNote "  no code changes to apply"
+    } else {
+        Write-Host ""
+        Write-Host "  Incoming commits:" -ForegroundColor Magenta
+        git log --oneline "$preCommit..$targetCommit" | ForEach-Object { Write-Host "    $_" -ForegroundColor Magenta }
+        Write-Host ""
+        $changed = git diff --name-only $preCommit $targetCommit
+        DryNote "changed files:"
+        $changed | ForEach-Object { Write-Host "    $_" -ForegroundColor Magenta }
+        if ($changed -match 'services/requirements\.txt') {
+            DryNote "requirements.txt would trigger `pip install -r services\requirements.txt`"
+        }
+        $buildDir = Join-Path $PSScriptRoot "webapp\customer-app\build"
+        if (($changed -match 'webapp/customer-app/') -and (Test-Path $buildDir)) {
+            DryNote "frontend + existing build/ would trigger `npm run build`"
+        } elseif ($changed -match 'webapp/customer-app/') {
+            DryNote "frontend changed but no build/ present — real deploy would SKIP npm build (dev-server mode)"
+        }
+    }
+    $postCommit = $preCommit  # keep the rest of the script sane
+    OK "pull step described"
+} else {
+    # Use reset --hard rather than pull so we survive force-pushes (like today's revert).
+    git reset --hard "$Remote/$Branch"
+    if ($LASTEXITCODE -ne 0) { Die "git reset --hard failed. Aborting." }
+    $postCommit = (git rev-parse HEAD).Trim()
+}
 
 if ($preCommit -eq $postCommit) {
     OK "already at $postCommit - no code changes to apply"
@@ -172,10 +249,23 @@ if ($preCommit -eq $postCommit) {
 Say ""
 Say "[4/4] Starting services..."
 
-# Launch start-all.bat detached so its trailing `pause` doesn't block us.
-# Piping `<nul` gives it EOF on stdin so the pause resolves immediately.
 $startBat = Join-Path $PSScriptRoot "start-all.bat"
 if (-not (Test-Path $startBat)) { Die "start-all.bat not found." }
+
+if ($DryRun) {
+    DryNote "would launch: cmd /c `"$startBat`" <nul  (WindowStyle Minimized)"
+    DryNote "would poll GET http://127.0.0.1:$apiPort/api/health up to $HealthTimeoutSec s"
+    DryNote "on health failure, would roll back to $($preCommit.Substring(0,7)) and restart"
+    Write-Host ""
+    Write-Host "======================================================" -ForegroundColor Magenta
+    Write-Host "  DRY-RUN complete - nothing changed on this box." -ForegroundColor Magenta
+    Write-Host "  Re-run without -DryRun to actually deploy." -ForegroundColor Magenta
+    Write-Host "======================================================" -ForegroundColor Magenta
+    exit 0
+}
+
+# Launch start-all.bat detached so its trailing `pause` doesn't block us.
+# Piping `<nul` gives it EOF on stdin so the pause resolves immediately.
 Start-Process -FilePath "cmd.exe" -ArgumentList "/c","`"$startBat`" <nul" -WorkingDirectory $PSScriptRoot -WindowStyle Minimized
 
 if ($SkipHealthCheck) {
