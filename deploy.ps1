@@ -75,10 +75,19 @@ if (Test-Path $configFile) {
 }
 $apiPort = if ($config['API_PORT']) { [int]$config['API_PORT'] } else { 5001 }
 
-# Derive DB name from DATABASE_URI when present, fall back to 'client_portal'
+# Derive DB connection details from DATABASE_URI when present. Anything we
+# can't parse falls through to backup-db.ps1's defaults (postgres user,
+# localhost, port 5432, database 'client_portal').
 $dbName = 'client_portal'
-if ($config['DATABASE_URI'] -and $config['DATABASE_URI'] -match '/([^/?]+)(\?|$)') {
-    $dbName = $Matches[1]
+$dbUser = $null
+$dbHost = $null
+$dbPort = $null
+$dbUri  = $config['DATABASE_URI']
+if ($dbUri) {
+    if ($dbUri -match '/([^/?]+)(\?|$)')          { $dbName = $Matches[1] }
+    if ($dbUri -match 'postgresql://([^:@/]+)')   { $dbUser = $Matches[1] }
+    if ($dbUri -match '@([^:/?]+)')               { $dbHost = $Matches[1] }
+    if ($dbUri -match '@[^:/?]+:(\d+)/')          { $dbPort = [int]$Matches[1] }
 }
 
 # ==================================================================
@@ -151,7 +160,11 @@ if ($SkipBackup) {
     if (-not (Test-Path $backupScript)) {
         DryNote "backup-db.ps1 NOT FOUND at $backupScript - real deploy would abort here"
     } else {
-        DryNote "would run: powershell -File '$backupScript' -DbName $dbName"
+        $argDesc = "-DbName $dbName"
+        if ($dbUser) { $argDesc += " -DbUser $dbUser" }
+        if ($dbHost) { $argDesc += " -DbHost $dbHost" }
+        if ($dbPort) { $argDesc += " -DbPort $dbPort" }
+        DryNote "would run: powershell -File '$backupScript' $argDesc"
         $bkDir = if ($config['BACKUP_DIR']) { $config['BACKUP_DIR'] } else { 'C:\backups\client_portal' }
         DryNote "backups typically land in $bkDir"
     }
@@ -160,7 +173,11 @@ if ($SkipBackup) {
     Say "[2/4] Backing up database ($dbName)..."
     $backupScript = Join-Path $PSScriptRoot "backup-db.ps1"
     if (-not (Test-Path $backupScript)) { Die "backup-db.ps1 not found. Aborting before pull." }
-    & $backupScript -DbName $dbName
+    $backupArgs = @{ DbName = $dbName }
+    if ($dbUser) { $backupArgs['DbUser'] = $dbUser }
+    if ($dbHost) { $backupArgs['DbHost'] = $dbHost }
+    if ($dbPort) { $backupArgs['DbPort'] = $dbPort }
+    & $backupScript @backupArgs
     if ($LASTEXITCODE -ne 0) { Die "backup-db.ps1 exited with code $LASTEXITCODE. Aborting before pull." }
     OK "backup complete"
 }
