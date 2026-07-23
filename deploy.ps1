@@ -149,9 +149,9 @@ if ($SkipBackup) {
     Say "[2/4] Backing up database ($dbName)..."
     $backupScript = Join-Path $PSScriptRoot "backup-db.ps1"
     if (-not (Test-Path $backupScript)) {
-        DryNote "backup-db.ps1 NOT FOUND at $backupScript — real deploy would abort here"
+        DryNote "backup-db.ps1 NOT FOUND at $backupScript - real deploy would abort here"
     } else {
-        DryNote "would run: & '$backupScript' -DbName $dbName"
+        DryNote "would run: powershell -File '$backupScript' -DbName $dbName"
         $bkDir = if ($config['BACKUP_DIR']) { $config['BACKUP_DIR'] } else { 'C:\backups\client_portal' }
         DryNote "backups typically land in $bkDir"
     }
@@ -193,13 +193,13 @@ if ($DryRun) {
         DryNote "changed files:"
         $changed | ForEach-Object { Write-Host "    $_" -ForegroundColor Magenta }
         if ($changed -match 'services/requirements\.txt') {
-            DryNote "requirements.txt would trigger `pip install -r services\requirements.txt`"
+            DryNote "requirements.txt would trigger: pip install -r services\requirements.txt"
         }
         $buildDir = Join-Path $PSScriptRoot "webapp\customer-app\build"
         if (($changed -match 'webapp/customer-app/') -and (Test-Path $buildDir)) {
-            DryNote "frontend + existing build/ would trigger `npm run build`"
+            DryNote "frontend + existing build/ would trigger: npm run build"
         } elseif ($changed -match 'webapp/customer-app/') {
-            DryNote "frontend changed but no build/ present — real deploy would SKIP npm build (dev-server mode)"
+            DryNote "frontend changed but no build/ present - real deploy would SKIP npm build (dev-server mode)"
         }
     }
     $postCommit = $preCommit  # keep the rest of the script sane
