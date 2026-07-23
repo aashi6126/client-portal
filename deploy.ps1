@@ -22,6 +22,11 @@
 #   Reinstall pip deps even if requirements.txt didn't change:
 #     powershell.exe -ExecutionPolicy Bypass -File deploy.ps1 -ForcePipInstall
 #
+#   Override the DB user (host, port) used for the backup step. Useful when
+#   the app connects as a role that's not in DATABASE_URI (e.g. because the
+#   URI has no user embedded, or you have a distinct backup role):
+#     powershell.exe -ExecutionPolicy Bypass -File deploy.ps1 -DbUser client_portal_user
+#
 # EXITS
 #   0 = success (services healthy)
 #   1 = a step failed and could not be undone
@@ -36,7 +41,13 @@ param(
     [switch]$DryRun,
     [string]$Branch          = "main",
     [string]$Remote          = "origin",
-    [int]   $HealthTimeoutSec = 90
+    [int]   $HealthTimeoutSec = 90,
+    # Override DB connection for the backup step. When empty, values are
+    # derived from DATABASE_URI in config.env, and backup-db.ps1's own
+    # defaults are used for anything still missing.
+    [string]$DbUser          = "",
+    [string]$DbHost          = "",
+    [int]   $DbPort          = 0
 )
 
 $ErrorActionPreference = "Stop"
@@ -77,18 +88,28 @@ $apiPort = if ($config['API_PORT']) { [int]$config['API_PORT'] } else { 5001 }
 
 # Derive DB connection details from DATABASE_URI when present. Anything we
 # can't parse falls through to backup-db.ps1's defaults (postgres user,
-# localhost, port 5432, database 'client_portal').
+# localhost, port 5432, database 'client_portal'). Explicit -DbUser /
+# -DbHost / -DbPort flags on the deploy.ps1 command line always win over
+# whatever the URI says.
 $dbName = 'client_portal'
-$dbUser = $null
-$dbHost = $null
-$dbPort = $null
+$uriUser = $null
+$uriHost = $null
+$uriPort = 0
 $dbUri  = $config['DATABASE_URI']
 if ($dbUri) {
-    if ($dbUri -match '/([^/?]+)(\?|$)')          { $dbName = $Matches[1] }
-    if ($dbUri -match 'postgresql://([^:@/]+)')   { $dbUser = $Matches[1] }
-    if ($dbUri -match '@([^:/?]+)')               { $dbHost = $Matches[1] }
-    if ($dbUri -match '@[^:/?]+:(\d+)/')          { $dbPort = [int]$Matches[1] }
+    if ($dbUri -match '/([^/?]+)(\?|$)')                 { $dbName  = $Matches[1] }
+    # user only present when the URI contains an '@' sentinel; without it,
+    # postgresql://localhost/dbname would incorrectly parse 'localhost' as user.
+    if ($dbUri -match 'postgresql://([^:@/]+)[^@]*@')    { $uriUser = $Matches[1] }
+    if ($dbUri -match '@([^:/?]+)')                      { $uriHost = $Matches[1] }
+    if ($dbUri -match '@[^:/?]+:(\d+)/')                 { $uriPort = [int]$Matches[1] }
 }
+
+# Final effective values: CLI wins, URI is next, else fall through to
+# backup-db.ps1's defaults by leaving these as null/0.
+$effDbUser = if ($DbUser)     { $DbUser } elseif ($uriUser) { $uriUser } else { $null }
+$effDbHost = if ($DbHost)     { $DbHost } elseif ($uriHost) { $uriHost } else { $null }
+$effDbPort = if ($DbPort -gt 0) { $DbPort } elseif ($uriPort -gt 0) { $uriPort } else { $null }
 
 # ==================================================================
 # STEP 1 - STOP services
@@ -161,9 +182,9 @@ if ($SkipBackup) {
         DryNote "backup-db.ps1 NOT FOUND at $backupScript - real deploy would abort here"
     } else {
         $argDesc = "-DbName $dbName"
-        if ($dbUser) { $argDesc += " -DbUser $dbUser" }
-        if ($dbHost) { $argDesc += " -DbHost $dbHost" }
-        if ($dbPort) { $argDesc += " -DbPort $dbPort" }
+        if ($effDbUser) { $argDesc += " -DbUser $effDbUser" }
+        if ($effDbHost) { $argDesc += " -DbHost $effDbHost" }
+        if ($effDbPort) { $argDesc += " -DbPort $effDbPort" }
         DryNote "would run: powershell -File '$backupScript' $argDesc"
         $bkDir = if ($config['BACKUP_DIR']) { $config['BACKUP_DIR'] } else { 'C:\backups\client_portal' }
         DryNote "backups typically land in $bkDir"
@@ -174,9 +195,9 @@ if ($SkipBackup) {
     $backupScript = Join-Path $PSScriptRoot "backup-db.ps1"
     if (-not (Test-Path $backupScript)) { Die "backup-db.ps1 not found. Aborting before pull." }
     $backupArgs = @{ DbName = $dbName }
-    if ($dbUser) { $backupArgs['DbUser'] = $dbUser }
-    if ($dbHost) { $backupArgs['DbHost'] = $dbHost }
-    if ($dbPort) { $backupArgs['DbPort'] = $dbPort }
+    if ($effDbUser) { $backupArgs['DbUser'] = $effDbUser }
+    if ($effDbHost) { $backupArgs['DbHost'] = $effDbHost }
+    if ($effDbPort) { $backupArgs['DbPort'] = $effDbPort }
     & $backupScript @backupArgs
     if ($LASTEXITCODE -ne 0) { Die "backup-db.ps1 exited with code $LASTEXITCODE. Aborting before pull." }
     OK "backup complete"
