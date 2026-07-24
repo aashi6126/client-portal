@@ -5,6 +5,7 @@ import {
   DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
 import CancelIcon from '@mui/icons-material/Cancel';
 import UndoIcon from '@mui/icons-material/Undo';
 import DeleteIcon from '@mui/icons-material/Delete';
@@ -16,6 +17,8 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
   const [tab, setTab] = useState(0);
   const [states, setStates] = useState([]);
   const [addDialog, setAddDialog] = useState(false);
+  const [editDialog, setEditDialog] = useState({ open: false, id: null });
+  const [editForm, setEditForm] = useState({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '', administration_type: '' });
   const [terminateDialog, setTerminateDialog] = useState({ open: false, id: null, name: '' });
   const [undoDialog, setUndoDialog] = useState({ open: false, id: null, name: '' });
   const [deleteDialog, setDeleteDialog] = useState({ open: false, id: null, name: '' });
@@ -69,6 +72,31 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
       fetchCoverages();
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to add coverage');
+    }
+  };
+
+  const openEditDialog = (cov) => {
+    setError(null);
+    setEditForm({
+      first_name: cov.first_name || '',
+      last_name: cov.last_name || '',
+      tax_id: cov.tax_id || '',
+      state: cov.state || '',
+      start_date: cov.start_date ? cov.start_date.slice(0, 10) : '',
+      end_date: cov.end_date ? cov.end_date.slice(0, 10) : '',
+      administration_type: cov.administration_type || '',
+    });
+    setEditDialog({ open: true, id: cov.id });
+  };
+
+  const handleEdit = async () => {
+    try {
+      setError(null);
+      await axios.put(`/api/cobra/${editDialog.id}`, editForm);
+      setEditDialog({ open: false, id: null });
+      fetchCoverages();
+    } catch (err) {
+      setError(err.response?.data?.error || 'Failed to update coverage');
     }
   };
 
@@ -190,6 +218,14 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
                     </TableCell>
                     <TableCell>
                       <Box sx={{ display: 'flex', gap: 0.5 }}>
+                        <Button
+                          size="small"
+                          startIcon={<EditIcon />}
+                          onClick={() => openEditDialog(cov)}
+                          sx={{ fontSize: '0.7rem' }}
+                        >
+                          Edit
+                        </Button>
                         {cov.status === 'active' ? (
                           <Button
                             size="small"
@@ -293,6 +329,67 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
         <DialogActions>
           <Button onClick={() => setAddDialog(false)}>Cancel</Button>
           <Button onClick={handleAdd} variant="contained" disabled={!form.first_name.trim() || !form.last_name.trim()}>Add</Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Edit Coverage Dialog */}
+      <Dialog open={editDialog.open} onClose={() => setEditDialog({ open: false, id: null })} maxWidth="sm" fullWidth>
+        <DialogTitle>Edit COBRA Coverage</DialogTitle>
+        <DialogContent sx={{ pt: 2 }}>
+          {error && <Alert severity="error" sx={{ mb: 2, mt: 1 }} onClose={() => setError(null)}>{error}</Alert>}
+          <Box sx={{ display: 'flex', gap: 2, mb: 2, mt: error ? 0 : 1 }}>
+            <TextField label="First Name" value={editForm.first_name} onChange={(e) => setEditForm({ ...editForm, first_name: e.target.value })} size="small" fullWidth required />
+            <TextField label="Last Name" value={editForm.last_name} onChange={(e) => setEditForm({ ...editForm, last_name: e.target.value })} size="small" fullWidth required />
+          </Box>
+          <TextField
+            label="Client"
+            select
+            value={editForm.tax_id}
+            onChange={(e) => setEditForm({ ...editForm, tax_id: e.target.value })}
+            size="small"
+            fullWidth
+            sx={{ mb: 2 }}
+          >
+            <MenuItem value="">— None —</MenuItem>
+            {clients.map((c) => (
+              <MenuItem key={c.tax_id} value={c.tax_id}>{c.client_name} ({c.tax_id})</MenuItem>
+            ))}
+          </TextField>
+          <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+            <TextField
+              label="State"
+              select
+              value={editForm.state}
+              onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">— None —</MenuItem>
+              {states.map((s) => (
+                <MenuItem key={s} value={s}>{s}</MenuItem>
+              ))}
+            </TextField>
+            <TextField
+              label="Administered By"
+              select
+              value={editForm.administration_type}
+              onChange={(e) => setEditForm({ ...editForm, administration_type: e.target.value })}
+              size="small"
+              fullWidth
+            >
+              <MenuItem value="">— Unspecified —</MenuItem>
+              <MenuItem value="employer">Employer Administered</MenuItem>
+              <MenuItem value="carrier">Carrier Administered</MenuItem>
+            </TextField>
+          </Box>
+          <Box sx={{ display: 'flex', gap: 2 }}>
+            <TextField label="Start Date" type="date" value={editForm.start_date} onChange={(e) => setEditForm({ ...editForm, start_date: e.target.value })} size="small" fullWidth InputLabelProps={{ shrink: true }} />
+            <TextField label="End Date" type="date" value={editForm.end_date} onChange={(e) => setEditForm({ ...editForm, end_date: e.target.value })} size="small" fullWidth InputLabelProps={{ shrink: true }} />
+          </Box>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setEditDialog({ open: false, id: null })}>Cancel</Button>
+          <Button onClick={handleEdit} variant="contained" disabled={!editForm.first_name.trim() || !editForm.last_name.trim()}>Save</Button>
         </DialogActions>
       </Dialog>
 

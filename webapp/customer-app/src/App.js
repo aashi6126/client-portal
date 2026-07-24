@@ -28,7 +28,9 @@ import {
   TableHead,
   TableRow,
   IconButton,
-  Tooltip
+  Tooltip,
+  Checkbox,
+  FormControlLabel
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
@@ -245,6 +247,9 @@ function AppShell() {
   const [individualSearch, setIndividualSearch] = useState('');
   const [benefitsSearch, setBenefitsSearch] = useState('');
   const [commercialSearch, setCommercialSearch] = useState('');
+  const [benefitsOnlyOutstanding, setBenefitsOnlyOutstanding] = useState(false);
+  const [commercialOnlyOutstanding, setCommercialOnlyOutstanding] = useState(false);
+  const [personalOnlyOutstanding, setPersonalOnlyOutstanding] = useState(false);
   const [personalSearch, setPersonalSearch] = useState('');
 
   // Import/Export states
@@ -627,31 +632,54 @@ function AppShell() {
     );
   };
 
+  // A record has an "outstanding" item if any wide-column ending in
+  // `_outstanding_item`, or any plan.outstanding_item inside `plans[type]`,
+  // is truthy and not one of the "cleared" values.
+  const OUTSTANDING_CLEARED = new Set(['', 'None', 'Complete']);
+  const recordHasOutstanding = (rec) => {
+    if (!rec) return false;
+    for (const [k, v] of Object.entries(rec)) {
+      if (k.endsWith('outstanding_item') && v && !OUTSTANDING_CLEARED.has(v)) return true;
+    }
+    if (rec.plans && typeof rec.plans === 'object') {
+      for (const arr of Object.values(rec.plans)) {
+        if (!Array.isArray(arr)) continue;
+        for (const p of arr) {
+          if (p && p.outstanding_item && !OUTSTANDING_CLEARED.has(p.outstanding_item)) return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const filterBenefits = () => {
-    if (!benefitsSearch) return benefits;
-    return benefits.filter(benefit =>
-      Object.values(benefit).some(val =>
-        val && val.toString().toLowerCase().includes(benefitsSearch.toLowerCase())
-      )
-    );
+    let list = benefits;
+    if (benefitsOnlyOutstanding) list = list.filter(recordHasOutstanding);
+    if (benefitsSearch) {
+      const q = benefitsSearch.toLowerCase();
+      list = list.filter(b => Object.values(b).some(v => v && v.toString().toLowerCase().includes(q)));
+    }
+    return list;
   };
 
   const filterCommercial = () => {
-    if (!commercialSearch) return commercial;
-    return commercial.filter(comm =>
-      Object.values(comm).some(val =>
-        val && val.toString().toLowerCase().includes(commercialSearch.toLowerCase())
-      )
-    );
+    let list = commercial;
+    if (commercialOnlyOutstanding) list = list.filter(recordHasOutstanding);
+    if (commercialSearch) {
+      const q = commercialSearch.toLowerCase();
+      list = list.filter(c => Object.values(c).some(v => v && v.toString().toLowerCase().includes(q)));
+    }
+    return list;
   };
 
   const filterPersonal = () => {
-    if (!personalSearch) return personal;
-    return personal.filter(pers =>
-      Object.values(pers).some(val =>
-        val && val.toString().toLowerCase().includes(personalSearch.toLowerCase())
-      )
-    );
+    let list = personal;
+    if (personalOnlyOutstanding) list = list.filter(recordHasOutstanding);
+    if (personalSearch) {
+      const q = personalSearch.toLowerCase();
+      list = list.filter(p => Object.values(p).some(v => v && v.toString().toLowerCase().includes(q)));
+    }
+    return list;
   };
 
   // ========== IMPORT/EXPORT OPERATIONS ==========
@@ -1083,14 +1111,27 @@ function AppShell() {
                   Add New Benefits
                 </Button>
               </Stack>
-              <TextField
-                label="Search benefits..."
-                value={benefitsSearch}
-                onChange={(e) => setBenefitsSearch(e.target.value)}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
+              <Stack direction="row" spacing={2} alignItems="center">
+                <TextField
+                  label="Search benefits..."
+                  value={benefitsSearch}
+                  onChange={(e) => setBenefitsSearch(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  sx={{ flex: 1 }}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={benefitsOnlyOutstanding}
+                      onChange={(e) => setBenefitsOnlyOutstanding(e.target.checked)}
+                    />
+                  }
+                  label="Only with outstanding items"
+                  sx={{ whiteSpace: 'nowrap', mr: 0 }}
+                />
+              </Stack>
             </Paper>
             <BenefitsTable
               benefits={filterBenefits()}
@@ -1117,14 +1158,27 @@ function AppShell() {
                   Add New Commercial
                 </Button>
               </Stack>
-              <TextField
-                label="Search commercial..."
-                value={commercialSearch}
-                onChange={(e) => setCommercialSearch(e.target.value)}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
+              <Stack direction="row" spacing={2} alignItems="center">
+                <TextField
+                  label="Search commercial..."
+                  value={commercialSearch}
+                  onChange={(e) => setCommercialSearch(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  sx={{ flex: 1 }}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={commercialOnlyOutstanding}
+                      onChange={(e) => setCommercialOnlyOutstanding(e.target.checked)}
+                    />
+                  }
+                  label="Only with outstanding items"
+                  sx={{ whiteSpace: 'nowrap', mr: 0 }}
+                />
+              </Stack>
             </Paper>
             <CommercialTable
               commercial={filterCommercial()}
@@ -1151,14 +1205,27 @@ function AppShell() {
                   Add New Personal
                 </Button>
               </Stack>
-              <TextField
-                label="Search personal..."
-                value={personalSearch}
-                onChange={(e) => setPersonalSearch(e.target.value)}
-                variant="outlined"
-                size="small"
-                fullWidth
-              />
+              <Stack direction="row" spacing={2} alignItems="center">
+                <TextField
+                  label="Search personal..."
+                  value={personalSearch}
+                  onChange={(e) => setPersonalSearch(e.target.value)}
+                  variant="outlined"
+                  size="small"
+                  sx={{ flex: 1 }}
+                />
+                <FormControlLabel
+                  control={
+                    <Checkbox
+                      size="small"
+                      checked={personalOnlyOutstanding}
+                      onChange={(e) => setPersonalOnlyOutstanding(e.target.checked)}
+                    />
+                  }
+                  label="Only with outstanding items"
+                  sx={{ whiteSpace: 'nowrap', mr: 0 }}
+                />
+              </Stack>
             </Paper>
             <PersonalTable
               personal={filterPersonal()}

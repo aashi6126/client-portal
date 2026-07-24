@@ -495,6 +495,20 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     return result;
   }, [benefits, commercial, personal]);
 
+  // Sub-tab views of the outstanding list, split by source.
+  const outstandingCommercial = useMemo(
+    () => outstandingPolicies.filter(x => x.source === 'Commercial'),
+    [outstandingPolicies]
+  );
+  const outstandingBenefits = useMemo(
+    () => outstandingPolicies.filter(x => x.source === 'Benefits'),
+    [outstandingPolicies]
+  );
+  const outstandingPersonal = useMemo(
+    () => outstandingPolicies.filter(x => x.source === 'Personal'),
+    [outstandingPolicies]
+  );
+
   // Prospect (quoting) clients
   const prospectClients = useMemo(() => {
     return clients.filter(c => c.status === 'Prospect');
@@ -814,13 +828,17 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           onChange={(_, newValue) => setOutstandingTab(newValue)}
           sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}
         >
-          <Tab label={`Outstanding Items (${outstandingPolicies.length})`} />
+          <Tab label={`Commercial (${outstandingCommercial.length})`} />
+          <Tab label={`Benefits (${outstandingBenefits.length})`} />
+          <Tab label={`Personal (${outstandingPersonal.length})`} />
           <Tab label={`Prospects (${prospectClients.length})`} />
         </Tabs>
 
-        {/* Outstanding Items tab */}
-        {outstandingTab === 0 && (() => {
-          const items = outstandingPolicies;
+        {/* Outstanding Items table — same rendering for all three source-scoped tabs */}
+        {(outstandingTab === 0 || outstandingTab === 1 || outstandingTab === 2) && (() => {
+          const items = outstandingTab === 0 ? outstandingCommercial
+                      : outstandingTab === 1 ? outstandingBenefits
+                      : outstandingPersonal;
           return items.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table stickyHeader size="small">
@@ -828,7 +846,6 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                   <TableRow>
                     <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Policy</TableCell>
-                    <TableCell sx={{ fontWeight: 'bold' }}>Type</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Outstanding Item</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Due Date</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Assigned To</TableCell>
@@ -853,9 +870,6 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                         </Box>
                       </TableCell>
                       <TableCell>{item.policy}</TableCell>
-                      <TableCell>
-                        <Chip label={item.source} size="small" color={item.source === 'Benefits' ? 'warning' : item.source === 'Commercial' ? 'info' : 'default'} sx={{ fontSize: '0.75rem' }} />
-                      </TableCell>
                       <TableCell>{item.outstanding_item}</TableCell>
                       <TableCell sx={{ color: isOverdue ? '#d32f2f' : 'inherit', fontWeight: isOverdue ? 700 : 400 }}>
                         {item.due_date ? formatDate(item.due_date) : '—'}
@@ -880,7 +894,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         })()}
 
         {/* Prospects tab */}
-        {outstandingTab === 1 && (
+        {outstandingTab === 3 && (
           prospectClients.length > 0 ? (
             <TableContainer sx={{ maxHeight: 400 }}>
               <Table stickyHeader size="small">

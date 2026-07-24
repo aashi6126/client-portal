@@ -3800,6 +3800,55 @@ def create_cobra_coverage():
         session.close()
 
 
+@app.route('/api/cobra/<int:coverage_id>', methods=['PUT'])
+def update_cobra_coverage(coverage_id):
+    """Update editable fields on a COBRA record.
+
+    Does NOT change status/termination_date/termination_reason - those are
+    owned by the /terminate and /undo-terminate endpoints. Allowed fields:
+      first_name, last_name, tax_id, state, start_date, end_date,
+      administration_type ('employer' | 'carrier' | null).
+    """
+    session = Session()
+    try:
+        coverage = session.query(CobraCoverage).filter_by(id=coverage_id).first()
+        if not coverage:
+            return jsonify({'error': 'Coverage not found'}), 404
+
+        data = request.get_json(silent=True) or {}
+
+        if 'administration_type' in data:
+            admin_type = (data.get('administration_type') or '').strip().lower() or None
+            if admin_type and admin_type not in ('employer', 'carrier'):
+                return jsonify({'error': "administration_type must be 'employer' or 'carrier'"}), 400
+            coverage.administration_type = admin_type
+
+        for f in ('first_name', 'last_name'):
+            if f in data:
+                v = (data.get(f) or '').strip()
+                if not v:
+                    return jsonify({'error': f'{f} cannot be empty'}), 400
+                setattr(coverage, f, v)
+
+        if 'tax_id' in data:
+            coverage.tax_id = (data.get('tax_id') or '').strip() or None
+        if 'state' in data:
+            coverage.state = (data.get('state') or '').strip() or None
+        if 'start_date' in data:
+            coverage.start_date = parse_date(data.get('start_date'))
+        if 'end_date' in data:
+            coverage.end_date = parse_date(data.get('end_date'))
+
+        session.commit()
+        return jsonify({'message': 'COBRA coverage updated', 'coverage': coverage.to_dict()}), 200
+    except Exception as e:
+        session.rollback()
+        logging.error(f"Error updating COBRA coverage {coverage_id}: {e}")
+        return jsonify({'error': str(e)}), 500
+    finally:
+        session.close()
+
+
 @app.route('/api/cobra/<int:coverage_id>/terminate', methods=['PUT'])
 def terminate_cobra(coverage_id):
     session = Session()
