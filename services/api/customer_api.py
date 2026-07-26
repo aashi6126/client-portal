@@ -1985,6 +1985,78 @@ class CobraCoverage(db.Model):
         }
 
 
+TASK_STATUSES = ('Open', 'In Progress', 'Blocked', 'Done')
+TASK_PRIORITIES = ('Low', 'Medium', 'High')
+
+
+class Task(db.Model):
+    __tablename__ = 'tasks'
+
+    id = db.Column(db.Integer, primary_key=True)
+    title = db.Column(db.String(300), nullable=False)
+    description = db.Column(db.Text)
+    status = db.Column(db.String(30), nullable=False, default='Open')
+    priority = db.Column(db.String(20), nullable=False, default='Medium')
+    assignee_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = db.Column(db.DateTime)
+
+    assignee = db.relationship('User', foreign_keys=[assignee_id])
+    created_by = db.relationship('User', foreign_keys=[created_by_id])
+    comments = db.relationship(
+        'TaskComment',
+        backref='task',
+        order_by='TaskComment.created_at.asc()',
+        cascade='all, delete-orphan',
+    )
+
+    def to_dict(self, include_comments=False):
+        d = {
+            'id': self.id,
+            'title': self.title,
+            'description': self.description or '',
+            'status': self.status,
+            'priority': self.priority,
+            'assignee_id': self.assignee_id,
+            'assignee_username': self.assignee.username if self.assignee else None,
+            'assignee_full_name': (self.assignee.full_name or self.assignee.username) if self.assignee else None,
+            'created_by_id': self.created_by_id,
+            'created_by_username': self.created_by.username if self.created_by else None,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'comment_count': len(self.comments) if self.comments is not None else 0,
+        }
+        if include_comments:
+            d['comments'] = [c.to_dict() for c in self.comments]
+        return d
+
+
+class TaskComment(db.Model):
+    __tablename__ = 'task_comments'
+
+    id = db.Column(db.Integer, primary_key=True)
+    task_id = db.Column(db.Integer, db.ForeignKey('tasks.id', ondelete='CASCADE'), nullable=False, index=True)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    body = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    author = db.relationship('User', foreign_keys=[author_id])
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'task_id': self.task_id,
+            'author_id': self.author_id,
+            'author_username': self.author.username if self.author else None,
+            'author_full_name': (self.author.full_name or self.author.username) if self.author else None,
+            'body': self.body,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+
+
 # ===========================================================================
 # UTILITY FUNCTIONS
 # ===========================================================================
@@ -6424,6 +6496,277 @@ def delete_feedback(feedback_id):
         db.session.rollback()
         logging.error(f"Error deleting feedback: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+# ===========================================================================
+# TASK MANAGEMENT
+# ===========================================================================
+# Access rules:
+#   - Admins can list every task, create, reassign, edit any field, delete,
+#     and comment on any task.
+#   - Non-admin users only see tasks assigned to them. They may update
+#     status and add comments on their own tasks, but cannot reassign,
+#     re-title, delete, or view other people's tasks.
+
+
+def _is_admin_user(user):
+    return bool(user and getattr(user, 'role', None) == 'admin')
+
+
+def _validate_task_status(status):
+    return status in TASK_STATUSES
+
+
+def _validate_task_priority(priority):
+    return priority in TASK_PRIORITIES
+
+
+@app.route('/api/tasks', methods=['GET'])
+def list_tasks():
+    """List tasks. Admins see all; non-admin users see only their own.
+
+    Query params (all optional):
+      assignee_id — admin only; filter to a specific user's tasks
+      status      — filter to one status
+      include_done=false — hide 'Done' tasks (default: include)
+    """
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    q = Task.query
+    if _is_admin_user(user):
+        req_assignee = request.args.get('assignee_id', type=int)
+        if req_assignee is not None:
+            q = q.filter(Task.assignee_id == req_assignee)
+    else:
+        q = q.filter(Task.assignee_id == user.id)
+
+    status = request.args.get('status')
+    if status:
+        q = q.filter(Task.status == status)
+
+    if request.args.get('include_done', 'true').lower() == 'false':
+        q = q.filter(Task.status != 'Done')
+
+    # Open first, Done last; within a bucket newest first.
+    tasks = q.order_by(
+        (Task.status == 'Done').asc(),
+        Task.updated_at.desc().nullslast(),
+    ).all()
+    return jsonify({'tasks': [t.to_dict() for t in tasks]}), 200
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['GET'])
+def get_task(task_id):
+    """Get one task with its comment thread. Non-admins can only fetch
+    tasks assigned to them."""
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+    t = db.session.get(Task, task_id)
+    if not t:
+        return jsonify({'error': 'Task not found'}), 404
+    if not _is_admin_user(user) and t.assignee_id != user.id:
+        return jsonify({'error': 'Not authorized to view this task'}), 403
+    return jsonify({'task': t.to_dict(include_comments=True)}), 200
+
+
+@app.route('/api/tasks', methods=['POST'])
+@require_admin
+def create_task():
+    """Create a new task. Admin only."""
+    user = getattr(request, 'current_user', None) or _current_user()
+    data = request.get_json(silent=True) or {}
+    title = (data.get('title') or '').strip()
+    if not title:
+        return jsonify({'error': 'title is required'}), 400
+
+    status = data.get('status') or 'Open'
+    priority = data.get('priority') or 'Medium'
+    if not _validate_task_status(status):
+        return jsonify({'error': f"status must be one of {list(TASK_STATUSES)}"}), 400
+    if not _validate_task_priority(priority):
+        return jsonify({'error': f"priority must be one of {list(TASK_PRIORITIES)}"}), 400
+
+    assignee_id = data.get('assignee_id')
+    if assignee_id is not None:
+        assignee = db.session.get(User, assignee_id)
+        if not assignee or not assignee.is_active:
+            return jsonify({'error': 'assignee_id does not match an active user'}), 400
+
+    t = Task(
+        title=title,
+        description=(data.get('description') or '').strip() or None,
+        status=status,
+        priority=priority,
+        assignee_id=assignee_id,
+        created_by_id=getattr(user, 'id', None),
+    )
+    if status == 'Done':
+        t.completed_at = datetime.utcnow()
+    db.session.add(t)
+    db.session.commit()
+    return jsonify({'task': t.to_dict()}), 201
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['PATCH', 'PUT'])
+def update_task(task_id):
+    """Update a task. Admin can change any field (including reassigning).
+    The assignee can only change status."""
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+    t = db.session.get(Task, task_id)
+    if not t:
+        return jsonify({'error': 'Task not found'}), 404
+
+    is_admin = _is_admin_user(user)
+    is_assignee = t.assignee_id == getattr(user, 'id', None)
+    if not (is_admin or is_assignee):
+        return jsonify({'error': 'Not authorized to update this task'}), 403
+
+    data = request.get_json(silent=True) or {}
+
+    if 'status' in data:
+        new_status = data['status']
+        if not _validate_task_status(new_status):
+            return jsonify({'error': f"status must be one of {list(TASK_STATUSES)}"}), 400
+        if new_status != t.status:
+            t.status = new_status
+            t.completed_at = datetime.utcnow() if new_status == 'Done' else None
+
+    # Everything else is admin-only.
+    admin_only_fields = {'title', 'description', 'priority', 'assignee_id'}
+    supplied_admin_fields = admin_only_fields & set(data.keys())
+    if supplied_admin_fields and not is_admin:
+        return jsonify({
+            'error': 'Only admins can change title, description, priority, or assignee'
+        }), 403
+
+    if 'title' in data:
+        new_title = (data['title'] or '').strip()
+        if not new_title:
+            return jsonify({'error': 'title cannot be empty'}), 400
+        t.title = new_title
+
+    if 'description' in data:
+        t.description = (data['description'] or '').strip() or None
+
+    if 'priority' in data:
+        if not _validate_task_priority(data['priority']):
+            return jsonify({'error': f"priority must be one of {list(TASK_PRIORITIES)}"}), 400
+        t.priority = data['priority']
+
+    if 'assignee_id' in data:
+        new_assignee = data['assignee_id']
+        if new_assignee is not None:
+            u = db.session.get(User, new_assignee)
+            if not u or not u.is_active:
+                return jsonify({'error': 'assignee_id does not match an active user'}), 400
+        t.assignee_id = new_assignee
+
+    db.session.commit()
+    return jsonify({'task': t.to_dict(include_comments=True)}), 200
+
+
+@app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
+@require_admin
+def delete_task(task_id):
+    """Delete a task and its comment thread. Admin only."""
+    t = db.session.get(Task, task_id)
+    if not t:
+        return jsonify({'error': 'Task not found'}), 404
+    db.session.delete(t)
+    db.session.commit()
+    return jsonify({'message': 'Task deleted'}), 200
+
+
+@app.route('/api/tasks/<int:task_id>/comments', methods=['POST'])
+def add_task_comment(task_id):
+    """Post a comment/update on a task. Admin or the current assignee."""
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+    t = db.session.get(Task, task_id)
+    if not t:
+        return jsonify({'error': 'Task not found'}), 404
+    if not (_is_admin_user(user) or t.assignee_id == getattr(user, 'id', None)):
+        return jsonify({'error': 'Not authorized to comment on this task'}), 403
+
+    data = request.get_json(silent=True) or {}
+    body = (data.get('body') or '').strip()
+    if not body:
+        return jsonify({'error': 'body is required'}), 400
+
+    c = TaskComment(task_id=t.id, author_id=getattr(user, 'id', None), body=body)
+    db.session.add(c)
+    t.updated_at = datetime.utcnow()
+    db.session.commit()
+    return jsonify({'comment': c.to_dict()}), 201
+
+
+@app.route('/api/tasks/reports/by-user', methods=['GET'])
+@require_admin
+def task_report_by_user():
+    """Per-user task summary. Admin only.
+
+    Returns one row per active user (plus an 'Unassigned' bucket if there
+    are unassigned tasks), with counts by status.
+    """
+    users = User.query.filter(User.is_active == True).order_by(User.username.asc()).all()
+
+    raw = (
+        db.session.query(Task.assignee_id, Task.status, func.count(Task.id))
+        .group_by(Task.assignee_id, Task.status)
+        .all()
+    )
+    counts = {}
+    for assignee_id, status, cnt in raw:
+        counts.setdefault(assignee_id, {})[status] = cnt
+
+    def build_row(uid, label_username, label_full_name):
+        buckets = counts.get(uid, {})
+        total = sum(buckets.values())
+        return {
+            'user_id': uid,
+            'username': label_username,
+            'full_name': label_full_name,
+            'total': total,
+            'open': buckets.get('Open', 0),
+            'in_progress': buckets.get('In Progress', 0),
+            'blocked': buckets.get('Blocked', 0),
+            'done': buckets.get('Done', 0),
+        }
+
+    rows = [build_row(u.id, u.username, u.full_name or u.username) for u in users]
+
+    if None in counts:
+        rows.append(build_row(None, '(unassigned)', '(unassigned)'))
+
+    return jsonify({'rows': rows}), 200
+
+
+@app.route('/api/tasks/assignable-users', methods=['GET'])
+@require_admin
+def list_assignable_users():
+    """Lightweight user list for the assignee dropdown. Admin only."""
+    users = (
+        User.query.filter(User.is_active == True)
+        .order_by(User.username.asc())
+        .all()
+    )
+    return jsonify({
+        'users': [
+            {
+                'id': u.id,
+                'username': u.username,
+                'full_name': u.full_name or u.username,
+                'role': u.role,
+            }
+            for u in users
+        ]
+    }), 200
 
 
 # ===========================================================================

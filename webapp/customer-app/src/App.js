@@ -52,6 +52,8 @@ import AssignmentIndIcon from '@mui/icons-material/AssignmentInd';
 import FeedbackIcon from '@mui/icons-material/Feedback';
 import ReceiptLongIcon from '@mui/icons-material/ReceiptLong';
 import ChatIcon from '@mui/icons-material/Chat';
+import TaskAltIcon from '@mui/icons-material/TaskAlt';
+import BarChartIcon from '@mui/icons-material/BarChart';
 import LocalHospitalIcon from '@mui/icons-material/LocalHospital';
 import LogoutIcon from '@mui/icons-material/Logout';
 import ManageAccountsIcon from '@mui/icons-material/ManageAccounts';
@@ -83,6 +85,8 @@ import PocManagement from './components/PocManagement';
 import ChatPanel from './components/ChatPanel';
 import Invoices from './components/Invoices';
 import CobraManagement from './components/CobraManagement';
+import Tasks from './components/Tasks';
+import TaskReports from './components/TaskReports';
 
 // API URLs
 const API_CLIENTS = '/api/clients';
@@ -943,6 +947,9 @@ function AppShell() {
               { label: 'Individuals', icon: <PeopleIcon fontSize="small" />, index: 2 },
               { label: 'Personal', icon: <PersonIcon fontSize="small" />, index: 5 },
               { label: 'Cobra', icon: <LocalHospitalIcon fontSize="small" />, index: 10 },
+              { type: 'divider', label: 'WORK' },
+              { label: 'Tasks', icon: <TaskAltIcon fontSize="small" />, index: 13 },
+              ...(isAdmin ? [{ label: 'Task Report', icon: <BarChartIcon fontSize="small" />, index: 14 }] : []),
               { type: 'divider', label: 'ADMIN' },
               { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
               { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
@@ -1258,6 +1265,16 @@ function AppShell() {
         {/* Tab 12: Tax ID Remap (admin only) */}
         {activeTab === 12 && isAdmin && (
           <TaxIdRemap onApplied={() => { fetchAllData(); setDataVersion(v => v + 1); }} />
+        )}
+
+        {/* Tab 13: Tasks */}
+        {activeTab === 13 && (
+          <Tasks />
+        )}
+
+        {/* Tab 14: Task Report (admin only) */}
+        {activeTab === 14 && isAdmin && (
+          <TaskReports />
         )}
 
         {/* Tab 9: Chat */}
