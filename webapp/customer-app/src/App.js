@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
@@ -255,6 +255,12 @@ function AppShell() {
   const [commercialOnlyOutstanding, setCommercialOnlyOutstanding] = useState(false);
   const [personalOnlyOutstanding, setPersonalOnlyOutstanding] = useState(false);
   const [personalSearch, setPersonalSearch] = useState('');
+
+  // Shared "renewals in month" filter, applied to Benefits, Commercial, Personal.
+  // renewalMonth = 0 means "all months" (filter disabled). renewalYear defaults
+  // to the current year and is required whenever a month is picked.
+  const [renewalYear, setRenewalYear] = useState(new Date().getFullYear());
+  const [renewalMonth, setRenewalMonth] = useState(0);
 
   // Import/Export states
   const [importing, setImporting] = useState(false);
@@ -656,9 +662,76 @@ function AppShell() {
     return false;
   };
 
+  // True if any renewal date on `rec` falls in the given (year, month).
+  // Scans every `*_renewal_date` scalar column, plus nested plan/policy
+  // arrays inside `rec.plans` or `rec.policies`.
+  const dateMatchesYearMonth = (dateStr, year, month) => {
+    if (!dateStr) return false;
+    // Parse yyyy-mm-dd portion directly to avoid TZ shift from `new Date(...)`.
+    const [y, m] = String(dateStr).slice(0, 10).split('-').map(Number);
+    return y === year && m === month;
+  };
+  const recordRenewsInMonth = (rec, year, month) => {
+    if (!rec) return false;
+    for (const [k, v] of Object.entries(rec)) {
+      if (k.endsWith('_renewal_date') && dateMatchesYearMonth(v, year, month)) return true;
+    }
+    if (dateMatchesYearMonth(rec.renewal_date, year, month)) return true;
+    const scanArrays = (obj) => {
+      if (!obj) return false;
+      if (Array.isArray(obj)) {
+        return obj.some(item => item && dateMatchesYearMonth(item.renewal_date, year, month));
+      }
+      if (typeof obj === 'object') {
+        return Object.values(obj).some(scanArrays);
+      }
+      return false;
+    };
+    return scanArrays(rec.plans) || scanArrays(rec.policies);
+  };
+
+  const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'];
+
+  // Year options: union of years present in any renewal_date across the three
+  // datasets, plus the current year (so it's always selectable even for empty
+  // data), sorted descending.
+  const availableYears = useMemo(() => {
+    const years = new Set([new Date().getFullYear()]);
+    const scan = (rec) => {
+      if (!rec) return;
+      for (const [k, v] of Object.entries(rec)) {
+        if (k.endsWith('_renewal_date') && v) {
+          const y = parseInt(String(v).slice(0, 4), 10);
+          if (!Number.isNaN(y)) years.add(y);
+        }
+      }
+      const scanArrays = (obj) => {
+        if (!obj) return;
+        if (Array.isArray(obj)) {
+          obj.forEach(item => {
+            if (item?.renewal_date) {
+              const y = parseInt(String(item.renewal_date).slice(0, 4), 10);
+              if (!Number.isNaN(y)) years.add(y);
+            }
+          });
+        } else if (typeof obj === 'object') {
+          Object.values(obj).forEach(scanArrays);
+        }
+      };
+      scanArrays(rec.plans);
+      scanArrays(rec.policies);
+    };
+    benefits.forEach(scan);
+    commercial.forEach(scan);
+    personal.forEach(scan);
+    return [...years].sort((a, b) => b - a);
+  }, [benefits, commercial, personal]);
+
   const filterBenefits = () => {
     let list = benefits;
     if (benefitsOnlyOutstanding) list = list.filter(recordHasOutstanding);
+    if (renewalMonth) list = list.filter(b => recordRenewsInMonth(b, renewalYear, renewalMonth));
     if (benefitsSearch) {
       const q = benefitsSearch.toLowerCase();
       list = list.filter(b => Object.values(b).some(v => v && v.toString().toLowerCase().includes(q)));
@@ -669,6 +742,7 @@ function AppShell() {
   const filterCommercial = () => {
     let list = commercial;
     if (commercialOnlyOutstanding) list = list.filter(recordHasOutstanding);
+    if (renewalMonth) list = list.filter(c => recordRenewsInMonth(c, renewalYear, renewalMonth));
     if (commercialSearch) {
       const q = commercialSearch.toLowerCase();
       list = list.filter(c => Object.values(c).some(v => v && v.toString().toLowerCase().includes(q)));
@@ -679,6 +753,7 @@ function AppShell() {
   const filterPersonal = () => {
     let list = personal;
     if (personalOnlyOutstanding) list = list.filter(recordHasOutstanding);
+    if (renewalMonth) list = list.filter(p => recordRenewsInMonth(p, renewalYear, renewalMonth));
     if (personalSearch) {
       const q = personalSearch.toLowerCase();
       list = list.filter(p => Object.values(p).some(v => v && v.toString().toLowerCase().includes(q)));
@@ -818,6 +893,37 @@ function AppShell() {
   const deleteFeedbackItem = (item) => {
     setDeleteDialog({ open: true, type: 'feedback', item });
   };
+
+  const renderRenewalMonthFilter = () => (
+    <>
+      <TextField
+        select
+        label="Renewal month"
+        value={renewalMonth}
+        onChange={(e) => setRenewalMonth(Number(e.target.value))}
+        size="small"
+        sx={{ minWidth: 150 }}
+      >
+        <MenuItem value={0}>All months</MenuItem>
+        {MONTH_NAMES.map((name, i) => (
+          <MenuItem key={i + 1} value={i + 1}>{name}</MenuItem>
+        ))}
+      </TextField>
+      <TextField
+        select
+        label="Year"
+        value={renewalYear}
+        onChange={(e) => setRenewalYear(Number(e.target.value))}
+        size="small"
+        disabled={!renewalMonth}
+        sx={{ minWidth: 100 }}
+      >
+        {availableYears.map(y => (
+          <MenuItem key={y} value={y}>{y}</MenuItem>
+        ))}
+      </TextField>
+    </>
+  );
 
   return (
     <ThemeProvider theme={theme}>
@@ -1118,15 +1224,16 @@ function AppShell() {
                   Add New Benefits
                 </Button>
               </Stack>
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                 <TextField
                   label="Search benefits..."
                   value={benefitsSearch}
                   onChange={(e) => setBenefitsSearch(e.target.value)}
                   variant="outlined"
                   size="small"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: 1, minWidth: 200 }}
                 />
+                {renderRenewalMonthFilter()}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -1165,15 +1272,16 @@ function AppShell() {
                   Add New Commercial
                 </Button>
               </Stack>
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                 <TextField
                   label="Search commercial..."
                   value={commercialSearch}
                   onChange={(e) => setCommercialSearch(e.target.value)}
                   variant="outlined"
                   size="small"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: 1, minWidth: 200 }}
                 />
+                {renderRenewalMonthFilter()}
                 <FormControlLabel
                   control={
                     <Checkbox
@@ -1212,15 +1320,16 @@ function AppShell() {
                   Add New Personal
                 </Button>
               </Stack>
-              <Stack direction="row" spacing={2} alignItems="center">
+              <Stack direction="row" spacing={2} alignItems="center" flexWrap="wrap">
                 <TextField
                   label="Search personal..."
                   value={personalSearch}
                   onChange={(e) => setPersonalSearch(e.target.value)}
                   variant="outlined"
                   size="small"
-                  sx={{ flex: 1 }}
+                  sx={{ flex: 1, minWidth: 200 }}
                 />
+                {renderRenewalMonthFilter()}
                 <FormControlLabel
                   control={
                     <Checkbox

@@ -1634,16 +1634,51 @@ class CommercialInsurance(db.Model):
         return result
 
     def _get_commercial_plans_dict(self):
-        """Group child CommercialPlan records by type."""
-        plans_dict = {'umbrella': [], 'professional_eo': [], 'cyber': [], 'crime': []}
+        """Group child CommercialPlan records by type.
+
+        For workers_comp: if the record has no CommercialPlan WC rows but
+        still holds legacy flat workers_comp_* data, synthesize a single
+        plan entry so the client renders WC uniformly as a multi-plan list.
+        The flat columns are treated as read-only fallback; the next save
+        promotes the synthesized entry into a real CommercialPlan row.
+        """
+        plans_dict = {'umbrella': [], 'professional_eo': [], 'cyber': [], 'crime': [], 'workers_comp': []}
         for plan in (self.commercial_plans or []):
             if plan.plan_type in plans_dict:
                 plans_dict[plan.plan_type].append(plan.to_dict())
         for pt in plans_dict:
             plans_dict[pt].sort(key=lambda p: p['plan_number'])
+
+        if not plans_dict['workers_comp'] and (
+            self.workers_comp_carrier or self.workers_comp_policy_number
+            or self.workers_comp_premium or self.workers_comp_renewal_date
+        ):
+            plans_dict['workers_comp'].append({
+                'id': None,
+                'plan_type': 'workers_comp',
+                'plan_number': 1,
+                'carrier': self.workers_comp_carrier,
+                'agency': self.workers_comp_agency,
+                'policy_number': self.workers_comp_policy_number,
+                'occ_limit': self.workers_comp_occ_limit,
+                'agg_limit': self.workers_comp_agg_limit,
+                'premium': float(self.workers_comp_premium) if self.workers_comp_premium else None,
+                'renewal_date': self.workers_comp_renewal_date.isoformat() if self.workers_comp_renewal_date else None,
+                'remarks': self.workers_comp_remarks,
+                'outstanding_item': self.workers_comp_outstanding_item,
+                'outstanding_item_due_date': (
+                    self.workers_comp_outstanding_item_due_date.isoformat()
+                    if self.workers_comp_outstanding_item_due_date else None
+                ),
+                'insured_entities': None,
+                'endorsement_tech_eo': False,
+                'endorsement_allied_healthcare': False,
+                'endorsement_staffing': False,
+                'endorsement_medical_malpractice': False,
+            })
         return plans_dict
 
-MULTI_PLAN_COMMERCIAL_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime']
+MULTI_PLAN_COMMERCIAL_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime', 'workers_comp']
 
 
 class CommercialPlan(db.Model):
@@ -3043,7 +3078,7 @@ def create_commercial():
 
         # Single-plan product types (not in MULTI_PLAN_COMMERCIAL_TYPES)
         single_plan_products = [
-            'general_liability', 'property', 'bop', 'workers_comp', 'auto',
+            'general_liability', 'property', 'bop', 'auto',
             'epli', 'nydbl', 'surety', 'product_liability', 'flood',
             'directors_officers', 'fiduciary', 'inland_marine'
         ]
@@ -3066,8 +3101,7 @@ def create_commercial():
             setattr(commercial, f'{product}_remarks', data.get(f'{product}_remarks') or None)
             setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
             setattr(commercial, f'{product}_outstanding_item_due_date', parse_date(data.get(f'{product}_outstanding_item_due_date')))
-            if product != 'workers_comp':
-                setattr(commercial, f'{product}_insured_entities', data.get(f'{product}_insured_entities') or None)
+            setattr(commercial, f'{product}_insured_entities', data.get(f'{product}_insured_entities') or None)
 
         # GL endorsements
         for endorsement in ['bop', 'marine', 'foreign', 'molestation', 'staffing']:
@@ -3132,7 +3166,7 @@ def update_commercial(commercial_id):
 
         # Update single-plan insurance products
         single_plan_products = [
-            'general_liability', 'property', 'bop', 'workers_comp', 'auto',
+            'general_liability', 'property', 'bop', 'auto',
             'epli', 'nydbl', 'surety', 'product_liability', 'flood',
             'directors_officers', 'fiduciary', 'inland_marine'
         ]
@@ -3157,7 +3191,7 @@ def update_commercial(commercial_id):
                 setattr(commercial, f'{product}_outstanding_item', data.get(f'{product}_outstanding_item') or None)
             if f'{product}_outstanding_item_due_date' in data:
                 setattr(commercial, f'{product}_outstanding_item_due_date', parse_date(data.get(f'{product}_outstanding_item_due_date')))
-            if product != 'workers_comp' and f'{product}_insured_entities' in data:
+            if f'{product}_insured_entities' in data:
                 setattr(commercial, f'{product}_insured_entities', data.get(f'{product}_insured_entities') or None)
 
         # Update GL endorsements

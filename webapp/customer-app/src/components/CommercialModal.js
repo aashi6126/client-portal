@@ -39,13 +39,14 @@ const parseCsv = (s) =>
 const stringifyCsv = (arr) => (arr && arr.length ? arr.join(', ') : '');
 
 // Multi-plan types: support multiple carrier/limit/premium/renewal per type
-const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
+const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime', 'workers_comp'];
 
 const MULTI_PLAN_LABELS = {
   umbrella: 'Umbrella Liability',
   professional_eo: 'Professional or E&O',
   cyber: 'Cyber Liability',
-  crime: 'Crime or Fidelity Bond'
+  crime: 'Crime or Fidelity Bond',
+  workers_comp: 'Workers Compensation'
 };
 
 // Color mapping for outstanding item values
@@ -119,12 +120,9 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
   const [selectedTab, setSelectedTab] = useState(0);
 
   // Multi-plan state: { umbrella: [{carrier, occ_limit, agg_limit, premium, renewal_date, remarks, outstanding_item}, ...], ... }
-  const [plans, setPlans] = useState({
-    umbrella: [],
-    professional_eo: [],
-    cyber: [],
-    crime: []
-  });
+  const [plans, setPlans] = useState(() =>
+    Object.fromEntries(MULTI_PLAN_TYPES.map(pt => [pt, []]))
+  );
   const [invoiceOpen, setInvoiceOpen] = useState(false);
   const [copyMenuAnchor, setCopyMenuAnchor] = useState(null);
 
@@ -182,7 +180,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
     { name: 'Commercial Property', tabLabel: 'Property', prefix: 'property' },
     { name: 'Business Owners Policy (BOP)', tabLabel: 'BOP', prefix: 'bop' },
     { name: 'Umbrella Liability', tabLabel: 'Umbrella', prefix: 'umbrella', multiPlan: true },
-    { name: 'Workers Compensation', tabLabel: 'WC', prefix: 'workers_comp' },
+    { name: 'Workers Compensation', tabLabel: 'WC', prefix: 'workers_comp', multiPlan: true },
     { name: 'Professional or E&O', tabLabel: 'E&O', prefix: 'professional_eo', multiPlan: true },
     { name: 'Cyber Liability', tabLabel: 'Cyber', prefix: 'cyber', multiPlan: true },
     { name: 'Commercial Auto', tabLabel: 'Auto', prefix: 'auto' },
@@ -206,7 +204,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
       setFormData({ ...getInitialFormData(), ...sanitized });
 
       // Initialize multi-plan state from commercial.plans
-      const newPlans = { umbrella: [], professional_eo: [], cyber: [], crime: [] };
+      const newPlans = Object.fromEntries(MULTI_PLAN_TYPES.map(pt => [pt, []]));
       if (commercial.plans) {
         for (const planType of MULTI_PLAN_TYPES) {
           const typePlans = commercial.plans[planType] || [];
@@ -272,7 +270,7 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
       }
     } else {
       setFormData(getInitialFormData());
-      setPlans({ umbrella: [], professional_eo: [], cyber: [], crime: [] });
+      setPlans(Object.fromEntries(MULTI_PLAN_TYPES.map(pt => [pt, []])));
       setActiveCoverages([]);
       setSelectedTab(0);
     }
@@ -985,40 +983,38 @@ const CommercialModal = ({ open, onClose, commercial, onSave, clients = [], init
                                     }}
                                   />
                                 </Grid>
-                                {prefix !== 'workers_comp' && (
-                                  <Grid size={12}>
-                                    <Autocomplete
-                                      multiple
-                                      options={(clients || [])
-                                        .map((c) => c.client_name)
-                                        .filter((name) => name && name !== selectedClient?.client_name)}
-                                      value={parseCsv(formData[`${prefix}_insured_entities`])}
-                                      onChange={(_, newValue) =>
-                                        setFormData((prev) => ({
-                                          ...prev,
-                                          [`${prefix}_insured_entities`]: stringifyCsv(newValue),
-                                        }))
-                                      }
-                                      renderTags={(value, getTagProps) =>
-                                        value.map((name, i) => (
-                                          <Chip
-                                            label={name}
-                                            size="small"
-                                            {...getTagProps({ index: i })}
-                                          />
-                                        ))
-                                      }
-                                      renderInput={(params) => (
-                                        <TextField
-                                          {...params}
-                                          label="Insured Entities"
+                                <Grid size={12}>
+                                  <Autocomplete
+                                    multiple
+                                    options={(clients || [])
+                                      .map((c) => c.client_name)
+                                      .filter((name) => name && name !== selectedClient?.client_name)}
+                                    value={parseCsv(formData[`${prefix}_insured_entities`])}
+                                    onChange={(_, newValue) =>
+                                      setFormData((prev) => ({
+                                        ...prev,
+                                        [`${prefix}_insured_entities`]: stringifyCsv(newValue),
+                                      }))
+                                    }
+                                    renderTags={(value, getTagProps) =>
+                                      value.map((name, i) => (
+                                        <Chip
+                                          label={name}
                                           size="small"
-                                          placeholder="Select clients"
+                                          {...getTagProps({ index: i })}
                                         />
-                                      )}
-                                    />
-                                  </Grid>
-                                )}
+                                      ))
+                                    }
+                                    renderInput={(params) => (
+                                      <TextField
+                                        {...params}
+                                        label="Insured Entities"
+                                        size="small"
+                                        placeholder="Select clients"
+                                      />
+                                    )}
+                                  />
+                                </Grid>
                               </Grid>
                             </Box>
                           </Grid>

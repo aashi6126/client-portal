@@ -386,24 +386,6 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                   slotProps={{ formHelperText: isPastDate(plan.renewal_date?.split('T')[0]) ? { sx: { color: '#ed6c02' } } : undefined }}
                 />
               </Grid>
-              <Grid item xs={12} sm={6}>
-                <TextField
-                  label="Waiting Period"
-                  select
-                  value={plan.waiting_period || ''}
-                  onChange={(e) => updatePlan(planType, idx, 'waiting_period', e.target.value)}
-                  size="small"
-                  sx={{ minWidth: 280 }}
-                  InputLabelProps={{ shrink: !!plan.waiting_period }}
-                  slotProps={{ select: { renderValue: (v) => v || '' } }}
-                >
-                  <MenuItem value="DOH">DOH</MenuItem>
-                  <MenuItem value="1st of Month after DOH">1st of Month after DOH</MenuItem>
-                  <MenuItem value="1st of Month after 30 Days">1st of Month after 30 Days</MenuItem>
-                  <MenuItem value="1st of Month after 60 Days">1st of Month after 60 Days</MenuItem>
-                  <MenuItem value="90 Days">90 Days</MenuItem>
-                </TextField>
-              </Grid>
               {/* Outstanding Item, Due Date, Remarks */}
               <Grid item xs={12}>
                 <Box sx={{ border: '1px solid #e0e0e0', borderRadius: 1, p: 1.5 }}>
