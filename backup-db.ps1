@@ -19,13 +19,28 @@ param(
     [string]$DbName     = "client_portal",
     [string]$DbHost     = "localhost",
     [int]   $DbPort     = 5432,
-    [string]$DbUser     = "postgres",
+    [string]$DbUser     = "client_portal_user",
     [string]$BackupDir  = "C:\backups\client_portal",
     [string]$PgDumpExe  = "",     # auto-detect if empty
     [int]   $RetainDays = 14      # delete backups older than this many days (0 = keep forever)
 )
 
 $ErrorActionPreference = "Stop"
+
+# Load config.env from the script's directory so PGPASSWORD (and any other
+# libpq PG* env vars) are available to pg_dump without having to set them
+# manually before every invocation. Lines starting with # or non-KEY=VAL
+# text are ignored; surrounding single/double quotes on values are stripped.
+$scriptDir  = Split-Path -Parent $MyInvocation.MyCommand.Path
+$configFile = Join-Path $scriptDir "config.env"
+if (Test-Path $configFile) {
+    Get-Content $configFile | ForEach-Object {
+        if ($_ -match '^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*)$') {
+            $val = $matches[2].Trim().Trim('"').Trim("'")
+            [Environment]::SetEnvironmentVariable($matches[1], $val, 'Process')
+        }
+    }
+}
 
 function Find-PgDump {
     if ($PgDumpExe -and (Test-Path $PgDumpExe)) { return $PgDumpExe }
