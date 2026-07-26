@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import {
   Box, Typography, Paper, Tabs, Tab, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Chip, Button, Dialog,
+  TableContainer, TableHead, TableRow, TableSortLabel, Chip, Button, Dialog,
   DialogTitle, DialogContent, DialogActions, TextField, MenuItem, Alert
 } from '@mui/material';
 import AddIcon from '@mui/icons-material/Add';
@@ -25,6 +25,37 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
   const [form, setForm] = useState({ first_name: '', last_name: '', tax_id: '', state: '', start_date: '', end_date: '', administration_type: '' });
   const [termForm, setTermForm] = useState({ termination_date: '', termination_reason: '' });
   const [search, setSearch] = useState('');
+  const [sort, setSort] = useState({ field: 'end_date', direction: 'asc' });
+
+  const DATE_FIELDS = new Set(['start_date', 'end_date', 'termination_date']);
+
+  const handleSort = (field) => {
+    setSort(prev =>
+      prev.field === field
+        ? { field, direction: prev.direction === 'asc' ? 'desc' : 'asc' }
+        : { field, direction: 'asc' }
+    );
+  };
+
+  const compareRows = (a, b) => {
+    const { field, direction } = sort;
+    const va = a[field];
+    const vb = b[field];
+    const dir = direction === 'asc' ? 1 : -1;
+
+    // Missing values always sort to the bottom of an ascending list,
+    // to the top of a descending list.
+    const aMissing = va == null || va === '';
+    const bMissing = vb == null || vb === '';
+    if (aMissing && bMissing) return 0;
+    if (aMissing) return 1;
+    if (bMissing) return -1;
+
+    if (DATE_FIELDS.has(field)) {
+      return (new Date(va) - new Date(vb)) * dir;
+    }
+    return String(va).localeCompare(String(vb), undefined, { sensitivity: 'base' }) * dir;
+  };
 
   const fetchCoverages = async () => {
     try {
@@ -55,8 +86,9 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
         (c.client_name || '').toLowerCase().includes(q)
       );
     }
-    return list;
-  }, [coverages, tab, search]);
+    return [...list].sort(compareRows);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [coverages, tab, search, sort]);
 
   const activeCount = coverages.filter(c => c.status === 'active').length;
   const terminatedCount = coverages.filter(c => c.status === 'terminated').length;
@@ -175,16 +207,28 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
             <Table stickyHeader size="small">
               <TableHead>
                 <TableRow>
-                  <TableCell sx={{ fontWeight: 'bold' }}>First Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Last Name</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>State</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Start Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>End Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Administered By</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Termination Date</TableCell>
-                  <TableCell sx={{ fontWeight: 'bold' }}>Reason</TableCell>
+                  {[
+                    { field: 'first_name', label: 'First Name' },
+                    { field: 'last_name', label: 'Last Name' },
+                    { field: 'client_name', label: 'Client' },
+                    { field: 'state', label: 'State' },
+                    { field: 'start_date', label: 'Start Date' },
+                    { field: 'end_date', label: 'End Date' },
+                    { field: 'administration_type', label: 'Administered By' },
+                    { field: 'status', label: 'Status' },
+                    { field: 'termination_date', label: 'Termination Date' },
+                    { field: 'termination_reason', label: 'Reason' },
+                  ].map(col => (
+                    <TableCell key={col.field} sx={{ fontWeight: 'bold' }} sortDirection={sort.field === col.field ? sort.direction : false}>
+                      <TableSortLabel
+                        active={sort.field === col.field}
+                        direction={sort.field === col.field ? sort.direction : 'asc'}
+                        onClick={() => handleSort(col.field)}
+                      >
+                        {col.label}
+                      </TableSortLabel>
+                    </TableCell>
+                  ))}
                   <TableCell sx={{ fontWeight: 'bold', width: 140 }}>Actions</TableCell>
                 </TableRow>
               </TableHead>

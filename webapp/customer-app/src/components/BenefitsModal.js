@@ -397,7 +397,7 @@ const BenefitsModal = ({ open, onClose, benefit, onSave, clients = [], initialCo
                   InputLabelProps={{ shrink: !!plan.waiting_period }}
                   slotProps={{ select: { renderValue: (v) => v || '' } }}
                 >
-                  <MenuItem value="">None</MenuItem>
+                  <MenuItem value="DOH">DOH</MenuItem>
                   <MenuItem value="1st of Month after DOH">1st of Month after DOH</MenuItem>
                   <MenuItem value="1st of Month after 30 Days">1st of Month after 30 Days</MenuItem>
                   <MenuItem value="1st of Month after 60 Days">1st of Month after 60 Days</MenuItem>
