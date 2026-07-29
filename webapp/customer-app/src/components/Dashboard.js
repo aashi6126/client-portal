@@ -373,6 +373,12 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
 
   // Policies grouped by outstanding item status (Cancel Due, Premium Due, In Audit)
   const outstandingPolicies = useMemo(() => {
+    // Values that count as an item having been resolved rather than open.
+    // Kept in sync with recordHasOutstanding() in App.js so the list-page
+    // filter and this Actions tab agree on what counts as "outstanding".
+    const OUTSTANDING_CLEARED = new Set(['', 'None', 'Complete']);
+    const isOutstanding = (v) => !!v && !OUTSTANDING_CLEARED.has(v);
+
     const BENEFIT_MULTI_PLAN_TYPES = ['medical', 'dental', 'vision', 'life_adnd'];
     const BENEFIT_MULTI_LABELS = { medical: 'Medical', dental: 'Dental', vision: 'Vision', life_adnd: 'Life & AD&D' };
     const BENEFIT_SINGLE_TYPES = [
@@ -381,15 +387,19 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       { prefix: 'accident', name: 'Accident' }, { prefix: 'hospital', name: 'Hospital' },
       { prefix: 'voluntary_life', name: 'Vol Life' }
     ];
-    const COMMERCIAL_MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
-    const COMMERCIAL_MULTI_LABELS = { umbrella: 'Umbrella', professional_eo: 'E&O', cyber: 'Cyber', crime: 'Crime' };
+    // workers_comp is a multi-plan type since customer_api.py MULTI_PLAN_COMMERCIAL_TYPES
+    // added it; outstanding_item lives on c.plans.workers_comp[i] and is NOT synced
+    // back to the flat workers_comp_outstanding_item column.
+    const COMMERCIAL_MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime', 'workers_comp'];
+    const COMMERCIAL_MULTI_LABELS = { umbrella: 'Umbrella', professional_eo: 'E&O', cyber: 'Cyber', crime: 'Crime', workers_comp: 'WC' };
     const COMMERCIAL_SINGLE_TYPES = [
       { prefix: 'general_liability', name: 'GL' }, { prefix: 'property', name: 'Property' },
-      { prefix: 'bop', name: 'BOP' }, { prefix: 'workers_comp', name: 'WC' },
+      { prefix: 'bop', name: 'BOP' },
       { prefix: 'auto', name: 'Auto' }, { prefix: 'epli', name: 'EPLI' },
       { prefix: 'nydbl', name: 'NYDBL' }, { prefix: 'surety', name: 'Surety' },
       { prefix: 'product_liability', name: 'Product' }, { prefix: 'flood', name: 'Flood' },
-      { prefix: 'directors_officers', name: 'D&O' }, { prefix: 'fiduciary', name: 'Fiduciary' }
+      { prefix: 'directors_officers', name: 'D&O' }, { prefix: 'fiduciary', name: 'Fiduciary' },
+      { prefix: 'inland_marine', name: 'Inland Marine' }
     ];
 
     const result = [];
@@ -400,7 +410,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       BENEFIT_MULTI_PLAN_TYPES.forEach(pt => {
         const typePlans = (b.plans && b.plans[pt]) || [];
         typePlans.forEach((plan, idx) => {
-          if (plan.outstanding_item) {
+          if (isOutstanding(plan.outstanding_item)) {
             result.push({
               client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
               prefix: pt,
@@ -415,7 +425,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       // Single-plan types
       BENEFIT_SINGLE_TYPES.forEach(({ prefix, name }) => {
         const item = b[`${prefix}_outstanding_item`];
-        if (item) {
+        if (isOutstanding(item)) {
           result.push({
             client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
             prefix,
@@ -433,7 +443,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       COMMERCIAL_MULTI_PLAN_TYPES.forEach(pt => {
         const typePlans = (c.plans && c.plans[pt]) || [];
         typePlans.forEach((plan, idx) => {
-          if (plan.outstanding_item) {
+          if (isOutstanding(plan.outstanding_item)) {
             result.push({
               client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
               prefix: pt,
@@ -448,7 +458,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
       // Single-plan types
       COMMERCIAL_SINGLE_TYPES.forEach(({ prefix, name }) => {
         const item = c[`${prefix}_outstanding_item`];
-        if (item) {
+        if (isOutstanding(item)) {
           result.push({
             client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
             prefix,
@@ -471,7 +481,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     personal.forEach(p => {
       PERSONAL_TYPES.forEach(({ prefix, name }) => {
         const item = p[`${prefix}_outstanding_item`];
-        if (item) {
+        if (isOutstanding(item)) {
           const renewalField = ['event', 'visitors_medical'].includes(prefix) ? `${prefix}_start_date` : `${prefix}_renewal_date`;
           result.push({
             client_name: p.client_name, tax_id: p.tax_id, source: 'Personal',
