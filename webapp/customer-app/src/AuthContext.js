@@ -56,6 +56,10 @@ export function AuthProvider({ children }) {
     loading,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
+    isManager: user?.role === 'manager',
+    // True for both admins and managers. Guards task-management UI paths
+    // (create/reassign/delete/reports). Nothing else admin-only opens up.
+    canManageTasks: user?.role === 'admin' || user?.role === 'manager',
     mustChangePassword: !!user?.must_change_password,
     loginEnabled,
     setLoginEnabled,

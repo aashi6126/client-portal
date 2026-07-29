@@ -183,7 +183,7 @@ const theme = createTheme({
 });
 
 function AppShell() {
-  const { user, isAdmin, logout, loginEnabled, authDisabled } = useAuth();
+  const { user, isAdmin, canManageTasks, logout, loginEnabled, authDisabled } = useAuth();
 
   // Change-password dialog
   const [changePasswordOpen, setChangePasswordOpen] = useState(false);
@@ -1055,7 +1055,7 @@ function AppShell() {
               { label: 'Cobra', icon: <LocalHospitalIcon fontSize="small" />, index: 10 },
               { type: 'divider', label: 'WORK' },
               { label: 'Tasks', icon: <TaskAltIcon fontSize="small" />, index: 13 },
-              ...(isAdmin ? [{ label: 'Task Report', icon: <BarChartIcon fontSize="small" />, index: 14 }] : []),
+              ...(canManageTasks ? [{ label: 'Task Report', icon: <BarChartIcon fontSize="small" />, index: 14 }] : []),
               { type: 'divider', label: 'ADMIN' },
               { label: 'PoC Mgmt', icon: <AssignmentIndIcon fontSize="small" />, index: 6 },
               { label: 'Feedback', icon: <FeedbackIcon fontSize="small" />, index: 7 },
@@ -1382,7 +1382,7 @@ function AppShell() {
         )}
 
         {/* Tab 14: Task Report (admin only) */}
-        {activeTab === 14 && isAdmin && (
+        {activeTab === 14 && canManageTasks && (
           <TaskReports />
         )}
 

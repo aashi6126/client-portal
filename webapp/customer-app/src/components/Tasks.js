@@ -69,7 +69,7 @@ function formatWhen(iso) {
 }
 
 export default function Tasks() {
-  const { user, isAdmin } = useAuth();
+  const { user, canManageTasks } = useAuth();
 
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);       // for assignee dropdown / filter
@@ -106,7 +106,7 @@ export default function Tasks() {
       if (!hideDone) params.include_done = 'true';
       else params.include_done = 'false';
       if (statusFilter) params.status = statusFilter;
-      if (isAdmin && assigneeFilter) params.assignee_id = assigneeFilter;
+      if (canManageTasks && assigneeFilter) params.assignee_id = assigneeFilter;
       const { data } = await axios.get('/api/tasks', { params });
       setTasks(data.tasks || []);
     } catch (err) {
@@ -114,17 +114,17 @@ export default function Tasks() {
     } finally {
       setLoading(false);
     }
-  }, [hideDone, statusFilter, assigneeFilter, isAdmin]);
+  }, [hideDone, statusFilter, assigneeFilter, canManageTasks]);
 
   const fetchAssignableUsers = useCallback(async () => {
-    if (!isAdmin) return;
+    if (!canManageTasks) return;
     try {
       const { data } = await axios.get('/api/tasks/assignable-users');
       setUsers(data.users || []);
     } catch {
       // Non-fatal — the dropdown just stays empty.
     }
-  }, [isAdmin]);
+  }, [canManageTasks]);
 
   useEffect(() => {
     fetchTasks();
@@ -203,10 +203,10 @@ export default function Tasks() {
     }
   };
 
-  const canEditTask = (t) => isAdmin;
-  const canDeleteTask = (t) => isAdmin;
-  const canUpdateStatus = (t) => isAdmin || t.assignee_id === user?.id;
-  const canComment = (t) => isAdmin || t.assignee_id === user?.id;
+  const canEditTask = (t) => canManageTasks;
+  const canDeleteTask = (t) => canManageTasks;
+  const canUpdateStatus = (t) => canManageTasks || t.assignee_id === user?.id;
+  const canComment = (t) => canManageTasks || t.assignee_id === user?.id;
 
   const changeStatusInline = async (t, newStatus) => {
     try {
@@ -273,10 +273,10 @@ export default function Tasks() {
           <Box>
             <span className="page-eyebrow">Admin · Work</span>
             <Typography variant="h6">
-              Tasks{isAdmin ? '' : ' assigned to you'} ({filteredTasks.length}{filteredTasks.length !== tasks.length ? ` of ${tasks.length}` : ''})
+              Tasks{canManageTasks ? '' : ' assigned to you'} ({filteredTasks.length}{filteredTasks.length !== tasks.length ? ` of ${tasks.length}` : ''})
             </Typography>
           </Box>
-          {isAdmin && (
+          {canManageTasks && (
             <Button variant="contained" color="primary" startIcon={<AddIcon />} onClick={openCreate}>
               New Task
             </Button>
@@ -303,7 +303,7 @@ export default function Tasks() {
               <MenuItem key={s} value={s}>{s}</MenuItem>
             ))}
           </TextField>
-          {isAdmin && (
+          {canManageTasks && (
             <TextField
               label="Assignee"
               select
@@ -359,7 +359,7 @@ export default function Tasks() {
             ) : filteredTasks.length === 0 ? (
               <TableRow>
                 <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
-                  {isAdmin ? 'No tasks yet — click “New Task” to add one.' : 'No tasks assigned to you.'}
+                  {canManageTasks ? 'No tasks yet — click “New Task” to add one.' : 'No tasks assigned to you.'}
                 </TableCell>
               </TableRow>
             ) : (

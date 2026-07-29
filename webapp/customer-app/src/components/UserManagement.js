@@ -491,6 +491,7 @@ export default function UserManagement() {
               disabled={!!inviteResultUrl}
             >
               <MenuItem value="user">User</MenuItem>
+              <MenuItem value="manager">Manager</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
             </TextField>
           </Stack>
@@ -546,6 +547,7 @@ export default function UserManagement() {
               fullWidth
             >
               <MenuItem value="user">User</MenuItem>
+              <MenuItem value="manager">Manager</MenuItem>
               <MenuItem value="admin">Admin</MenuItem>
             </TextField>
             <TextField

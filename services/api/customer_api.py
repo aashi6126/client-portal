@@ -390,8 +390,8 @@ def create_user():
     email = (data.get('email') or '').strip()
     if not username or not password:
         return jsonify({'error': 'username and password are required'}), 400
-    if role not in ('admin', 'user'):
-        return jsonify({'error': "role must be 'admin' or 'user'"}), 400
+    if role not in ('admin', 'manager', 'user'):
+        return jsonify({'error': "role must be 'admin', 'manager', or 'user'"}), 400
     pw_err = _validate_password(password, username=username)
     if pw_err:
         return jsonify({'error': pw_err}), 400
@@ -413,8 +413,8 @@ def update_user(user_id):
     data = request.get_json(silent=True) or {}
     if 'role' in data:
         role = (data['role'] or '').strip().lower()
-        if role not in ('admin', 'user'):
-            return jsonify({'error': "role must be 'admin' or 'user'"}), 400
+        if role not in ('admin', 'manager', 'user'):
+            return jsonify({'error': "role must be 'admin', 'manager', or 'user'"}), 400
         # Prevent removing the last admin
         if u.role == 'admin' and role != 'admin':
             other_admins = User.query.filter(User.role == 'admin', User.id != u.id, User.is_active == True).count()
@@ -538,8 +538,8 @@ def create_invitation():
     role = (data.get('role') or 'user').strip().lower()
     if not email or not _EMAIL_RE.match(email):
         return jsonify({'error': 'A valid email address is required'}), 400
-    if role not in ('admin', 'user'):
-        return jsonify({'error': "role must be 'admin' or 'user'"}), 400
+    if role not in ('admin', 'manager', 'user'):
+        return jsonify({'error': "role must be 'admin', 'manager', or 'user'"}), 400
     if User.query.filter(func.lower(User.email) == email).first():
         return jsonify({'error': 'A user with that email already exists'}), 409
     # Revoke any prior pending invitations for this email so only one is active.
@@ -737,7 +737,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(100), unique=True, nullable=False)
     password_hash = db.Column(db.String(255), nullable=False)
-    role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' or 'user'
+    role = db.Column(db.String(20), nullable=False, default='user')  # 'admin' | 'manager' | 'user'
     full_name = db.Column(db.String(200))
     email = db.Column(db.String(200))
     is_active = db.Column(db.Boolean, default=True)
@@ -6536,15 +6536,38 @@ def delete_feedback(feedback_id):
 # TASK MANAGEMENT
 # ===========================================================================
 # Access rules:
-#   - Admins can list every task, create, reassign, edit any field, delete,
-#     and comment on any task.
-#   - Non-admin users only see tasks assigned to them. They may update
+#   - Admins and users with role 'manager' can list every task, create,
+#     reassign, edit any field, delete, and comment on any task. This is
+#     the manager role's ONLY elevated privilege — it does not extend to
+#     user administration, settings, invitations, or other admin-only
+#     endpoints.
+#   - Regular users only see tasks assigned to them. They may update
 #     status and add comments on their own tasks, but cannot reassign,
 #     re-title, delete, or view other people's tasks.
 
 
 def _is_admin_user(user):
     return bool(user and getattr(user, 'role', None) == 'admin')
+
+
+def _can_manage_tasks(user):
+    return bool(user and getattr(user, 'role', None) in ('admin', 'manager'))
+
+
+def require_task_manager(fn):
+    """Decorator for task endpoints only. Grants access to admins AND managers.
+    Everything outside task management stays admin-only via require_admin."""
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        if AUTH_DISABLED:
+            return fn(*args, **kwargs)
+        user = getattr(request, 'current_user', None) or _current_user()
+        if not user:
+            return jsonify({'error': 'Authentication required'}), 401
+        if not _can_manage_tasks(user):
+            return jsonify({'error': 'Task-management privileges required'}), 403
+        return fn(*args, **kwargs)
+    return wrapper
 
 
 def _validate_task_status(status):
@@ -6569,7 +6592,7 @@ def list_tasks():
         return jsonify({'error': 'Authentication required'}), 401
 
     q = Task.query
-    if _is_admin_user(user):
+    if _can_manage_tasks(user):
         req_assignee = request.args.get('assignee_id', type=int)
         if req_assignee is not None:
             q = q.filter(Task.assignee_id == req_assignee)
@@ -6601,15 +6624,15 @@ def get_task(task_id):
     t = db.session.get(Task, task_id)
     if not t:
         return jsonify({'error': 'Task not found'}), 404
-    if not _is_admin_user(user) and t.assignee_id != user.id:
+    if not _can_manage_tasks(user) and t.assignee_id != user.id:
         return jsonify({'error': 'Not authorized to view this task'}), 403
     return jsonify({'task': t.to_dict(include_comments=True)}), 200
 
 
 @app.route('/api/tasks', methods=['POST'])
-@require_admin
+@require_task_manager
 def create_task():
-    """Create a new task. Admin only."""
+    """Create a new task. Admin or manager."""
     user = getattr(request, 'current_user', None) or _current_user()
     data = request.get_json(silent=True) or {}
     title = (data.get('title') or '').strip()
@@ -6655,9 +6678,9 @@ def update_task(task_id):
     if not t:
         return jsonify({'error': 'Task not found'}), 404
 
-    is_admin = _is_admin_user(user)
+    can_manage = _can_manage_tasks(user)
     is_assignee = t.assignee_id == getattr(user, 'id', None)
-    if not (is_admin or is_assignee):
+    if not (can_manage or is_assignee):
         return jsonify({'error': 'Not authorized to update this task'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -6670,12 +6693,12 @@ def update_task(task_id):
             t.status = new_status
             t.completed_at = datetime.utcnow() if new_status == 'Done' else None
 
-    # Everything else is admin-only.
-    admin_only_fields = {'title', 'description', 'priority', 'assignee_id'}
-    supplied_admin_fields = admin_only_fields & set(data.keys())
-    if supplied_admin_fields and not is_admin:
+    # Everything else requires task-management privileges (admin or manager).
+    manager_only_fields = {'title', 'description', 'priority', 'assignee_id'}
+    supplied_manager_fields = manager_only_fields & set(data.keys())
+    if supplied_manager_fields and not can_manage:
         return jsonify({
-            'error': 'Only admins can change title, description, priority, or assignee'
+            'error': 'Only admins or managers can change title, description, priority, or assignee'
         }), 403
 
     if 'title' in data:
@@ -6705,9 +6728,9 @@ def update_task(task_id):
 
 
 @app.route('/api/tasks/<int:task_id>', methods=['DELETE'])
-@require_admin
+@require_task_manager
 def delete_task(task_id):
-    """Delete a task and its comment thread. Admin only."""
+    """Delete a task and its comment thread. Admin or manager."""
     t = db.session.get(Task, task_id)
     if not t:
         return jsonify({'error': 'Task not found'}), 404
@@ -6725,7 +6748,7 @@ def add_task_comment(task_id):
     t = db.session.get(Task, task_id)
     if not t:
         return jsonify({'error': 'Task not found'}), 404
-    if not (_is_admin_user(user) or t.assignee_id == getattr(user, 'id', None)):
+    if not (_can_manage_tasks(user) or t.assignee_id == getattr(user, 'id', None)):
         return jsonify({'error': 'Not authorized to comment on this task'}), 403
 
     data = request.get_json(silent=True) or {}
@@ -6741,9 +6764,9 @@ def add_task_comment(task_id):
 
 
 @app.route('/api/tasks/reports/by-user', methods=['GET'])
-@require_admin
+@require_task_manager
 def task_report_by_user():
-    """Per-user task summary. Admin only.
+    """Per-user task summary. Admin or manager.
 
     Returns one row per active user (plus an 'Unassigned' bucket if there
     are unassigned tasks), with counts by status.
@@ -6782,9 +6805,9 @@ def task_report_by_user():
 
 
 @app.route('/api/tasks/assignable-users', methods=['GET'])
-@require_admin
+@require_task_manager
 def list_assignable_users():
-    """Lightweight user list for the assignee dropdown. Admin only."""
+    """Lightweight user list for the assignee dropdown. Admin or manager."""
     users = (
         User.query.filter(User.is_active == True)
         .order_by(User.username.asc())
