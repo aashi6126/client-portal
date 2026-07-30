@@ -332,6 +332,32 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     ];
     const totalCommercialTypes = commercialMultiPlanDefs.length + commercialSinglePlanDefs.length; // 17
 
+    // Earliest renewal date on/after today across every *_renewal_date scalar
+    // column and every plans[type][i].renewal_date. Returns null if the record
+    // has no upcoming renewals — used by Coverage Gaps to hint when to time
+    // the cross-sell pitch.
+    const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const nextRenewal = (rec) => {
+      let best = null;
+      const consider = (d) => {
+        if (!d) return;
+        const key = String(d).slice(0, 10);
+        if (key < todayKey) return;
+        if (!best || key < best) best = key;
+      };
+      for (const [k, v] of Object.entries(rec || {})) {
+        if (k.endsWith('_renewal_date')) consider(v);
+      }
+      consider(rec?.renewal_date);
+      if (rec?.plans && typeof rec.plans === 'object') {
+        for (const arr of Object.values(rec.plans)) {
+          if (!Array.isArray(arr)) continue;
+          for (const p of arr) consider(p?.renewal_date);
+        }
+      }
+      return best;
+    };
+
     const benefitGaps = benefits
       .map(b => {
         const missing = [];
@@ -345,7 +371,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           if (!b[p.key]) missing.push(p.name);
         });
         const active = totalBenefitTypes - missing.length;
-        return { client_name: b.client_name, tax_id: b.tax_id, missing, active };
+        return { client_name: b.client_name, tax_id: b.tax_id, missing, active, next_renewal: nextRenewal(b) };
       })
       .filter(b => b.missing.length > 0 && b.active > 0)
       .sort((a, b) => a.missing.length - b.missing.length);
@@ -363,7 +389,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           if (!c[p.key]) missing.push(p.name);
         });
         const active = totalCommercialTypes - missing.length;
-        return { client_name: c.client_name, tax_id: c.tax_id, missing, active };
+        return { client_name: c.client_name, tax_id: c.tax_id, missing, active, next_renewal: nextRenewal(c) };
       })
       .filter(c => c.missing.length > 0 && c.active > 0)
       .sort((a, b) => a.missing.length - b.missing.length);
@@ -1071,6 +1097,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                     <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Coverage</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Missing Plans</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Next Renewal</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
                   </TableRow>
                 </TableHead>
@@ -1094,6 +1121,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                             ))}
                           </Box>
                         </TableCell>
+                        <TableCell>{client.next_renewal ? formatDate(client.next_renewal) : '—'}</TableCell>
                         <TableCell>
                           <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
                             Edit
@@ -1121,6 +1149,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                     <TableCell sx={{ fontWeight: 'bold' }}>Client</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Coverage</TableCell>
                     <TableCell sx={{ fontWeight: 'bold' }}>Missing Products</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold' }}>Next Renewal</TableCell>
                     <TableCell sx={{ fontWeight: 'bold', width: 60 }}></TableCell>
                   </TableRow>
                 </TableHead>
@@ -1144,6 +1173,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                             ))}
                           </Box>
                         </TableCell>
+                        <TableCell>{client.next_renewal ? formatDate(client.next_renewal) : '—'}</TableCell>
                         <TableCell>
                           <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
                             Edit
