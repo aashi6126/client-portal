@@ -337,6 +337,18 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     // has no upcoming renewals — used by Coverage Gaps to hint when to time
     // the cross-sell pitch.
     const todayKey = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    // Sort ascending by next_renewal; records with no upcoming renewal
+    // (next_renewal === null) sink to the bottom. Ties broken by fewest
+    // gaps first so smaller opportunities aren't buried.
+    const byNextRenewalAsc = (a, b) => {
+      const ar = a.next_renewal, br = b.next_renewal;
+      if (ar && br) {
+        if (ar !== br) return ar < br ? -1 : 1;
+      } else if (ar) return -1;
+      else if (br) return 1;
+      return a.missing.length - b.missing.length;
+    };
+
     const nextRenewal = (rec) => {
       let best = null;
       const consider = (d) => {
@@ -374,7 +386,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         return { client_name: b.client_name, tax_id: b.tax_id, missing, active, next_renewal: nextRenewal(b) };
       })
       .filter(b => b.missing.length > 0 && b.active > 0)
-      .sort((a, b) => a.missing.length - b.missing.length);
+      .sort(byNextRenewalAsc);
 
     const commercialGaps = commercial
       .map(c => {
@@ -392,7 +404,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         return { client_name: c.client_name, tax_id: c.tax_id, missing, active, next_renewal: nextRenewal(c) };
       })
       .filter(c => c.missing.length > 0 && c.active > 0)
-      .sort((a, b) => a.missing.length - b.missing.length);
+      .sort(byNextRenewalAsc);
 
     return { benefitGaps, commercialGaps };
   }, [benefits, commercial]);
