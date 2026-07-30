@@ -2037,6 +2037,11 @@ class Task(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
+    # Notification bookkeeping: NULL means the current assignee hasn't seen
+    # this task yet (either it was just created for them, or someone
+    # reassigned it to them). Reset to NULL on every assignee change; set
+    # to now() when the assignee visits their Tasks tab.
+    assignee_seen_at = db.Column(db.DateTime)
 
     assignee = db.relationship('User', foreign_keys=[assignee_id])
     created_by = db.relationship('User', foreign_keys=[created_by_id])
@@ -2062,6 +2067,8 @@ class Task(db.Model):
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+            'assignee_seen_at': self.assignee_seen_at.isoformat() if self.assignee_seen_at else None,
+            'is_new_for_assignee': self.assignee_id is not None and self.assignee_seen_at is None,
             'comment_count': len(self.comments) if self.comments is not None else 0,
         }
         if include_comments:
@@ -6662,6 +6669,10 @@ def create_task():
     )
     if status == 'Done':
         t.completed_at = datetime.utcnow()
+    # If the creator IS the assignee, no notification needed — they know.
+    # If it's someone else, leave assignee_seen_at NULL so the badge fires.
+    if assignee_id is not None and assignee_id == getattr(user, 'id', None):
+        t.assignee_seen_at = datetime.utcnow()
     db.session.add(t)
     db.session.commit()
     return jsonify({'task': t.to_dict()}), 201
@@ -6721,6 +6732,17 @@ def update_task(task_id):
             u = db.session.get(User, new_assignee)
             if not u or not u.is_active:
                 return jsonify({'error': 'assignee_id does not match an active user'}), 400
+        # Reset the seen-timestamp when the assignee actually changes.
+        # If the actor reassigns to themselves, mark as already seen.
+        # If reassigning to nobody (unassigned), leave seen_at alone —
+        # there's no assignee to notify.
+        if new_assignee != t.assignee_id:
+            if new_assignee is None:
+                pass
+            elif new_assignee == getattr(user, 'id', None):
+                t.assignee_seen_at = datetime.utcnow()
+            else:
+                t.assignee_seen_at = None
         t.assignee_id = new_assignee
 
     db.session.commit()
@@ -6824,6 +6846,41 @@ def list_assignable_users():
             for u in users
         ]
     }), 200
+
+
+@app.route('/api/me/notifications', methods=['GET'])
+def my_notifications():
+    """Notification summary for the current user. Currently returns
+    unseen_task_count: how many tasks assigned to them have not yet
+    had their assignee_seen_at set (i.e. either just created or just
+    reassigned to them).
+    """
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user or not getattr(user, 'id', None):
+        return jsonify({'unseen_task_count': 0}), 200
+    count = (
+        db.session.query(func.count(Task.id))
+        .filter(Task.assignee_id == user.id, Task.assignee_seen_at.is_(None))
+        .scalar()
+    ) or 0
+    return jsonify({'unseen_task_count': int(count)}), 200
+
+
+@app.route('/api/me/notifications/tasks/mark-seen', methods=['POST'])
+def mark_my_tasks_seen():
+    """Mark every task assigned to the current user as seen, clearing the
+    unseen count. Called when the user opens the Tasks tab."""
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user or not getattr(user, 'id', None):
+        return jsonify({'error': 'Authentication required'}), 401
+    now = datetime.utcnow()
+    updated = (
+        Task.query
+        .filter(Task.assignee_id == user.id, Task.assignee_seen_at.is_(None))
+        .update({Task.assignee_seen_at: now}, synchronize_session=False)
+    )
+    db.session.commit()
+    return jsonify({'marked_seen': int(updated)}), 200
 
 
 # ===========================================================================
@@ -7047,7 +7104,10 @@ with app.app_context():
          'ALTER TABLE users ADD COLUMN must_change_password BOOLEAN NOT NULL DEFAULT FALSE'),
         ('cobra_coverages', 'administration_type',
          'ALTER TABLE cobra_coverages ADD COLUMN administration_type VARCHAR(20)'),
+        ('tasks', 'assignee_seen_at',
+         'ALTER TABLE tasks ADD COLUMN assignee_seen_at TIMESTAMP'),
     ]
+    _newly_added_columns = set()
     try:
         _inspector = _sa_inspect(engine)
         _existing_tables = set(_inspector.get_table_names())
@@ -7059,9 +7119,24 @@ with app.app_context():
                 continue
             with engine.begin() as _conn:
                 _conn.execute(db.text(_ddl))
+            _newly_added_columns.add((_table, _column))
             logging.info(f"Added {_table}.{_column} column to existing table.")
     except Exception as _e:
         logging.warning(f"Could not run runtime column migration: {_e}")
+
+    # One-time backfill: mark existing assigned tasks as already-seen so
+    # the notification badge doesn't light up with legacy work the first
+    # time a user logs in after this column is added.
+    if ('tasks', 'assignee_seen_at') in _newly_added_columns:
+        try:
+            with engine.begin() as _conn:
+                _res = _conn.execute(db.text(
+                    "UPDATE tasks SET assignee_seen_at = NOW() "
+                    "WHERE assignee_seen_at IS NULL AND assignee_id IS NOT NULL"
+                ))
+                logging.info(f"Backfilled assignee_seen_at on {_res.rowcount} existing tasks.")
+        except Exception as _e:
+            logging.warning(f"assignee_seen_at backfill failed: {_e}")
 
     db.create_all()
 

@@ -216,6 +216,26 @@ function AppShell() {
     return () => clearInterval(interval);
   }, []);
 
+  // Task-notification badge count. Polled every 60s; also refreshed
+  // whenever the user opens the Tasks tab (which additionally marks all
+  // their unseen tasks seen).
+  const [unseenTaskCount, setUnseenTaskCount] = useState(0);
+  useEffect(() => {
+    const fetchUnseen = () => {
+      axios.get('/api/me/notifications', { timeout: 5000 })
+        .then(res => setUnseenTaskCount(res.data?.unseen_task_count || 0))
+        .catch(() => { /* ignore — silent if endpoint fails */ });
+    };
+    fetchUnseen();
+    const id = setInterval(fetchUnseen, 60000);
+    return () => clearInterval(id);
+  }, []);
+  const markTasksSeen = () => {
+    if (unseenTaskCount === 0) return;
+    axios.post('/api/me/notifications/tasks/mark-seen').catch(() => {});
+    setUnseenTaskCount(0);
+  };
+
   // Modal states for Clients
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [currentClient, setCurrentClient] = useState(null);
@@ -1081,7 +1101,10 @@ function AppShell() {
                     <ListItemButton
                       key={item.label}
                       selected={activeTab === item.index}
-                      onClick={() => setActiveTab(item.index)}
+                      onClick={() => {
+                        setActiveTab(item.index);
+                        if (item.index === 13) markTasksSeen();
+                      }}
                       sx={{
                         py: 0.7,
                         my: 0.2,
@@ -1098,11 +1121,26 @@ function AppShell() {
                         {item.icon}
                       </ListItemIcon>
                       <ListItemText
-                        primary={item.label}
+                        primary={
+                          item.index === 13 && unseenTaskCount > 0 ? (
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                              <span>{item.label}</span>
+                              <Chip
+                                label={unseenTaskCount}
+                                size="small"
+                                color="error"
+                                sx={{ height: 16, minWidth: 18, fontSize: '0.6rem', px: 0.5 }}
+                              />
+                            </Box>
+                          ) : (
+                            item.label
+                          )
+                        }
                         primaryTypographyProps={{
                           fontSize: '0.8rem',
                           fontWeight: activeTab === item.index ? 600 : 400,
                           color: activeTab === item.index ? '#fff' : 'rgba(255,255,255,0.7)',
+                          component: 'div',
                         }}
                       />
                     </ListItemButton>
