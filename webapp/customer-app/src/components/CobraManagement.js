@@ -211,6 +211,7 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
                     { field: 'first_name', label: 'First Name' },
                     { field: 'last_name', label: 'Last Name' },
                     { field: 'client_name', label: 'Client' },
+                    { field: 'assigned_to', label: 'Assigned To' },
                     { field: 'state', label: 'State' },
                     { field: 'start_date', label: 'Start Date' },
                     { field: 'end_date', label: 'End Date' },
@@ -238,6 +239,7 @@ const CobraManagement = ({ clients = [], isAdmin = false }) => {
                     <TableCell>{cov.first_name}</TableCell>
                     <TableCell>{cov.last_name}</TableCell>
                     <TableCell>{cov.client_name || '—'}</TableCell>
+                    <TableCell>{cov.assigned_to || '—'}</TableCell>
                     <TableCell>{cov.state || '—'}</TableCell>
                     <TableCell>{formatDate(cov.start_date)}</TableCell>
                     <TableCell>{formatDate(cov.end_date)}</TableCell>

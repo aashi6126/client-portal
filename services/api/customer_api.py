@@ -2003,12 +2003,23 @@ class CobraCoverage(db.Model):
     client = db.relationship('Client', backref='cobra_coverages')
 
     def to_dict(self):
+        # "Assigned to" on a cobra row comes from the client's group-benefits
+        # record - enrollment_poc is the person at the broker responsible
+        # for the client's health benefits, which is who owns COBRA follow-
+        # up too. Falls back to None if the client has no benefits record.
+        assigned_to = None
+        if self.client and getattr(self.client, 'employee_benefits', None):
+            for eb in self.client.employee_benefits:
+                if getattr(eb, 'enrollment_poc', None):
+                    assigned_to = eb.enrollment_poc
+                    break
         return {
             'id': self.id,
             'first_name': self.first_name,
             'last_name': self.last_name,
             'tax_id': self.tax_id,
             'client_name': self.client.client_name if self.client else None,
+            'assigned_to': assigned_to,
             'state': self.state,
             'start_date': self.start_date.isoformat() if self.start_date else None,
             'end_date': self.end_date.isoformat() if self.end_date else None,
@@ -6881,6 +6892,99 @@ def mark_my_tasks_seen():
     )
     db.session.commit()
     return jsonify({'marked_seen': int(updated)}), 200
+
+
+# ===========================================================================
+# OUTSTANDING-ITEM ACTIONS
+# ===========================================================================
+# Small dedicated endpoint for the Dashboard Actions tab's "Clear" button.
+# Sets outstanding_item and outstanding_item_due_date to NULL on the
+# targeted coverage. Two shapes:
+#   - Multi-plan item (BenefitPlan or CommercialPlan): send { plan_id }
+#     and the source ('benefits' | 'commercial'). The plan row is
+#     located by ID and cleared.
+#   - Single-plan flat field: send { source, tax_id or individual_id,
+#     prefix }. The parent record is located and its
+#     `<prefix>_outstanding_item` + `<prefix>_outstanding_item_due_date`
+#     columns are cleared.
+#
+# Deliberately not admin-locked to match the (also unlocked) update_*
+# endpoints on the parent records - if you can edit the record you can
+# clear an outstanding item.
+
+
+@app.route('/api/actions/clear-outstanding', methods=['POST'])
+def clear_outstanding_item():
+    user = getattr(request, 'current_user', None) or _current_user()
+    if not user:
+        return jsonify({'error': 'Authentication required'}), 401
+
+    data = request.get_json(silent=True) or {}
+    source   = (data.get('source') or '').lower()
+    prefix   = data.get('prefix')
+    plan_id  = data.get('plan_id')
+    tax_id   = data.get('tax_id')
+    indiv_id = data.get('individual_id')
+
+    if source not in ('benefits', 'commercial', 'personal'):
+        return jsonify({'error': "source must be 'benefits', 'commercial', or 'personal'"}), 400
+
+    # Multi-plan branch: locate the plan row by ID and clear its columns.
+    if plan_id is not None:
+        if source == 'benefits':
+            plan = db.session.get(BenefitPlan, plan_id)
+            if not plan:
+                return jsonify({'error': 'BenefitPlan not found'}), 404
+            plan.outstanding_item = None
+            if hasattr(plan, 'outstanding_item_due_date'):
+                plan.outstanding_item_due_date = None
+        elif source == 'commercial':
+            plan = db.session.get(CommercialPlan, plan_id)
+            if not plan:
+                return jsonify({'error': 'CommercialPlan not found'}), 404
+            plan.outstanding_item = None
+            plan.outstanding_item_due_date = None
+        else:
+            return jsonify({'error': 'Personal has no multi-plan structure'}), 400
+        db.session.commit()
+        return jsonify({'cleared': True, 'target': 'plan', 'plan_id': plan_id}), 200
+
+    # Single-plan branch: locate the parent record and clear the flat cols.
+    if not prefix:
+        return jsonify({'error': 'prefix is required for single-plan items'}), 400
+
+    if source == 'benefits':
+        if not tax_id:
+            return jsonify({'error': 'tax_id is required for benefits'}), 400
+        rec = EmployeeBenefit.query.filter_by(tax_id=tax_id).first()
+        if not rec:
+            return jsonify({'error': 'EmployeeBenefit not found'}), 404
+    elif source == 'commercial':
+        if not tax_id:
+            return jsonify({'error': 'tax_id is required for commercial'}), 400
+        rec = CommercialInsurance.query.filter_by(tax_id=tax_id).first()
+        if not rec:
+            return jsonify({'error': 'CommercialInsurance not found'}), 404
+    else:  # personal
+        if not indiv_id and not tax_id:
+            return jsonify({'error': 'individual_id or tax_id is required for personal'}), 400
+        q = PersonalInsurance.query
+        if indiv_id:
+            rec = q.filter_by(individual_id=indiv_id).first()
+        else:
+            rec = q.filter_by(tax_id=tax_id).first()
+        if not rec:
+            return jsonify({'error': 'PersonalInsurance not found'}), 404
+
+    item_col = f'{prefix}_outstanding_item'
+    date_col = f'{prefix}_outstanding_item_due_date'
+    if not hasattr(rec, item_col):
+        return jsonify({'error': f'{item_col} does not exist on this record'}), 400
+    setattr(rec, item_col, None)
+    if hasattr(rec, date_col):
+        setattr(rec, date_col, None)
+    db.session.commit()
+    return jsonify({'cleared': True, 'target': 'flat', 'prefix': prefix}), 200
 
 
 # ===========================================================================

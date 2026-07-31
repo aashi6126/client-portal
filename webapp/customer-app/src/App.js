@@ -1378,6 +1378,7 @@ function AppShell() {
             onOpenPersonalModal={openPersonalModal}
             onNavigateToTab={setActiveTab}
             dataVersion={dataVersion}
+            onDataChanged={() => { fetchAllData(); setDataVersion(v => v + 1); }}
           />
         )}
 

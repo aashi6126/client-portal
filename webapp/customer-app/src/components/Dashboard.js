@@ -15,7 +15,12 @@ import {
   Button,
   Alert,
   Tabs,
-  Tab
+  Tab,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogContentText,
+  DialogActions,
 } from '@mui/material';
 import {
   BarChart,
@@ -33,6 +38,7 @@ import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import SecurityIcon from '@mui/icons-material/Security';
 import TrendingUpIcon from '@mui/icons-material/TrendingUp';
 import EditIcon from '@mui/icons-material/Edit';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import PersonIcon from '@mui/icons-material/Person';
 import axios from 'axios';
 
@@ -57,7 +63,7 @@ const parseDate = (d) => {
  * 3. Next Month Focus
  * 4. Cross-Sell Opportunities
  */
-const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal = [], onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion }) => {
+const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal = [], onOpenBenefitsModal, onOpenCommercialModal, onOpenPersonalModal, onNavigateToTab, dataVersion, onDataChanged }) => {
   const [renewals, setRenewals] = useState([]);
   const [crossSell, setCrossSell] = useState({ benefits_only: [], commercial_only: [] });
   const [policyAgg, setPolicyAgg] = useState({ by_industry: [], by_coverage_type: [], by_carrier: [] });
@@ -70,6 +76,12 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
   const [crossSellTab, setCrossSellTab] = useState(0);
   const [oppMonthTab, setOppMonthTab] = useState(0);
   const [oppTypeFilter, setOppTypeFilter] = useState('all');
+
+  // Confirmation dialog for the "Clear outstanding item" button on the
+  // Actions tab. Holds the target row + a pending flag while the POST
+  // is in flight.
+  const [clearDialog, setClearDialog] = useState({ open: false, item: null });
+  const [clearing, setClearing] = useState(false);
 
   // Base month for the renewals view: defaults to next month (YYYY-MM)
   const getDefaultBaseMonth = () => {
@@ -452,6 +464,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             result.push({
               client_name: b.client_name, tax_id: b.tax_id, source: 'Benefits',
               prefix: pt,
+              plan_id: plan.id,
               policy: typePlans.length > 1 ? `${BENEFIT_MULTI_LABELS[pt]} ${idx + 1}` : BENEFIT_MULTI_LABELS[pt],
               assigned_to: b.enrollment_poc, renewal_date: plan.renewal_date,
               outstanding_item: plan.outstanding_item,
@@ -485,6 +498,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
             result.push({
               client_name: c.client_name, tax_id: c.tax_id, source: 'Commercial',
               prefix: pt,
+              plan_id: plan.id,
               policy: typePlans.length > 1 ? `${COMMERCIAL_MULTI_LABELS[pt]} ${idx + 1}` : COMMERCIAL_MULTI_LABELS[pt],
               assigned_to: c.assigned_to, renewal_date: plan.renewal_date,
               outstanding_item: plan.outstanding_item,
@@ -523,6 +537,7 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
           const renewalField = ['event', 'visitors_medical'].includes(prefix) ? `${prefix}_start_date` : `${prefix}_renewal_date`;
           result.push({
             client_name: p.client_name, tax_id: p.tax_id, source: 'Personal',
+            individual_id: p.individual_id,
             prefix,
             policy: name, assigned_to: '', renewal_date: p[renewalField],
             outstanding_item: item,
@@ -629,6 +644,39 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
     }
   };
 
+  // POST to /api/actions/clear-outstanding for the confirmed row. Sends
+  // plan_id when the item lives on a multi-plan row; otherwise sends
+  // prefix + parent identifier. Triggers a parent-side refresh via
+  // onDataChanged so the row disappears from the list.
+  const confirmClearOutstanding = async () => {
+    const item = clearDialog.item;
+    if (!item) return;
+    setClearing(true);
+    try {
+      const source = String(item.source || '').toLowerCase();
+      const payload = { source };
+      if (item.plan_id) {
+        payload.plan_id = item.plan_id;
+      } else {
+        payload.prefix = item.prefix;
+        if (source === 'personal') {
+          if (item.individual_id) payload.individual_id = item.individual_id;
+          else if (item.tax_id) payload.tax_id = item.tax_id;
+        } else {
+          payload.tax_id = item.tax_id;
+        }
+      }
+      await axios.post('/api/actions/clear-outstanding', payload);
+      setClearDialog({ open: false, item: null });
+      if (onDataChanged) onDataChanged();
+    } catch (err) {
+      const msg = err?.response?.data?.error || err?.message || 'Unknown error';
+      alert(`Failed to clear outstanding item: ${msg}`);
+    } finally {
+      setClearing(false);
+    }
+  };
+
   if (loading) {
     return (
       <Box sx={{ p: 3, textAlign: 'center' }}>
@@ -682,13 +730,74 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         ))}
       </Box>
 
-      {/* Tab bar for the four dashboard sections */}
-      <Tabs value={mainTab} onChange={(e, v) => setMainTab(v)} sx={{ mb: 2, borderBottom: 1, borderColor: 'divider' }}>
-        <Tab label="Renewals" />
-        <Tab label="Actions" />
-        <Tab label="Opportunities" />
-        <Tab label="Analytics" />
-      </Tabs>
+      {/* Dashboard section navigation, styled as folder tabs sitting on
+          a shelf. Each tab is a filled rectangle with rounded top
+          corners; the selected tab matches the content-area color
+          underneath and gets a gold accent bar so it reads as raised.
+          The `TabIndicatorProps display:none` disables MUI's usual
+          underline indicator - we build the visual selection ourselves. */}
+      <Box sx={{ mb: 3, mt: 1 }}>
+        <Tabs
+          value={mainTab}
+          onChange={(e, v) => setMainTab(v)}
+          TabIndicatorProps={{ style: { display: 'none' } }}
+          sx={(theme) => {
+            const r = theme.palette.rothschild || {};
+            const contentBg = r.parchment || theme.palette.background.default;
+            const restBg    = r.parchmentSoft || 'rgba(0,0,0,0.03)';
+            const border    = r.borderStrong || theme.palette.divider;
+            const gold      = r.gold || theme.palette.secondary.main;
+            const navy      = r.navy || theme.palette.primary.main;
+            return {
+              minHeight: 44,
+              // The "shelf" line the tabs sit on. Selected tab overlaps
+              // this so its bottom edge fuses with the content below.
+              borderBottom: `1.5px solid ${border}`,
+              '& .MuiTabs-flexContainer': { gap: '3px' },
+              '& .MuiTab-root': {
+                minHeight: 44,
+                fontFamily: theme.typography.button.fontFamily,
+                fontSize: '0.82rem',
+                fontWeight: 700,
+                textTransform: 'uppercase',
+                letterSpacing: '0.12em',
+                paddingInline: 2.75,
+                color: theme.palette.text.secondary,
+                backgroundColor: restBg,
+                border: `1.5px solid ${border}`,
+                borderBottom: 'none',
+                borderTopLeftRadius: 6,
+                borderTopRightRadius: 6,
+                // Nudge the tab down by 1.5px so its bottom edge sits on
+                // top of the shelf border - selected state can then hide
+                // the shared line to look attached to content.
+                marginBottom: '-1.5px',
+                transition: 'color 140ms ease, background-color 140ms ease',
+                '&:hover': {
+                  color: theme.palette.text.primary,
+                  backgroundColor: contentBg,
+                },
+                '&.Mui-selected': {
+                  color: navy,
+                  backgroundColor: contentBg,
+                  // Fuse with the shelf: match the content bg so the
+                  // border-bottom of the container reads as "cut away".
+                  borderBottomColor: contentBg,
+                  // Gold accent on top of the selected tab - the firm-
+                  // signature stroke that tells you which tab is live.
+                  borderTop: `2.5px solid ${gold}`,
+                  paddingTop: '9.5px',
+                },
+              },
+            };
+          }}
+        >
+          <Tab label="Renewals" />
+          <Tab label="Actions" />
+          <Tab label="Opportunities" />
+          <Tab label="Analytics" />
+        </Tabs>
+      </Box>
 
       {/* ---------- Tab 0: Renewals ---------- */}
       {mainTab === 0 && (<>
@@ -924,9 +1033,23 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
                       </TableCell>
                       <TableCell>{item.assigned_to || '—'}</TableCell>
                       <TableCell>
-                        <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
-                          Edit
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 0.5 }}>
+                          <Button size="small" startIcon={<EditIcon />} sx={{ fontSize: '0.75rem', minWidth: 0 }}>
+                            Edit
+                          </Button>
+                          <Button
+                            size="small"
+                            color="success"
+                            startIcon={<CheckCircleOutlineIcon />}
+                            sx={{ fontSize: '0.75rem', minWidth: 0 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setClearDialog({ open: true, item });
+                            }}
+                          >
+                            Clear
+                          </Button>
+                        </Box>
                       </TableCell>
                     </TableRow>
                     );
@@ -1375,6 +1498,47 @@ const NewDashboard = ({ clients = [], benefits = [], commercial = [], personal =
         )}
       </Paper>
       </>)}
+
+      {/* Confirmation dialog for the "Clear" button on the Actions tab.
+          Reached from any of the three outstanding-item source tabs
+          (Commercial / Benefits / Personal) - shape matches whatever
+          the parent list-page delete-confirm dialog uses. */}
+      <Dialog
+        open={clearDialog.open}
+        onClose={() => (clearing ? null : setClearDialog({ open: false, item: null }))}
+      >
+        <DialogTitle>Clear outstanding item?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            {clearDialog.item ? (
+              <>
+                Mark the outstanding item{' '}
+                <strong>&ldquo;{clearDialog.item.outstanding_item}&rdquo;</strong> on{' '}
+                <strong>{clearDialog.item.client_name}</strong>&rsquo;s{' '}
+                <strong>{clearDialog.item.policy}</strong> coverage as resolved?
+                The item and its due date will be cleared on the record.
+              </>
+            ) : null}
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button
+            onClick={() => setClearDialog({ open: false, item: null })}
+            disabled={clearing}
+            color="inherit"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={confirmClearOutstanding}
+            disabled={clearing}
+            variant="contained"
+            color="success"
+          >
+            {clearing ? 'Clearing…' : 'Clear item'}
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
