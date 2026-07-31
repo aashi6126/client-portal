@@ -135,7 +135,7 @@ export default function ChatBubble() {
         bgcolor: '#f5f5f5',
       }}>
         {messages.length === 0 && (
-          <Box sx={{ textAlign: 'center', mt: 4, color: '#999' }}>
+          <Box sx={{ textAlign: 'center', mt: 4, color: '#9ca3af' }}>
             <SmartToyIcon sx={{ fontSize: 48, mb: 1, opacity: 0.3 }} />
             <Typography variant="body2" sx={{ color: '#888' }}>
               Ask me about clients, policies, renewals, or coverage.

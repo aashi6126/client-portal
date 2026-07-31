@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OUTSTANDING_ITEM_COLORS } from '../theme/tokens';
 import {
   Dialog,
   DialogTitle,
@@ -32,14 +33,6 @@ const MULTI_PLAN_LABELS = {
   dental: 'Dental',
   vision: 'Vision',
   life_adnd: 'Life & AD&D'
-};
-
-// Color mapping for outstanding item values
-const OUTSTANDING_ITEM_COLORS = {
-  'Premium Due': '#ed6c02',
-  'In Audit': '#0288d1',
-  'Cancel Due': '#d32f2f',
-  'Complete': '#2e7d32',
 };
 
 // Check if a date string is in the past

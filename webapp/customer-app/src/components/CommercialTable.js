@@ -1,6 +1,8 @@
 import React from 'react';
 import DataTable from './DataTable';
 import { Chip, Box, Tooltip } from '@mui/material';
+import { OUTSTANDING_ITEM_COLORS, RENEWAL_PILL } from '../theme/tokens';
+import { StatusDot } from './StatusChips';
 
 // Multi-plan types (support multiple plans via plans nested object)
 const MULTI_PLAN_TYPES = ['umbrella', 'professional_eo', 'cyber', 'crime'];
@@ -25,15 +27,6 @@ const SINGLE_PLAN_PRODUCTS = {
   flood: 'Flood',
   directors_officers: 'D&O',
   fiduciary: 'Fiduciary'
-};
-
-// Color mapping for outstanding item values
-const OUTSTANDING_ITEM_COLORS = {
-  'Premium Due': '#ed6c02',
-  'In Audit': '#0288d1',
-  'Cancel Due': '#d32f2f',
-  'Add Line': '#7b1fa2',
-  'Complete': '#2e7d32',
 };
 
 // Parse date string as local time (avoids UTC timezone shift)
@@ -232,22 +225,14 @@ const getCommercialColumns = (onEdit) => [
     sticky: true,
     sortable: true,
     minWidth: 140,
-    render: (value, row) => {
-      const dotColor = row.client_status === 'Active' ? '#4caf50' : row.client_status === 'Prospect' ? '#ff9800' : '#999';
-      return (
+    render: (value, row) => (
+      <Tooltip title={row.client_status || 'Unknown'} placement="top" arrow>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: dotColor,
-            display: 'inline-block',
-            flexShrink: 0
-          }} />
+          <StatusDot value={row.client_status} />
           {value}
         </span>
-      );
-    }
+      </Tooltip>
+    )
   },
   {
     id: 'parent_client',
@@ -269,7 +254,7 @@ const getCommercialColumns = (onEdit) => [
     render: (value, row) => {
       const products = getActiveProducts(row);
       if (products.length === 0) {
-        return <span style={{ color: '#999' }}>No coverage</span>;
+        return <span style={{ color: '#9ca3af' }}>No coverage</span>;
       }
 
       const formatDate = (d) => {
@@ -332,9 +317,9 @@ const getCommercialColumns = (onEdit) => [
                 height: '20px',
                 cursor: 'pointer',
                 ...(renewing && {
-                  backgroundColor: '#fff3cd',
-                  color: '#856404',
-                  borderColor: '#ffc107',
+                  backgroundColor: RENEWAL_PILL.bg,
+                  color: RENEWAL_PILL.fg,
+                  borderColor: RENEWAL_PILL.border,
                   fontWeight: 'bold'
                 })
               }}
@@ -409,7 +394,7 @@ const getCommercialColumns = (onEdit) => [
     render: (value, row) => {
       const nextRenewal = getNextRenewal(row);
       if (!nextRenewal) {
-        return <span style={{ color: '#999' }}>—</span>;
+        return <span style={{ color: '#9ca3af' }}>—</span>;
       }
 
       const today = new Date();
@@ -441,7 +426,7 @@ const getCommercialColumns = (onEdit) => [
     render: (value, row) => {
       const total = getTotalPremium(row);
       if (total === 0) {
-        return <span style={{ color: '#999' }}>$0</span>;
+        return <span style={{ color: '#9ca3af' }}>$0</span>;
       }
 
       return (

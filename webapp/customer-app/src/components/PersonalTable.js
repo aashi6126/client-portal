@@ -1,6 +1,8 @@
 import React from 'react';
 import DataTable from './DataTable';
 import { Chip, Box, Tooltip } from '@mui/material';
+import { OUTSTANDING_ITEM_COLORS, RENEWAL_PILL } from '../theme/tokens';
+import { StatusDot } from './StatusChips';
 
 // All personal coverage types are single-plan
 const PERSONAL_PRODUCTS = {
@@ -9,15 +11,6 @@ const PERSONAL_PRODUCTS = {
   personal_umbrella: 'Umbrella',
   event: 'Event',
   visitors_medical: 'Visitors'
-};
-
-// Color mapping for outstanding item values
-const OUTSTANDING_ITEM_COLORS = {
-  'Premium Due': '#ed6c02',
-  'In Audit': '#0288d1',
-  'Cancel Due': '#d32f2f',
-  'Add Line': '#7b1fa2',
-  'Complete': '#2e7d32',
 };
 
 // Parse date string as local time (avoids UTC timezone shift)
@@ -254,22 +247,14 @@ const getPersonalColumns = (onEdit) => [
     sticky: true,
     sortable: true,
     minWidth: 140,
-    render: (value, row) => {
-      const dotColor = row.individual_status === 'Active' ? '#4caf50' : row.individual_status === 'Prospect' ? '#ff9800' : '#999';
-      return (
+    render: (value, row) => (
+      <Tooltip title={row.individual_status || 'Unknown'} placement="top" arrow>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: dotColor,
-            display: 'inline-block',
-            flexShrink: 0
-          }} />
+          <StatusDot value={row.individual_status} />
           {value}
         </span>
-      );
-    }
+      </Tooltip>
+    )
   },
   {
     id: 'active_products',
@@ -279,7 +264,7 @@ const getPersonalColumns = (onEdit) => [
     render: (value, row) => {
       const products = getActiveProducts(row);
       if (products.length === 0) {
-        return <span style={{ color: '#999' }}>No coverage</span>;
+        return <span style={{ color: '#9ca3af' }}>No coverage</span>;
       }
 
       const formatDate = (d) => {
@@ -328,9 +313,9 @@ const getPersonalColumns = (onEdit) => [
                 height: '20px',
                 cursor: 'pointer',
                 ...(renewing && {
-                  backgroundColor: '#fff3cd',
-                  color: '#856404',
-                  borderColor: '#ffc107',
+                  backgroundColor: RENEWAL_PILL.bg,
+                  color: RENEWAL_PILL.fg,
+                  borderColor: RENEWAL_PILL.border,
                   fontWeight: 'bold'
                 })
               }}
@@ -396,7 +381,7 @@ const getPersonalColumns = (onEdit) => [
     render: (value, row) => {
       const nextRenewal = getNextRenewal(row);
       if (!nextRenewal) {
-        return <span style={{ color: '#999' }}>—</span>;
+        return <span style={{ color: '#9ca3af' }}>—</span>;
       }
 
       const today = new Date();
@@ -428,7 +413,7 @@ const getPersonalColumns = (onEdit) => [
     render: (value, row) => {
       const total = getTotalPremium(row);
       if (total === 0) {
-        return <span style={{ color: '#999' }}>$0</span>;
+        return <span style={{ color: '#9ca3af' }}>$0</span>;
       }
 
       return (

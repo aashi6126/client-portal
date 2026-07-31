@@ -63,7 +63,7 @@ export default function ChatPanel() {
 
       <Box sx={{ flex: 1, overflow: 'auto', p: 2, display: 'flex', flexDirection: 'column', gap: 1.5, bgcolor: '#fafafa' }}>
         {messages.length === 0 && (
-          <Box sx={{ textAlign: 'center', mt: 8, color: '#999' }}>
+          <Box sx={{ textAlign: 'center', mt: 8, color: '#9ca3af' }}>
             <SmartToyIcon sx={{ fontSize: 56, mb: 1, opacity: 0.15 }} />
             <Typography variant="body2" color="text.secondary">
               Ask me about clients, policies, renewals, or coverage.
@@ -92,7 +92,7 @@ export default function ChatPanel() {
           </Box>
         ))}
         {loading && (
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#999' }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, color: '#9ca3af' }}>
             <CircularProgress size={16} />
             <Typography variant="caption">Thinking...</Typography>
           </Box>

@@ -108,9 +108,10 @@ const DataTable = ({
       return column.render(value, row);
     }
 
-    // Default rendering
+    // Default rendering. Theme text.disabled keeps the neutral em dash
+    // consistent with other empty-state markers across the app.
     if (value == null || value === '') {
-      return <span style={{ color: '#999' }}>—</span>;
+      return <Box component="span" sx={{ color: 'text.disabled' }}>—</Box>;
     }
 
     // Handle dates
@@ -155,17 +156,18 @@ const DataTable = ({
       <Table stickyHeader size="small">
         <TableHead>
           <TableRow>
-            {/* Actions column (left) */}
+            {/* Actions column (left). Font weight, background, and
+                casing come from the theme's MuiTableCell.head override -
+                no per-cell sx needed. Sticky positioning is column-
+                specific though, so it stays inline. */}
             <TableCell
               sx={{
-                fontWeight: 'bold',
-                backgroundColor: '#f5f5f5',
                 position: 'sticky',
                 left: 0,
                 zIndex: 3,
                 boxShadow: '2px 0 5px rgba(0,0,0,0.1)',
                 minWidth: 80,
-                whiteSpace: 'nowrap'
+                whiteSpace: 'nowrap',
               }}
             >
               Actions
@@ -176,8 +178,6 @@ const DataTable = ({
               <TableCell
                 key={column.id}
                 sx={{
-                  fontWeight: 'bold',
-                  backgroundColor: '#f5f5f5',
                   whiteSpace: 'nowrap',
                   minWidth: column.minWidth || 150,
                   maxWidth: column.maxWidth || 300,

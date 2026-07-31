@@ -3,6 +3,7 @@ import { Tooltip } from '@mui/material';
 import BusinessIcon from '@mui/icons-material/Business';
 import HealthAndSafetyIcon from '@mui/icons-material/HealthAndSafety';
 import DataTable from './DataTable';
+import { StatusDot } from './StatusChips';
 
 // Column definitions for Clients table
 export const clientColumns = [
@@ -20,22 +21,14 @@ export const clientColumns = [
     sticky: true,
     sortable: true,
     minWidth: 140,
-    render: (value, row) => {
-      const dotColor = row.status === 'Active' ? '#4caf50' : row.status === 'Prospect' ? '#ff9800' : '#999';
-      return (
+    render: (value, row) => (
+      <Tooltip title={row.status || 'Unknown'} placement="top" arrow>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: dotColor,
-            display: 'inline-block',
-            flexShrink: 0
-          }} />
+          <StatusDot value={row.status} />
           {value}
         </span>
-      );
-    }
+      </Tooltip>
+    )
   },
   {
     id: 'coverage_icons',
@@ -80,7 +73,7 @@ export const clientColumns = [
     sortable: true,
     minWidth: 130,
     render: (value) => {
-      if (value == null) return <span style={{ color: '#999' }}>—</span>;
+      if (value == null) return <span style={{ color: '#9ca3af' }}>—</span>;
       return `$${parseFloat(value).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
     }
   },
@@ -90,7 +83,7 @@ export const clientColumns = [
     sortable: true,
     minWidth: 100,
     render: (value) => {
-      if (value == null) return <span style={{ color: '#999' }}>—</span>;
+      if (value == null) return <span style={{ color: '#9ca3af' }}>—</span>;
       return value.toLocaleString('en-US');
     }
   },

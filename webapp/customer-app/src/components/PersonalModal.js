@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { OUTSTANDING_ITEM_COLORS } from '../theme/tokens';
 import {
   Dialog,
   DialogTitle,
@@ -27,15 +28,6 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import AddIcon from '@mui/icons-material/Add';
 import AddCircleOutlineIcon from '@mui/icons-material/AddCircleOutline';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
-
-// Color mapping for outstanding item values
-const OUTSTANDING_ITEM_COLORS = {
-  'Premium Due': '#ed6c02',
-  'In Audit': '#0288d1',
-  'Cancel Due': '#d32f2f',
-  'Add Line': '#7b1fa2',
-  'Complete': '#2e7d32',
-};
 
 // Check if a date string is in the past
 const isPastDate = (dateStr) => {

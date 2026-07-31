@@ -291,7 +291,7 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
                 onChange={handleChange('gross_revenue')}
                 fullWidth
                 size="small"
-                InputProps={{ startAdornment: <span style={{ marginRight: 4, color: '#999' }}>$</span> }}
+                InputProps={{ startAdornment: <span style={{ marginRight: 4, color: '#9ca3af' }}>$</span> }}
               />
             </Grid>
 
@@ -437,7 +437,7 @@ const ClientModal = ({ open, onClose, client, onSave }) => {
                     SelectProps={{
                       displayEmpty: true,
                       renderValue: (val) => {
-                        if (!val) return <em style={{ color: '#999' }}>Select State</em>;
+                        if (!val) return <em style={{ color: '#9ca3af' }}>Select State</em>;
                         const found = US_STATES.find(s => s.code === val);
                         return found ? `${found.name} (${found.code})` : val;
                       }

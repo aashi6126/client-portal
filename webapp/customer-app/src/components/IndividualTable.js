@@ -1,5 +1,7 @@
 import React from 'react';
+import { Tooltip } from '@mui/material';
 import DataTable from './DataTable';
+import { StatusDot } from './StatusChips';
 
 // Column definitions for Individuals table
 export const individualColumns = [
@@ -17,22 +19,14 @@ export const individualColumns = [
     sticky: true,
     sortable: true,
     minWidth: 120,
-    render: (value, row) => {
-      const dotColor = row.status === 'Active' ? '#4caf50' : row.status === 'Prospect' ? '#ff9800' : '#999';
-      return (
+    render: (value, row) => (
+      <Tooltip title={row.status || 'Unknown'} placement="top" arrow>
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-          <span style={{
-            width: 8,
-            height: 8,
-            borderRadius: '50%',
-            backgroundColor: dotColor,
-            display: 'inline-block',
-            flexShrink: 0
-          }} />
+          <StatusDot value={row.status} />
           {value}
         </span>
-      );
-    }
+      </Tooltip>
+    )
   },
   {
     id: 'last_name',
