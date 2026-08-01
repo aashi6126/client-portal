@@ -969,7 +969,9 @@ class EmployeeBenefit(db.Model):
     __tablename__ = 'employee_benefits'
 
     id = db.Column(db.Integer, primary_key=True)
-    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
+    # UNIQUE: one benefits record per client. See CommercialInsurance
+    # for the rationale (also unique on tax_id).
+    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False, unique=True)
     parent_client = db.Column(db.String(200))
 
     # Core fields
@@ -1184,7 +1186,10 @@ class CommercialInsurance(db.Model):
     __tablename__ = 'commercial_insurance'
 
     id = db.Column(db.Integer, primary_key=True)
-    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False)
+    # UNIQUE: the app treats CommercialInsurance as one row per client.
+    # DB-level constraint prevents duplicate rows from slipping in via
+    # Excel import, clone, or concurrent create attempts.
+    tax_id = db.Column(db.String(50), db.ForeignKey('clients.tax_id'), nullable=False, unique=True)
 
     parent_client = db.Column(db.String(200))
     assigned_to = db.Column(db.String(200))
@@ -1781,7 +1786,11 @@ class PersonalInsurance(db.Model):
     __tablename__ = 'personal_insurance'
 
     id = db.Column(db.Integer, primary_key=True)
-    individual_id = db.Column(db.String(50), db.ForeignKey('individuals.individual_id'), nullable=False)
+    # UNIQUE: one personal-lines record per individual. Households with
+    # multiple insured people are represented as multiple Individuals,
+    # each with their own PersonalInsurance row. tax_id is NOT unique
+    # here because multiple individuals can share a household tax_id.
+    individual_id = db.Column(db.String(50), db.ForeignKey('individuals.individual_id'), nullable=False, unique=True)
 
     # 1. Personal Auto
     personal_auto_carrier = db.Column(db.String(200))
