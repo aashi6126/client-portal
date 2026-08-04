@@ -397,20 +397,33 @@ function AppShell() {
     return () => clearInterval(interval);
   }, []);
 
-  // Task-notification badge count. Polled every 60s; also refreshed
+  // Task-notification badge count. Refetched every 15s, whenever the
+  // browser tab regains focus, whenever the logged-in user changes, and
   // whenever the user opens the Tasks tab (which additionally marks all
   // their unseen tasks seen).
   const [unseenTaskCount, setUnseenTaskCount] = useState(0);
   useEffect(() => {
+    let cancelled = false;
     const fetchUnseen = () => {
       axios.get('/api/me/notifications', { timeout: 5000 })
-        .then(res => setUnseenTaskCount(res.data?.unseen_task_count || 0))
+        .then(res => {
+          if (!cancelled) setUnseenTaskCount(res.data?.unseen_task_count || 0);
+        })
         .catch(() => { /* ignore — silent if endpoint fails */ });
     };
     fetchUnseen();
-    const id = setInterval(fetchUnseen, 60000);
-    return () => clearInterval(id);
-  }, []);
+    const id = setInterval(fetchUnseen, 15000);
+    const onFocus = () => fetchUnseen();
+    const onVisibility = () => { if (!document.hidden) fetchUnseen(); };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      cancelled = true;
+      clearInterval(id);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [user?.id]);
   const markTasksSeen = () => {
     if (unseenTaskCount === 0) return;
     axios.post('/api/me/notifications/tasks/mark-seen').catch(() => {});
@@ -1327,13 +1340,21 @@ function AppShell() {
                       <ListItemText
                         primary={
                           item.index === 13 && unseenTaskCount > 0 ? (
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 1, width: '100%' }}>
                               <span>{item.label}</span>
                               <Chip
                                 label={unseenTaskCount}
                                 size="small"
                                 color="error"
-                                sx={{ height: 16, minWidth: 18, fontSize: '0.6rem', px: 0.5 }}
+                                sx={{
+                                  height: 20,
+                                  minWidth: 22,
+                                  fontSize: '0.72rem',
+                                  fontWeight: 700,
+                                  px: 0.75,
+                                  boxShadow: '0 0 0 2px rgba(211,47,47,0.35)',
+                                  '& .MuiChip-label': { px: 0.5 },
+                                }}
                               />
                             </Box>
                           ) : (
