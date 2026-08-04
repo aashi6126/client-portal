@@ -2054,6 +2054,9 @@ class Task(db.Model):
     priority = db.Column(db.String(20), nullable=False, default='Medium')
     assignee_id = db.Column(db.Integer, db.ForeignKey('users.id'))
     created_by_id = db.Column(db.Integer, db.ForeignKey('users.id'))
+    # Optional client this task relates to. Deleting the client should not
+    # cascade-delete the task — just null the reference.
+    client_id = db.Column(db.Integer, db.ForeignKey('clients.id', ondelete='SET NULL'))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     completed_at = db.Column(db.DateTime)
@@ -2065,6 +2068,7 @@ class Task(db.Model):
 
     assignee = db.relationship('User', foreign_keys=[assignee_id])
     created_by = db.relationship('User', foreign_keys=[created_by_id])
+    client = db.relationship('Client', foreign_keys=[client_id])
     comments = db.relationship(
         'TaskComment',
         backref='task',
@@ -2084,6 +2088,8 @@ class Task(db.Model):
             'assignee_full_name': (self.assignee.full_name or self.assignee.username) if self.assignee else None,
             'created_by_id': self.created_by_id,
             'created_by_username': self.created_by.username if self.created_by else None,
+            'client_id': self.client_id,
+            'client_name': (self.client.client_name or self.client.dba) if self.client else None,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
             'completed_at': self.completed_at.isoformat() if self.completed_at else None,
@@ -6630,6 +6636,10 @@ def list_tasks():
     if status:
         q = q.filter(Task.status == status)
 
+    req_client = request.args.get('client_id', type=int)
+    if req_client is not None:
+        q = q.filter(Task.client_id == req_client)
+
     if request.args.get('include_done', 'true').lower() == 'false':
         q = q.filter(Task.status != 'Done')
 
@@ -6679,12 +6689,19 @@ def create_task():
         if not assignee or not assignee.is_active:
             return jsonify({'error': 'assignee_id does not match an active user'}), 400
 
+    client_id = data.get('client_id')
+    if client_id is not None:
+        client = db.session.get(Client, client_id)
+        if not client:
+            return jsonify({'error': 'client_id does not match a client'}), 400
+
     t = Task(
         title=title,
         description=(data.get('description') or '').strip() or None,
         status=status,
         priority=priority,
         assignee_id=assignee_id,
+        client_id=client_id,
         created_by_id=getattr(user, 'id', None),
     )
     if status == 'Done':
@@ -6725,11 +6742,11 @@ def update_task(task_id):
             t.completed_at = datetime.utcnow() if new_status == 'Done' else None
 
     # Everything else requires task-management privileges (admin or manager).
-    manager_only_fields = {'title', 'description', 'priority', 'assignee_id'}
+    manager_only_fields = {'title', 'description', 'priority', 'assignee_id', 'client_id'}
     supplied_manager_fields = manager_only_fields & set(data.keys())
     if supplied_manager_fields and not can_manage:
         return jsonify({
-            'error': 'Only admins or managers can change title, description, priority, or assignee'
+            'error': 'Only admins or managers can change title, description, priority, assignee, or client'
         }), 403
 
     if 'title' in data:
@@ -6764,6 +6781,14 @@ def update_task(task_id):
             else:
                 t.assignee_seen_at = None
         t.assignee_id = new_assignee
+
+    if 'client_id' in data:
+        new_client = data['client_id']
+        if new_client is not None:
+            c = db.session.get(Client, new_client)
+            if not c:
+                return jsonify({'error': 'client_id does not match a client'}), 400
+        t.client_id = new_client
 
     db.session.commit()
     return jsonify({'task': t.to_dict(include_comments=True)}), 200
@@ -7219,6 +7244,9 @@ with app.app_context():
          'ALTER TABLE cobra_coverages ADD COLUMN administration_type VARCHAR(20)'),
         ('tasks', 'assignee_seen_at',
          'ALTER TABLE tasks ADD COLUMN assignee_seen_at TIMESTAMP'),
+        ('tasks', 'client_id',
+         'ALTER TABLE tasks ADD COLUMN client_id INTEGER '
+         'REFERENCES clients(id) ON DELETE SET NULL'),
     ]
     _newly_added_columns = set()
     try:

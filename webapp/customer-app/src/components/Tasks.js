@@ -54,6 +54,7 @@ const EMPTY_FORM = {
   status: 'Open',
   priority: 'Medium',
   assignee_id: '',
+  client_id: '',
 };
 
 function formatWhen(iso) {
@@ -73,6 +74,7 @@ export default function Tasks() {
 
   const [tasks, setTasks] = useState([]);
   const [users, setUsers] = useState([]);       // for assignee dropdown / filter
+  const [clients, setClients] = useState([]);   // for client dropdown in the task form
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
@@ -80,6 +82,7 @@ export default function Tasks() {
   const [hideDone, setHideDone] = useState(true);
   const [statusFilter, setStatusFilter] = useState('');
   const [assigneeFilter, setAssigneeFilter] = useState('');    // admin-only
+  const [clientFilter, setClientFilter] = useState('');        // admin-only
   const [search, setSearch] = useState('');
 
   // Edit / create modal
@@ -107,6 +110,7 @@ export default function Tasks() {
       else params.include_done = 'false';
       if (statusFilter) params.status = statusFilter;
       if (canManageTasks && assigneeFilter) params.assignee_id = assigneeFilter;
+      if (canManageTasks && clientFilter) params.client_id = clientFilter;
       const { data } = await axios.get('/api/tasks', { params });
       setTasks(data.tasks || []);
     } catch (err) {
@@ -114,7 +118,7 @@ export default function Tasks() {
     } finally {
       setLoading(false);
     }
-  }, [hideDone, statusFilter, assigneeFilter, canManageTasks]);
+  }, [hideDone, statusFilter, assigneeFilter, clientFilter, canManageTasks]);
 
   const fetchAssignableUsers = useCallback(async () => {
     if (!canManageTasks) return;
@@ -126,6 +130,16 @@ export default function Tasks() {
     }
   }, [canManageTasks]);
 
+  const fetchClients = useCallback(async () => {
+    if (!canManageTasks) return;
+    try {
+      const { data } = await axios.get('/api/clients');
+      setClients(data.clients || []);
+    } catch {
+      // Non-fatal — the client dropdown just stays empty.
+    }
+  }, [canManageTasks]);
+
   useEffect(() => {
     fetchTasks();
   }, [fetchTasks]);
@@ -133,6 +147,32 @@ export default function Tasks() {
   useEffect(() => {
     fetchAssignableUsers();
   }, [fetchAssignableUsers]);
+
+  useEffect(() => {
+    fetchClients();
+  }, [fetchClients]);
+
+  const clientOptions = useMemo(() => {
+    const baseLabel = (c) => c.client_name || c.dba || c.tax_id || `Client #${c.id}`;
+    // Count each base label so we can disambiguate the ones that collide.
+    const counts = new Map();
+    for (const c of clients) {
+      const k = baseLabel(c);
+      counts.set(k, (counts.get(k) || 0) + 1);
+    }
+    return clients
+      .map(c => {
+        const base = baseLabel(c);
+        let label = base;
+        if ((counts.get(base) || 0) > 1) {
+          const locality = [c.city, c.state].filter(Boolean).join(', ');
+          const suffix = locality || c.tax_id || `#${c.id}`;
+          label = `${base} — ${suffix}`;
+        }
+        return { id: c.id, label };
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [clients]);
 
   const filteredTasks = useMemo(() => {
     if (!search.trim()) return tasks;
@@ -160,6 +200,7 @@ export default function Tasks() {
       status: t.status,
       priority: t.priority,
       assignee_id: t.assignee_id != null ? String(t.assignee_id) : '',
+      client_id: t.client_id != null ? String(t.client_id) : '',
     });
     setFormError('');
     setModalOpen(true);
@@ -177,6 +218,7 @@ export default function Tasks() {
       status: form.status,
       priority: form.priority,
       assignee_id: form.assignee_id === '' ? null : Number(form.assignee_id),
+      client_id: form.client_id === '' ? null : Number(form.client_id),
     };
     try {
       if (editing) {
@@ -320,6 +362,23 @@ export default function Tasks() {
               ))}
             </TextField>
           )}
+          {canManageTasks && (
+            <TextField
+              label="Client"
+              select
+              value={clientFilter}
+              onChange={(e) => setClientFilter(e.target.value)}
+              size="small"
+              sx={{ minWidth: 200 }}
+            >
+              <MenuItem value="">All clients</MenuItem>
+              {clientOptions.map(opt => (
+                <MenuItem key={opt.id} value={opt.id}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           <FormControlLabel
             control={
               <Checkbox
@@ -345,6 +404,7 @@ export default function Tasks() {
               <TableCell sx={{ minWidth: 130 }}>Status</TableCell>
               <TableCell sx={{ minWidth: 100 }}>Priority</TableCell>
               <TableCell sx={{ minWidth: 160 }}>Assignee</TableCell>
+              <TableCell sx={{ minWidth: 160 }}>Client</TableCell>
               <TableCell sx={{ minWidth: 90 }}>Updates</TableCell>
               <TableCell sx={{ minWidth: 150 }}>Updated</TableCell>
             </TableRow>
@@ -352,13 +412,13 @@ export default function Tasks() {
           <TableBody>
             {loading ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   Loading...
                 </TableCell>
               </TableRow>
             ) : filteredTasks.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} align="center" sx={{ py: 4, color: 'text.secondary' }}>
+                <TableCell colSpan={8} align="center" sx={{ py: 4, color: 'text.secondary' }}>
                   {canManageTasks ? 'No tasks yet — click “New Task” to add one.' : 'No tasks assigned to you.'}
                 </TableCell>
               </TableRow>
@@ -447,6 +507,13 @@ export default function Tasks() {
                       <Typography variant="caption" color="text.secondary">unassigned</Typography>
                     )}
                   </TableCell>
+                  <TableCell>
+                    {t.client_name ? (
+                      t.client_name
+                    ) : (
+                      <Typography variant="caption" color="text.secondary">—</Typography>
+                    )}
+                  </TableCell>
                   <TableCell>{t.comment_count || 0}</TableCell>
                   <TableCell>{formatWhen(t.updated_at)}</TableCell>
                 </TableRow>
@@ -517,6 +584,22 @@ export default function Tasks() {
                 </MenuItem>
               ))}
             </TextField>
+            <TextField
+              label="Client (optional)"
+              select
+              value={form.client_id}
+              onChange={(e) => setForm({ ...form, client_id: e.target.value })}
+              size="small"
+              fullWidth
+              helperText="Link this task to a client, or leave blank."
+            >
+              <MenuItem value="">No client</MenuItem>
+              {clientOptions.map(opt => (
+                <MenuItem key={opt.id} value={String(opt.id)}>
+                  {opt.label}
+                </MenuItem>
+              ))}
+            </TextField>
           </Stack>
         </DialogContent>
         <DialogActions>
@@ -553,6 +636,9 @@ export default function Tasks() {
                 />
                 <Typography variant="caption" color="text.secondary">
                   Assigned to <strong>{detailTask.assignee_full_name || 'nobody'}</strong>
+                  {detailTask.client_name && (
+                    <> · client <strong>{detailTask.client_name}</strong></>
+                  )}
                   {detailTask.created_by_username && (
                     <> · created by {detailTask.created_by_username}</>
                   )}
